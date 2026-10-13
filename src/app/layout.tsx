@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import BookingProviderWrap from "@/components/BookingModal";
 import BottomNav from "@/components/BottomNav";
 import HideOnAdmin from "@/components/HideOnAdmin";
+import TouchSparks from "@/components/TouchSparks";
 import { THEME_SCRIPT } from "@/components/ThemeToggle";
 import ChatBot from "@/components/ChatBot";
 import Footer from "@/components/Footer";
@@ -101,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ChatBot />
           <Analytics />
           <ScrollReveal />
+          <TouchSparks />
           </BookingProviderWrap>
         </ClerkProvider>
         <script

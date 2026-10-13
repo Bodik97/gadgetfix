@@ -2,14 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import { site } from "@/data/site";
+import { createSparkLayer } from "./lightning";
 import styles from "./HeroStatus.module.css";
 
 /**
  * Рядок над заголовком головної: графік і обіцянка передзвонити. Блискавка
  * б'є, як справжня: кілька коротких спалахів, з іконки вистрілюють
- * мініблискавки, потім пауза випадкової довжини. Ритм задає GSAP, розряди
- * малює three.js (lightning.ts); обидва довантажуються окремо, вже після
- * появи сторінки.
+ * мініблискавки, потім пауза випадкової довжини. Ритм задає GSAP (він
+ * довантажується окремо, вже після появи сторінки), розряди малює
+ * lightning.ts — ті самі, що спалахують у точці дотику.
  */
 
 /** Сторона полотна з розрядами, px: розряди виходять далеко за іконку */
@@ -26,18 +27,18 @@ export default function HeroStatus() {
     let stop = () => {};
     let cancelled = false;
 
-    Promise.all([import("gsap"), import("./lightning")]).then(([{ gsap }, { createSparks }]) => {
+    import("gsap").then(({ gsap }) => {
       if (cancelled || !bolt.current || !glow.current || !sparks.current) return;
 
-      const color = getComputedStyle(bolt.current).fill;
-      const arcs = createSparks(sparks.current, SPARKS_SIZE, color);
+      const arcs = createSparkLayer(sparks.current);
+      const center = SPARKS_SIZE / 2;
 
       const ctx = gsap.context(() => {
         const strike = () => {
           gsap
             .timeline({ onComplete: () => void gsap.delayedCall(gsap.utils.random(1.2, 3.6), strike) })
             // Два «передспалахи» — блискавка ніби шукає шлях
-            .call(() => arcs.burst())
+            .call(() => arcs.burst(center, center, { from: 8, reach: [24, 42] }))
             .to(bolt.current, { opacity: 0.25, duration: 0.05 })
             .to(bolt.current, { opacity: 1, duration: 0.04 })
             .to(bolt.current, { opacity: 0.35, duration: 0.06 })
@@ -66,7 +67,7 @@ export default function HeroStatus() {
     <p className={`${styles.status} nUp`}>
       <span className={styles.mark} aria-hidden="true">
         <span className={styles.glow} ref={glow} />
-        <canvas className={styles.sparks} ref={sparks} width={SPARKS_SIZE} height={SPARKS_SIZE} />
+        <canvas className={styles.sparks} ref={sparks} />
         <svg ref={bolt} className={styles.bolt} width="20" height="20" viewBox="0 0 24 24">
           <path d="M13.5 2L4.5 13.5H11L9.5 22L19.5 9.5H13L13.5 2Z" />
         </svg>

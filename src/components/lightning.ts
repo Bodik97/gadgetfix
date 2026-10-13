@@ -1,134 +1,169 @@
-import {
-  AdditiveBlending,
-  BufferAttribute,
-  BufferGeometry,
-  Color,
-  Mesh,
-  MeshBasicMaterial,
-  OrthographicCamera,
-  Scene,
-  WebGLRenderer,
-} from "three";
-
 /**
- * Мініблискавки навколо іконки: ламані розряди, що вистрілюють із центру
- * назовні й щокадру міняють форму — як справжній електричний пробій.
+ * Мініблискавки: ламані розряди, що вистрілюють із точки назовні й кілька
+ * кадрів поспіль міняють форму — як справжній електричний пробій.
  *
- * Малює three.js на маленькому прозорому полотні. Кадри рендеряться лише під
- * час спалаху: між спалахами полотно порожнє й нічого не рахується.
+ * Малюються на звичайному canvas, без бібліотек. Кадри рахуються лише поки
+ * триває хоч один спалах: між спалахами полотно порожнє й цикл зупинений.
  */
 
 type Point = [number, number];
 
+/** Гілка розряду: ламана й те, наскільки вона тонша за головний канал */
+type Branch = { points: Point[]; weight: number };
+
+type BurstOptions = {
+  /** Радіус, з якого розряд починається: 0 — з точки, більше — довкола іконки */
+  from?: number;
+  /** Довжина розрядів від центру, px: від і до */
+  reach: [number, number];
+};
+
+type Burst = {
+  x: number;
+  y: number;
+  options: BurstOptions;
+  angles: number[];
+  /** Скільки форм розряд змінить загалом і скільки ще лишилось */
+  total: number;
+  frames: number;
+  /** Коли малювати наступну форму */
+  nextAt: number;
+  /** Поточна форма; порожня — розряд на мить «згас» */
+  branches: Branch[];
+};
+
+const LIME = "#DCF35A";
+const CORE = "#FBFFE9";
+/** Темний край розряду: без нього салатове не видно на світлому тлі */
+const EDGE = "rgb(34 40 8 / .5)";
+
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
-/** Ламаний шлях розряду під кутом angle: від radius from до radius to */
-function boltPath(angle: number, from: number, to: number, jitter: number, steps: number): Point[] {
-  const dx = Math.cos(angle);
-  const dy = Math.sin(angle);
-  const points: Point[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const r = from + (to - from) * t;
-    // Найбільше розряд «гуляє» посередині, кінці тримаються напрямку
-    const off = i === 0 ? 0 : rand(-1, 1) * jitter * Math.sin(Math.PI * Math.min(t + 0.15, 1));
-    points.push([dx * r - dy * off, dy * r + dx * off]);
-  }
-  return points;
+/**
+ * Ламана від a до b «дробленням навпіл»: середину відрізка зсуваємо вбік і
+ * повторюємо для обох половин. Так ламається справжня блискавка — великі
+ * злами з дрібним тремтінням усередині.
+ */
+function fracture(a: Point, b: Point, sway: number, depth: number): Point[] {
+  if (depth === 0) return [a, b];
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const shift = rand(-1, 1) * sway;
+  const mid: Point = [(a[0] + b[0]) / 2 - dy * shift, (a[1] + b[1]) / 2 + dx * shift];
+  const left = fracture(a, mid, sway * 0.62, depth - 1);
+  return [...left, ...fracture(mid, b, sway * 0.62, depth - 1).slice(1)];
 }
 
-/** Смужка трикутників уздовж ламаної: до кінця розряд тоншає */
-function pushStrip(out: number[], points: Point[], width: number) {
-  for (let i = 0; i < points.length - 1; i++) {
-    const [ax, ay] = points[i];
-    const [bx, by] = points[i + 1];
-    const len = Math.hypot(bx - ax, by - ay) || 1;
-    const nx = -(by - ay) / len;
-    const ny = (bx - ax) / len;
-    const wa = (width * (1 - (i / points.length) * 0.75)) / 2;
-    const wb = (width * (1 - ((i + 1) / points.length) * 0.75)) / 2;
-    out.push(
-      ax + nx * wa, ay + ny * wa, 0, ax - nx * wa, ay - ny * wa, 0, bx + nx * wb, by + ny * wb, 0,
-      bx + nx * wb, by + ny * wb, 0, ax - nx * wa, ay - ny * wa, 0, bx - nx * wb, by - ny * wb, 0,
-    );
+/** Канал із точки start під кутом angle довжиною length, з відгалуженнями */
+function grow(out: Branch[], start: Point, angle: number, length: number, weight: number, depth: number) {
+  const end: Point = [start[0] + Math.cos(angle) * length, start[1] + Math.sin(angle) * length];
+  const points = fracture(start, end, 0.24, depth);
+  out.push({ points, weight });
+  if (weight < 0.35) return;
+
+  // Гілки відходять під гострим кутом у той самий бік, куди б'є канал
+  const forks = Math.floor(rand(1, 3.4));
+  for (let i = 0; i < forks; i++) {
+    const at = points[Math.floor(rand(points.length * 0.2, points.length * 0.8))];
+    const side = Math.random() < 0.5 ? -1 : 1;
+    grow(out, at, angle + rand(0.3, 0.75) * side, length * rand(0.28, 0.5), weight * 0.55, Math.max(depth - 1, 2));
   }
 }
 
-export function createSparks(canvas: HTMLCanvasElement, size: number, color: string) {
-  const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(size, size, false);
+/** Нова форма спалаху */
+function shape(burst: Burst): Branch[] {
+  const { x, y, options } = burst;
+  const from = options.from ?? 0;
+  const branches: Branch[] = [];
+  for (const base of burst.angles) {
+    const angle = base + rand(-0.1, 0.1);
+    const start: Point = [x + Math.cos(angle) * from, y + Math.sin(angle) * from];
+    grow(branches, start, angle, rand(options.reach[0], options.reach[1]) - from, 1, 4);
+  }
+  return branches;
+}
 
-  const half = size / 2;
-  const camera = new OrthographicCamera(-half, half, half, -half, 0, 10);
-  camera.position.z = 1;
-  const scene = new Scene();
+function trace(ctx: CanvasRenderingContext2D, points: Point[], width: number, style: string) {
+  ctx.strokeStyle = style;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+  ctx.stroke();
+}
 
-  // Два шари: широке кольорове світіння і тонка розпечена серцевина
-  const glowGeometry = new BufferGeometry();
-  const coreGeometry = new BufferGeometry();
-  const glowMaterial = new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity: 0.55, blending: AdditiveBlending, depthTest: false });
-  const coreMaterial = new MeshBasicMaterial({ color: new Color(color).lerp(new Color("#ffffff"), 0.7), transparent: true, blending: AdditiveBlending, depthTest: false });
-  scene.add(new Mesh(glowGeometry, glowMaterial), new Mesh(coreGeometry, coreMaterial));
+export function createSparkLayer(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  let bursts: Burst[] = [];
+  let frame = 0;
+  let width = 0;
+  let height = 0;
 
-  let timer = 0;
+  /** Полотно під розмір елемента й щільність екрана — інакше розряди мильні */
+  const fit = () => {
+    const ratio = Math.min(window.devicePixelRatio, 2);
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    ctx?.setTransform(ratio, 0, 0, ratio, 0, 0);
+  };
 
-  const draw = (angles: number[]) => {
-    const glow: number[] = [];
-    const core: number[] = [];
-    for (const base of angles) {
-      const angle = base + rand(-0.12, 0.12);
-      const reach = rand(half * 0.5, half - 3);
-      const path = boltPath(angle, 9, reach, 4.5, 7);
-      pushStrip(glow, path, 3.4);
-      pushStrip(core, path, 1.2);
+  const tick = (now: number) => {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, width, height);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
-      // Відгалуження від середини розряду
-      if (Math.random() < 0.6) {
-        const at = path[Math.floor(rand(2, 5))];
-        const start = Math.hypot(at[0], at[1]);
-        const branch = boltPath(angle + rand(0.35, 0.8) * (Math.random() < 0.5 ? -1 : 1), start, start + rand(8, 16), 2.4, 4);
-        // Гілка росте з точки на основному розряді, а не з центру
-        const shiftX = at[0] - branch[0][0];
-        const shiftY = at[1] - branch[0][1];
-        const moved = branch.map(([x, y]) => [x + shiftX, y + shiftY] as Point);
-        pushStrip(glow, moved, 2.2);
-        pushStrip(core, moved, 0.8);
+    bursts = bursts.filter((burst) => {
+      if (now >= burst.nextAt) {
+        if (burst.frames-- <= 0) return false;
+        // Зрідка розряд на кадр зникає — від цього він і «тріщить»
+        burst.branches = Math.random() < 0.2 ? [] : shape(burst);
+        burst.nextAt = now + rand(28, 55);
       }
-    }
-    glowGeometry.setAttribute("position", new BufferAttribute(new Float32Array(glow), 3));
-    coreGeometry.setAttribute("position", new BufferAttribute(new Float32Array(core), 3));
-    renderer.render(scene, camera);
+
+      // Перші кадри найяскравіші, далі розряд блякне
+      ctx.globalAlpha = 0.35 + 0.65 * (burst.frames / burst.total);
+      for (const { points, weight } of burst.branches) {
+        ctx.shadowBlur = 0;
+        trace(ctx, points, 2.4 * weight + 0.6, EDGE);
+        // Тонке салатове світіння і біла розпечена серцевина
+        ctx.shadowColor = LIME;
+        ctx.shadowBlur = 5;
+        trace(ctx, points, 1.3 * weight + 0.3, LIME);
+        ctx.shadowBlur = 0;
+        trace(ctx, points, 0.7 * weight + 0.15, CORE);
+      }
+      ctx.globalAlpha = 1;
+      return true;
+    });
+
+    frame = bursts.length ? requestAnimationFrame(tick) : 0;
   };
 
-  const clear = () => {
-    glowGeometry.setAttribute("position", new BufferAttribute(new Float32Array(0), 3));
-    coreGeometry.setAttribute("position", new BufferAttribute(new Float32Array(0), 3));
-    renderer.render(scene, camera);
-  };
+  fit();
 
   return {
-    /** Один спалах: кілька розрядів, що 5–8 кадрів поспіль міняють форму */
-    burst() {
-      window.clearTimeout(timer);
-      const angles = Array.from({ length: Math.floor(rand(2, 5)) }, () => rand(0, Math.PI * 2));
-      let frames = Math.floor(rand(5, 9));
-      const tick = () => {
-        if (frames-- <= 0) return clear();
-        // Зрідка розряд на кадр зникає — від цього він і «тріщить»
-        if (Math.random() < 0.18) clear();
-        else draw(angles);
-        timer = window.setTimeout(tick, rand(32, 60));
-      };
-      tick();
+    fit,
+    /** Спалах у точці (x, y) полотна: 1–3 розряди з гілками на 4–7 кадрів */
+    burst(x: number, y: number, options: BurstOptions) {
+      const total = Math.floor(rand(4, 8));
+      bursts.push({
+        x,
+        y,
+        options,
+        angles: Array.from({ length: Math.floor(rand(1, 3.6)) }, () => rand(0, Math.PI * 2)),
+        total,
+        frames: total,
+        nextAt: 0,
+        branches: [],
+      });
+      if (!frame) frame = requestAnimationFrame(tick);
     },
     dispose() {
-      window.clearTimeout(timer);
-      glowGeometry.dispose();
-      coreGeometry.dispose();
-      glowMaterial.dispose();
-      coreMaterial.dispose();
-      renderer.dispose();
+      cancelAnimationFrame(frame);
+      bursts = [];
     },
   };
 }
