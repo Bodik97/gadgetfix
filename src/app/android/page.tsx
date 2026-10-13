@@ -8,6 +8,8 @@ import FaqAside from "@/components/FaqAside";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
 import HeroArt from "@/components/HeroArt";
+import Ticker from "@/components/Ticker";
+import { tickerItems } from "@/data/servicesPage";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -117,6 +119,7 @@ export default function AndroidPage() {
       </section>
 
       <div className="band stripe-alt">
+        <Ticker items={tickerItems} />
       {/* Кроки */}
       <section className={`container ${styles.steps}`}>
         <h2 className={styles.stepsTitle}>Спершу деталь — потім ціна</h2>

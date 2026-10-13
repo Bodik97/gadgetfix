@@ -12,6 +12,8 @@ import { boardPrices, jobRange, PRICED_JOBS, PRICES_PUBLISHED, serviceFrom, uah,
 import { BUSINESS_ID, site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
 import { siteUrl } from "@/lib/siteUrl";
+import Ticker from "@/components/Ticker";
+import { tickerItems } from "@/data/servicesPage";
 import styles from "./page.module.css";
 
 export function generateStaticParams() {
@@ -194,6 +196,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
     </div>
 
     <div className="band stripe-alt">
+      <Ticker items={tickerItems} />
     <div className={styles.page}>
       <section className={styles.section} aria-labelledby="oznaky">
         <h2 id="oznaky" className={styles.h2}>

@@ -13,7 +13,7 @@ import { getPublishedReviews } from "@/db/reviews";
 import { services } from "@/data/services";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
-import { popular as popularModels } from "@/data/mailIn";
+import { getModel } from "@/data/catalog";
 import {
   bookingModels,
   faq,
@@ -24,6 +24,26 @@ import {
   topServices,
 } from "@/data/landing";
 import styles from "./page.module.css";
+
+/** Моделі для каруселі на головній — від нових до старших, без однакових фото */
+const stripModels = [
+  "iphone-16-pro-max",
+  "iphone-16",
+  "iphone-15-pro-max",
+  "iphone-15",
+  "iphone-14-pro",
+  "iphone-13-pro",
+  "iphone-13",
+  "iphone-12-pro",
+  "iphone-11-pro",
+  "iphone-11",
+  "iphone-x",
+  "iphone-se-2",
+  "iphone-8",
+].flatMap((slug) => {
+  const m = getModel(slug);
+  return m ? [{ name: m.name, slug: m.slug, img: m.image, year: m.year }] : [];
+});
 
 export const metadata: Metadata = {
   title: "GadgetFix — ремонт iPhone у Львові та Новому Роздолі",
@@ -195,7 +215,7 @@ export default async function Home() {
             <p className={styles.headNote}>Деталь під вашу модель підбираємо одразу після заявки.</p>
           </div>
 
-          <PhoneStrip models={popularModels} />
+          <PhoneStrip models={stripModels} />
 
           <div className={styles.groupList}>
             {modelGroups.map((g) => (

@@ -35,14 +35,22 @@
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: rgb(var(--text-rgb) / .86);
   text-decoration: none;
   transition: color .2s, transform .2s;
 }
 
-.link:hover {
+a.link:hover {
   color: var(--accent-text);
   transform: translateX(4px);
+}
+
+.icon {
+  flex: none;
+  color: var(--accent-text);
 }
 
 .muted {

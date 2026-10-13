@@ -1,90 +1,176 @@
-.phones {
+.strip {
+  margin-bottom: clamp(40px, 5vw, 72px);
+}
+
+/* Стрічка гортається сама по собі (палець, трекпад), стрілки лише допомагають.
+   Бічні поля рівно такі, щоб і першу, й останню картку можна було поставити
+   по центру. */
+.track {
+  --w: clamp(168px, 19vw, 244px);
+  position: relative;
   list-style: none;
-  margin: 0 0 clamp(40px, 5vw, 72px);
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: clamp(10px, 1.2vw, 18px);
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 34px calc(50% - var(--w) / 2) 30px;
+  display: flex;
+  gap: clamp(10px, 1.5vw, 20px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Краї тануть у тлі — видно, що ряд продовжується */
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
 }
 
-.phone {
-  display: grid;
-  gap: 14px;
-  justify-items: center;
-  text-decoration: none;
-  color: var(--text);
-}
-
-.phone:hover {
-  color: var(--accent-text);
-}
-
-/* Фото моделей зняті на білому — плитка теж біла в обох темах */
-.phoneShot {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  border-radius: var(--r-card);
-  background: #FFFFFF;
-  padding: 12%;
-  transition: transform .4s var(--ease);
-}
-
-.phone:hover .phoneShot {
-  transform: translateY(-6px);
-}
-
-.phoneShot img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.phoneName {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-@media (max-width: 900px) {
-  /* Стрічка, яку гортають пальцем: край наступної плитки підказує, що далі є ще */
-  .phones {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: min(42%, 190px);
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    margin-inline: calc(var(--gutter) * -1);
-    padding-inline: var(--gutter);
-    /* Без цього перша плитка «прилипає» до самого краю, з'їдаючи відступ */
-    scroll-padding-inline: var(--gutter);
-    scrollbar-width: none;
-  }
-
-  .phones > li {
-    scroll-snap-align: start;
-  }
-}
-
-/* Стрілки — лише там, де ряд гортається: на широкому екрані видно всі моделі */
-.arrows {
+.track::-webkit-scrollbar {
   display: none;
 }
 
-@media (max-width: 900px) {
-  .arrows {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin: -22px 0 clamp(36px, 5vw, 56px);
-  }
+/* --d — відстань картки до центру в «картках» (0 — по центру), ставить скрипт */
+.item {
+  --d: 0;
+  flex: none;
+  width: var(--w);
+  scroll-snap-align: center;
+  scale: calc(1 - min(var(--d), 1.6) * .13);
+  opacity: calc(1 - min(var(--d), 2) * .3);
+}
 
-  .phones {
-    margin-bottom: 40px;
-  }
+.card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 16px 16px 18px;
+  border-radius: 28px;
+  border: 1px solid rgb(var(--fg-rgb) / .1);
+  background: linear-gradient(180deg, rgb(var(--fg-rgb) / .07), rgb(var(--fg-rgb) / .02));
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .3s, box-shadow .3s, translate .3s var(--ease);
+}
+
+.card:hover {
+  border-color: rgb(var(--fg-rgb) / .26);
+  translate: 0 -4px;
+}
+
+/* Картка по центру: салатова рамка й світіння */
+.on .card {
+  border-color: rgb(var(--lime-rgb) / .7);
+  box-shadow: 0 26px 60px -26px rgb(var(--lime-rgb) / .55), inset 0 0 0 1px rgb(var(--lime-rgb) / .14);
+}
+
+.no {
+  font-size: 12px;
+  letter-spacing: .14em;
+  color: var(--text-3);
+  transition: color .3s;
+}
+
+.on .no {
+  color: var(--accent-text);
+}
+
+.shot {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  padding: 4% 12% 8%;
+}
+
+/* Салатова пляма під телефоном — проявляється в картки по центру */
+.shot::before {
+  content: "";
+  position: absolute;
+  inset: 12% 6% 2%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--lime-rgb) / .3), transparent);
+  opacity: 0;
+  transition: opacity .4s;
+}
+
+.on .shot::before {
+  opacity: 1;
+}
+
+.shot img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 18px rgb(0 0 0 / .5));
+}
+
+.name {
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: clamp(15px, 1.35vw, 18px);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.more {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-text);
+  opacity: 0;
+  translate: -6px 0;
+  transition: opacity .3s, translate .3s var(--ease);
+}
+
+.on .more,
+.card:hover .more {
+  opacity: 1;
+  translate: 0;
+}
+
+/* ---------- Стрілки й лічильник ---------- */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 2vw, 26px);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(260px, 46vw);
+}
+
+.count {
+  font-size: 13px;
+  letter-spacing: .1em;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--fg-rgb) / .14);
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width .35s var(--ease);
 }
 
 .arrow {
   width: 48px;
   height: 48px;
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -92,15 +178,23 @@
   border: 1px solid rgb(var(--fg-rgb) / .22);
   background: transparent;
   color: var(--text);
-  transition: background .2s, border-color .2s, opacity .2s;
+  transition: background .2s, border-color .2s, color .2s, opacity .2s;
 }
 
 .arrow:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: rgb(var(--fg-rgb) / .34);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 
 .arrow:disabled {
-  opacity: .35;
+  opacity: .3;
   cursor: default;
+}
+
+@media (max-width: 700px) {
+  .track {
+    --w: min(58vw, 220px);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
 }

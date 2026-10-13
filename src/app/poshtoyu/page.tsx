@@ -8,6 +8,8 @@ import StatusCheck from "@/components/StatusCheck";
 import StepDeck from "@/components/StepDeck";
 import { faq, heroStats, popular, steps } from "@/data/mailIn";
 import HeroArt from "@/components/HeroArt";
+import Ticker from "@/components/Ticker";
+import { tickerItems } from "@/data/servicesPage";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -95,6 +97,7 @@ export default function MailInPage() {
       </section>
 
       <div className="band stripe-alt">
+        <Ticker items={tickerItems} />
       {/* Кроки */}
       <section className={`container ${styles.steps}`}>
         <h2 className={styles.stepsTitle}>Шість кроків від відправки до повернення</h2>
