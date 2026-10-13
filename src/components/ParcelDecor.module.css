@@ -1,0 +1,116 @@
+/* Висота смуг з іконками — та сама, що відступи блоку статусу на головній */
+.decor {
+  --top: clamp(96px, 11vw, 150px);
+  --bottom: clamp(56px, 7vw, 96px);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: rgb(var(--fg-rgb) / .5);
+}
+
+.accent {
+  color: var(--accent);
+  stroke: var(--accent);
+}
+
+/* Шлях посилки над карткою: кружечки на пунктирній лінії */
+.journey,
+.extras {
+  position: absolute;
+  left: 0;
+  right: 0;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding-inline: calc(var(--gutter) + clamp(0px, 3vw, 40px));
+  display: flex;
+  align-items: center;
+}
+
+.journey {
+  top: 0;
+  height: var(--top);
+  justify-content: space-between;
+}
+
+.journey::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--gutter) + clamp(0px, 3vw, 40px));
+  right: calc(var(--gutter) + clamp(0px, 3vw, 40px));
+  top: 50%;
+  border-top: 1.5px dashed rgb(var(--fg-rgb) / .16);
+}
+
+.step {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--fg-rgb) / .12);
+  /* Непрозоре тло ховає пунктир під кружечком */
+  background: var(--bg);
+  animation: bob 4.2s ease-in-out infinite alternate;
+}
+
+.step svg {
+  width: 40px;
+  height: 40px;
+}
+
+/* Кружечки гойдаються не в такт — так шлях виглядає живим */
+.step:nth-child(2) { animation-delay: -.7s; }
+.step:nth-child(3) { animation-delay: -1.4s; }
+.step:nth-child(4) { animation-delay: -2.1s; }
+.step:nth-child(5) { animation-delay: -2.8s; }
+.step:nth-child(6) { animation-delay: -3.5s; }
+
+/* Під карткою — кілька іконок без рамок, тихіше */
+.extras {
+  bottom: 0;
+  height: var(--bottom);
+  justify-content: space-around;
+  opacity: .55;
+}
+
+.extra svg {
+  width: 34px;
+  height: 34px;
+}
+
+.extra:nth-child(1) { transform: rotate(-8deg); }
+.extra:nth-child(3) { transform: rotate(9deg); }
+
+@keyframes bob {
+  from { transform: translateY(4px); }
+  to { transform: translateY(-4px); }
+}
+
+@media (max-width: 700px) {
+  .journey,
+  .extras {
+    padding-inline: var(--gutter);
+  }
+
+  .journey::before {
+    left: var(--gutter);
+    right: var(--gutter);
+  }
+
+  .step {
+    width: 44px;
+    height: 44px;
+  }
+
+  .step svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .extra svg {
+    width: 28px;
+    height: 28px;
+  }
+}

@@ -558,8 +558,11 @@
 }
 
 /* ---------- Статус і запис ---------- */
+/* Відступи — місце для іконок шляху посилки (ParcelDecor): ті самі розміри, що там */
 .statusWrap {
-  padding-top: clamp(20px, 3vw, 44px);
+  position: relative;
+  padding-top: clamp(96px, 11vw, 150px);
+  padding-bottom: clamp(56px, 7vw, 96px);
 }
 
 .book {

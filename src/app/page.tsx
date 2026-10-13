@@ -6,6 +6,7 @@ import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
 import ReviewSlider from "@/components/ReviewSlider";
 import ReviewForm from "@/components/ReviewForm";
+import ParcelDecor from "@/components/ParcelDecor";
 import StatusCheck from "@/components/StatusCheck";
 import { getPublishedReviews } from "@/db/reviews";
 import { services } from "@/data/services";
@@ -297,6 +298,7 @@ export default async function Home() {
       {/* Статус і запис — одна темна смуга перед підвалом */}
       <div className="band" data-theme="dark">
         <div className={styles.statusWrap}>
+          <ParcelDecor />
           <StatusCheck />
         </div>
 
