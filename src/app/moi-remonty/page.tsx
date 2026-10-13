@@ -10,6 +10,7 @@ import QuickOrder from "@/components/account/QuickOrder";
 import RepairCard from "@/components/account/RepairCard";
 import SetPassword from "@/components/account/SetPassword";
 import SignOutButton from "@/components/account/SignOutButton";
+import { plural } from "@/components/account/plural";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { getDevices, getEvents } from "@/db/events";
 import { unreadByLead } from "@/db/messages";
@@ -28,6 +29,7 @@ const dateShort = new Intl.DateTimeFormat("uk-UA", {
   day: "numeric",
   month: "short",
   year: "numeric",
+  timeZone: "Europe/Kyiv",
 });
 
 export default async function MyRepairsPage() {
@@ -100,7 +102,7 @@ export default async function MyRepairsPage() {
             </h2>
             {waitingParcel > 0 && (
               <span className={styles.tag}>
-                {waitingParcel === 1 ? "1 посилка в дорозі" : `${waitingParcel} посилки в дорозі`}
+                {waitingParcel} {plural(waitingParcel, "посилка", "посилки", "посилок")} в дорозі
               </span>
             )}
           </div>

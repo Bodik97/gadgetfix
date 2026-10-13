@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { del, put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { devices, leadMessages, leads, pushSubscriptions, reviews } from "@/db/schema";
+import { devices, leadMessages, leads, pushSubscriptions, reviews, type Lead } from "@/db/schema";
 import { STATUS_OPTIONS } from "@/db/leads";
 import { guessWarrantyDays, isWarrantyTerm, warrantyEnd } from "@/data/warranty";
-import { addEvent, getLeadById } from "@/db/events";
+import { addEvent, getHandoverDate, getLeadById, registerDevice } from "@/db/events";
 import { addExpense, EXPENSE_CATEGORIES, removeExpense } from "@/db/expenses";
 import { addPart, removePart, shiftPartQty } from "@/db/parts";
 import { rateLimit, release } from "@/lib/rateLimit";
@@ -30,7 +30,12 @@ async function clientAddress(): Promise<string> {
   return h.get("x-real-ip") ?? "unknown";
 }
 
-/** Межі входу: на пошту суворіша, бо адреса може бути спільна у двох майстрів */
+/**
+ * Межі входу. Спроби на пошту рахуємо окремо для кожної адреси: якби лічильник
+ * був один на пошту, будь-хто, знаючи її, пʼятьма хибними паролями зачиняв би
+ * майстра з його власного телефона. Загальна межа на адресу лишається —
+ * вона може бути спільна у двох майстрів, тому вища.
+ */
 const LOGIN_WINDOW = 15 * 60_000;
 const BY_EMAIL = 5;
 const BY_IP = 15;
@@ -47,7 +52,8 @@ export async function signIn(_prev: string | null, formData: FormData): Promise<
   const ip = await clientAddress();
 
   // Межу перевіряємо ДО пароля: інакше сама перевірка стає тим, що перебирають
-  const byEmail = await rateLimit(`login:email:${email}`, BY_EMAIL, LOGIN_WINDOW);
+  const emailKey = `login:email:${email}:${ip}`;
+  const byEmail = await rateLimit(emailKey, BY_EMAIL, LOGIN_WINDOW);
   if (!byEmail.ok) return `Забагато спроб входу. Спробуйте за ${waitLabel(byEmail.retryAfter)}.`;
 
   const byIp = await rateLimit(`login:ip:${ip}`, BY_IP, LOGIN_WINDOW);
@@ -70,7 +76,7 @@ export async function signIn(_prev: string | null, formData: FormData): Promise<
 
   // Успіх знімає лічильник, щоб майстер не лишався заблокованим
   // через власні помилки перед вдалим входом
-  await release(`login:email:${email}`);
+  await release(emailKey);
   await createSession(master);
   redirect("/admin");
 }
@@ -92,11 +98,13 @@ export async function setStatus(formData: FormData): Promise<void> {
   const next = status as (typeof allowed)[number];
 
   const before = await getLeadById(id);
+  // Заявку видалили, поки картка була відкрита, — міняти нічого
+  if (!before) return;
 
   // «Відправлено» ставить лише збереження ТТН: без накладної клієнту нема що відстежувати
-  if (next === "shipped" && !before?.ttn) return;
+  if (next === "shipped" && !before.ttn) return;
 
-  if (next === "done" && before) {
+  if (next === "done") {
     // Пристрій у клієнта — заявка закривається, і з цього дня рахується гарантія
     await closeOrder(before);
   } else {
@@ -106,7 +114,7 @@ export async function setStatus(formData: FormData): Promise<void> {
     await addEvent(id, { status: next });
 
     // Клієнт із підключеним ботом дізнається про новий етап одразу, у Telegram
-    if (before) await notifyClientStatus({ ...before, status: next });
+    await notifyClientStatus({ ...before, status: next });
   }
 
   revalidatePath("/admin");
@@ -117,6 +125,9 @@ export async function setStatus(formData: FormData): Promise<void> {
  * Строк гарантії для заявки. До видачі — просто запамʼятовуємо вибір;
  * після — перераховуємо дату від того самого дня видачі, щоб майстер міг
  * виправити помилку, не подарувавши й не забравши клієнту дні.
+ *
+ * День видачі беремо з хроніки (подія «done»): updatedAt зсуває кожна
+ * пізніша правка, а дати кінця гарантії в заявки «без гарантії» немає.
  */
 export async function setWarranty(formData: FormData): Promise<void> {
   if (!(await isAdmin())) redirect("/admin/vhid");
@@ -128,19 +139,34 @@ export async function setWarranty(formData: FormData): Promise<void> {
   const lead = await getLeadById(id);
   if (!lead) return;
 
-  let warrantyUntil = lead.warrantyUntil;
-  if (lead.status === "done") {
-    // День видачі: кінець гарантії мінус попередній строк; для старих заявок без дати — остання зміна
-    const previous = lead.warrantyDays ?? guessWarrantyDays(lead.service ?? lead.problem);
-    const handedOver = lead.warrantyUntil ? new Date(lead.warrantyUntil) : new Date(lead.updatedAt);
-    if (lead.warrantyUntil) handedOver.setDate(handedOver.getDate() - previous);
+  const handedOver = lead.status === "done";
 
-    warrantyUntil = warrantyEnd(handedOver, days);
-    // Клієнт з акаунтом бачить гарантію в кабінеті з таблиці пристроїв — тримаємо її в лад
-    if (warrantyUntil) await getDb().update(devices).set({ warrantyUntil }).where(eq(devices.leadId, id));
+  let warrantyUntil = lead.warrantyUntil;
+  if (handedOver) {
+    let from = await getHandoverDate(id);
+    if (!from) {
+      // Стара заявка без події в хроніці: кінець гарантії мінус попередній строк, а без дати — остання зміна
+      const previous = lead.warrantyDays ?? guessWarrantyDays(lead.service ?? lead.problem);
+      from = lead.warrantyUntil ? new Date(lead.warrantyUntil) : new Date(lead.updatedAt);
+      if (lead.warrantyUntil) from.setDate(from.getDate() - previous);
+    }
+
+    warrantyUntil = warrantyEnd(from, days);
   }
 
   await getDb().update(leads).set({ warrantyDays: days, warrantyUntil, updatedAt: new Date() }).where(eq(leads.id, id));
+
+  if (handedOver) {
+    // Клієнт з акаунтом бачить гарантію в кабінеті з таблиці пристроїв — тримаємо її в лад
+    if (warrantyUntil) {
+      await getDb().update(devices).set({ warrantyUntil }).where(eq(devices.leadId, id));
+      // Заявку закривали «без гарантії» — пристрою в списку ще не було
+      await registerDevice({ ...lead, warrantyUntil });
+    } else {
+      // «Без гарантії»: у кабінеті не має лишатися стара дата
+      await getDb().delete(devices).where(eq(devices.leadId, id));
+    }
+  }
 
   revalidatePath("/admin");
   revalidatePath("/moi-remonty");
@@ -261,35 +287,53 @@ export async function addNote(formData: FormData): Promise<void> {
   revalidatePath("/moi-remonty");
 }
 
-/** Майстер вписує накладну — статус одразу стає «Відправлено» */
+/** Статуси, з яких накладна переводить заявку у «Відправлено»; закрита заявка лишається закритою */
+const SHIPPABLE: Lead["status"][] = ["new", "in_progress", "ready"];
+
+/**
+ * Майстер вписує накладну — незакрита заявка одразу стає «Відправлено».
+ *
+ * Та сама накладна вдруге (Enter у полі) нічого не робить. Виправлення номера
+ * у вже відправленій заявці міняє лише номер: клієнту про відправку вже
+ * писали. Стерта накладна повертає відправлену заявку в «Готово» —
+ * «Відправлено» без ТТН не буває.
+ */
 export async function setTtn(formData: FormData): Promise<void> {
   if (!(await isAdmin())) redirect("/admin/vhid");
 
   const id = String(formData.get("id") ?? "");
-  const ttn = String(formData.get("ttn") ?? "").trim();
+  const ttn = String(formData.get("ttn") ?? "").trim().slice(0, 40) || null;
   if (!id) return;
 
-  await getDb()
-    .update(leads)
-    .set({
-      ttn: ttn ? ttn.slice(0, 40) : null,
-      ...(ttn ? { status: "shipped" as const } : {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(leads.id, id));
+  const before = await getLeadById(id);
+  if (!before || before.ttn === ttn) return;
 
-  if (ttn) {
-    await addEvent(id, { text: `Відправлено Новою Поштою, накладна ${ttn}`, status: "shipped" });
+  // Статус міняємо умовою в самому запиті: якщо заявку щойно закрили з іншого
+  // телефона, вона лишиться закритою
+  const status = ttn
+    ? sql<Lead["status"]>`case when ${inArray(leads.status, SHIPPABLE)} then 'shipped' else ${leads.status} end`
+    : sql<Lead["status"]>`case when ${leads.status} = 'shipped' then 'ready' else ${leads.status} end`;
 
-    const lead = await getLeadById(id);
-    if (lead) await notifyClientStatus(lead);
+  await getDb().update(leads).set({ ttn, status, updatedAt: new Date() }).where(eq(leads.id, id));
+
+  if (!ttn) {
+    if (before.status === "shipped") await addEvent(id, { text: "Накладну скасовано — пристрій ще в сервісі", status: "ready" });
+  } else {
+    if (SHIPPABLE.includes(before.status)) {
+      await addEvent(id, { text: `Відправлено Новою Поштою, накладна ${ttn}`, status: "shipped" });
+      await notifyClientStatus({ ...before, ttn, status: "shipped" });
+    }
 
     // Стежимо за посилкою: клієнт забрав — заявка закриється, почнеться гарантія.
+    // За виправленим номером стеження запускаємо нове; старе зупиниться саме,
+    // щойно побачить, що накладна вже інша. Закритій заявці стеження не потрібне.
     // Збій тут не має зачіпати майстра: накладна вже збережена
-    try {
-      await start(watchParcel, [id, ttn.slice(0, 40)]);
-    } catch (e) {
-      console.error("[ttn] стеження за посилкою не запущено:", e);
+    if (SHIPPABLE.includes(before.status) || before.status === "shipped") {
+      try {
+        await start(watchParcel, [id, ttn]);
+      } catch (e) {
+        console.error("[ttn] стеження за посилкою не запущено:", e);
+      }
     }
   }
 
@@ -318,6 +362,13 @@ export async function deleteReview(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
+  const [review] = await getDb().select({ path: reviews.imagePath }).from(reviews).where(eq(reviews.id, id)).limit(1);
+
+  // Фото лежить у сховищі окремо від бази; збій там не має лишати відгук невидаленим
+  if (review?.path) {
+    await del(review.path).catch((e) => console.error("[deleteReview] фото не прибралось:", review.path, e));
+  }
+
   await getDb().delete(reviews).where(eq(reviews.id, id));
 
   revalidatePath("/admin");
@@ -341,21 +392,41 @@ function parseUah(form: FormData, key: string): number | null | undefined {
   return n;
 }
 
-/** Погоджена ціна, собівартість деталі та відмітка про оплату */
-export async function setMoney(formData: FormData): Promise<void> {
+/** Відмітка-прапорець: «on» — поставили, інше — зняли, поля немає — не чіпаємо */
+function parseMark(form: FormData, key: string): boolean | undefined {
+  return form.has(key) ? form.get(key) === "on" : undefined;
+}
+
+/**
+ * Погоджена ціна, собівартість деталі та відмітки про оплату.
+ *
+ * Пишемо лише ті поля, що прийшли у формі, — а форма шле тільки змінене.
+ * Так картка, що довго стояла відкритою, не затирає своїми старими
+ * значеннями правку другого майстра. Повертає текст помилки або null.
+ */
+export async function setMoney(formData: FormData): Promise<string | null> {
   if (!(await isAdmin())) redirect("/admin/vhid");
 
   const id = String(formData.get("id") ?? "");
-  if (!id) return;
+  if (!id) return null;
 
   const price = parseUah(formData, "price");
   const partsCost = parseUah(formData, "partsCost");
   const prepayment = parseUah(formData, "prepayment");
-  const prepaid = formData.get("prepaid") === "on";
-  const paid = formData.get("paid") === "on";
+  const prepaid = parseMark(formData, "prepaid");
+  const paid = parseMark(formData, "paid");
+
+  if ([price, partsCost, prepayment, prepaid, paid].every((v) => v === undefined)) return null;
 
   const [before] = await getDb().select().from(leads).where(eq(leads.id, id)).limit(1);
-  if (!before) return;
+  if (!before) return null;
+
+  // Передоплата більша за ціну дала б у журналі каси відʼємну доплату при видачі
+  const nextPrice = price === undefined ? before.price : price;
+  const nextPrepayment = prepayment === undefined ? before.prepayment : prepayment;
+  if (nextPrice !== null && nextPrepayment !== null && nextPrepayment > nextPrice) {
+    return `Передоплата (${nextPrepayment} ₴) не може бути більшою за ціну (${nextPrice} ₴).`;
+  }
 
   await getDb()
     .update(leads)
@@ -364,9 +435,9 @@ export async function setMoney(formData: FormData): Promise<void> {
       ...(partsCost === undefined ? {} : { partsCost }),
       ...(prepayment === undefined ? {} : { prepayment }),
       // Дату ставимо раз: повторне збереження не має її зсувати
-      prepaidAt: prepaid ? (before.prepaidAt ?? new Date()) : null,
+      ...(prepaid === undefined ? {} : { prepaidAt: prepaid ? (before.prepaidAt ?? new Date()) : null }),
       // Відмітку ставимо раз: повторне збереження не має зсувати дату оплати
-      paidAt: paid ? (before.paidAt ?? new Date()) : null,
+      ...(paid === undefined ? {} : { paidAt: paid ? (before.paidAt ?? new Date()) : null }),
       updatedAt: new Date(),
     })
     .where(eq(leads.id, id));
@@ -389,7 +460,11 @@ export async function setMoney(formData: FormData): Promise<void> {
 
   revalidatePath("/admin");
   revalidatePath("/moi-remonty");
+  return null;
 }
+
+/** Ті самі формати фото, що й у чаті: SVG та інше «image/*» у сховище не пускаємо */
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 
 /** Відгук, який майстер заводить сам: людина лишила його усно або в месенджері */
 export async function addReview(formData: FormData): Promise<string | null> {
@@ -412,7 +487,7 @@ export async function addReview(formData: FormData): Promise<string | null> {
 
   const file = formData.get("image");
   if (file instanceof File && file.size > 0) {
-    if (!file.type.startsWith("image/")) return "Можна додавати лише фото.";
+    if (!PHOTO_TYPES.includes(file.type)) return "Можна додавати лише фото.";
     if (file.size > 6 * 1024 * 1024) return "Фото завелике.";
 
     const blob = await put(`reviews/${crypto.randomUUID()}`, file, {

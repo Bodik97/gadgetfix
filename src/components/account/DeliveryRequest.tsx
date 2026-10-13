@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { requestDelivery } from "@/app/moi-remonty/actions";
+import { useActionState, useState } from "react";
+import { requestDelivery, type DeliveryResult } from "@/app/moi-remonty/actions";
+import FormError from "../FormError";
 import styles from "./DeliveryRequest.module.css";
 
 export default function DeliveryRequest({
@@ -14,8 +15,11 @@ export default function DeliveryRequest({
   address: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  // Адресу тримаємо в стані: після невдалої спроби форма не має спорожніти
+  const [place, setPlace] = useState("");
+  const [state, action, pending] = useActionState<DeliveryResult | null, FormData>(requestDelivery, null);
 
-  if (requested) {
+  if (requested || state?.ok) {
     return (
       <div className={styles.done}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: "var(--accent-text)" }} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -23,7 +27,7 @@ export default function DeliveryRequest({
           <path d="M8 12.5l2.5 2.5L16 9.5" />
         </svg>
         <div>
-          Запит на відправку прийнято{address ? <> — {address}</> : null}. Надішлемо накладну, щойно
+          Запит на відправку прийнято{address || place ? <> — {address || place.trim()}</> : null}. Надішлемо накладну, щойно
           передамо посилку.
         </div>
       </div>
@@ -42,7 +46,7 @@ export default function DeliveryRequest({
   }
 
   return (
-    <form action={requestDelivery} className={styles.form}>
+    <form action={action} className={styles.form}>
       <input type="hidden" name="id" value={id} />
       <label htmlFor={`addr-${id}`} className={styles.label}>
         Місто й відділення Нової Пошти
@@ -57,12 +61,15 @@ export default function DeliveryRequest({
           minLength={5}
           placeholder="Напр. Тернопіль, відділення 12"
           autoFocus
+          value={place}
+          onChange={(e) => setPlace(e.target.value)}
         />
-        <button type="submit" className="btn btn-accent">
-          Замовити відправку
+        <button type="submit" className="btn btn-accent" disabled={pending}>
+          {pending ? "Надсилаємо…" : "Замовити відправку"}
         </button>
       </div>
-      <button type="button" className={styles.cancel} onClick={() => setOpen(false)}>
+      <FormError>{state && !state.ok ? state.error : null}</FormError>
+      <button type="button" className={styles.cancel} onClick={() => setOpen(false)} disabled={pending}>
         Скасувати
       </button>
     </form>

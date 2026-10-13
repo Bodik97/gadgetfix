@@ -1,5 +1,66 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const m = vi.hoisted(() => ({
+  limit: { ok: true } as { ok: true } | { ok: false; retryAfter: number },
+  limited: [] as { subject: string; limit: number; windowMs: number }[],
+  inserted: [] as Record<string, unknown>[],
+}));
+
+vi.mock("@/lib/rateLimit", () => ({
+  rateLimit: async (subject: string, limit: number, windowMs: number) => {
+    m.limited.push({ subject, limit, windowMs });
+    return m.limit;
+  },
+  clientIp: () => "1.2.3.4",
+}));
+vi.mock("@/lib/admin", () => ({ isAdmin: async () => false }));
+vi.mock("@/db", () => ({
+  getDb: () => ({
+    insert: () => ({
+      values: async (v: Record<string, unknown>) => {
+        m.inserted.push(v);
+      },
+    }),
+  }),
+}));
+
 import { deviceOf, isBot, parseEvent, refHost, visitorHash } from "@/lib/track";
+import { POST } from "@/app/api/track/route";
+
+describe("POST /api/track", () => {
+  const post = (body: unknown) =>
+    POST(
+      new Request("http://gadgetfix.example/api/track", {
+        method: "POST",
+        headers: { host: "gadgetfix.example", "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)" },
+        body: JSON.stringify(body),
+      }),
+    );
+
+  beforeEach(() => {
+    m.limit = { ok: true };
+    m.limited = [];
+    m.inserted = [];
+  });
+
+  it("подія записується, адреса рахується в межі 120 за хвилину", async () => {
+    expect((await post({ kind: "click", path: "/", name: "hero-book" })).status).toBe(204);
+    expect(m.inserted).toHaveLength(1);
+    expect(m.limited).toEqual([{ subject: "track:ip:1.2.3.4", limit: 120, windowMs: 60_000 }]);
+  });
+
+  it("понад межу — тихо 204, у базу нічого не йде", async () => {
+    m.limit = { ok: false, retryAfter: 30 };
+    expect((await post({ kind: "view", path: "/" })).status).toBe(204);
+    expect(m.inserted).toHaveLength(0);
+  });
+
+  it("клік на невідому кнопку не записується й місця в межі не займає", async () => {
+    expect((await post({ kind: "click", path: "/", name: "=cmd|calc" })).status).toBe(204);
+    expect(m.inserted).toHaveLength(0);
+    expect(m.limited).toHaveLength(0);
+  });
+});
 
 describe("parseEvent", () => {
   it("перегляд: бере шлях, чужий реферер і utm", () => {
@@ -24,10 +85,18 @@ describe("parseEvent", () => {
     expect(parseEvent(null, "h")).toBeNull();
   });
 
+  it("клік приймається лише з назвою кнопки, яка є на сайті", () => {
+    for (const name of ["=HYPERLINK(\"http://evil.example\")", "<script>", "hero-book-2", "toString", "constructor"]) {
+      expect(parseEvent({ kind: "click", path: "/", name }, "h"), name).toBeNull();
+    }
+    expect(parseEvent({ kind: "click", path: "/", name: " footer-viber " }, "h")?.name).toBe("footer-viber");
+  });
+
   it("обрізає задовгі значення", () => {
-    const e = parseEvent({ kind: "click", path: "/" + "a".repeat(500), name: "n".repeat(500) }, "h");
+    const e = parseEvent({ kind: "view", path: "/" + "a".repeat(500), utm: "u".repeat(500) }, "h");
     expect(e?.path).toHaveLength(200);
-    expect(e?.name).toHaveLength(60);
+    expect(e?.utm).toHaveLength(60);
+    expect(parseEvent({ kind: "click", path: "/", name: "n".repeat(500) }, "h")).toBeNull();
   });
 });
 

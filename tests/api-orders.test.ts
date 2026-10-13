@@ -8,12 +8,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
   limit: { ok: true } as { ok: true } | { ok: false; retryAfter: number },
+  /** Скільки спроб на одне замовлення пускаємо; решта — як справжній обмежувач */
+  perOrder: 10,
+  hits: new Map<string, number>(),
   rows: [] as Record<string, unknown>[],
   dbCalls: 0,
 }));
 
 vi.mock("@/lib/rateLimit", () => ({
-  rateLimit: async () => m.limit,
+  rateLimit: async (subject: string) => {
+    if (!subject.startsWith("order:no:")) return m.limit;
+    const used = m.hits.get(subject) ?? 0;
+    if (used >= m.perOrder) return { ok: false, retryAfter: 3600 };
+    m.hits.set(subject, used + 1);
+    return { ok: true };
+  },
+  release: async (subject: string) => {
+    m.hits.delete(subject);
+  },
   clientIp: () => "1.2.3.4",
 }));
 
@@ -58,6 +70,7 @@ beforeEach(() => {
   m.limit = { ok: true };
   m.rows = [LEAD];
   m.dbCalls = 0;
+  m.hits.clear();
 });
 
 describe("GET /api/orders/[no]", () => {
@@ -109,6 +122,40 @@ describe("GET /api/orders/[no]", () => {
     expect((await get("105", "238")).status).toBe(400);
     expect((await get("105", "50238")).status).toBe(400);
     expect(m.dbCalls).toBe(0);
+  });
+
+  it("номер, якого не вмістить база, — 404 без запиту до неї", async () => {
+    const res = await get("9999999999", "0238");
+    expect(res.status).toBe(404);
+    expect(m.dbCalls).toBe(0);
+    expect((await get("2147483648", "0238")).status).toBe(404);
+    expect(m.dbCalls).toBe(0);
+  });
+
+  it("10 невдалих спроб на одне замовлення — далі 429, навіть із правильними цифрами", async () => {
+    for (let i = 0; i < 10; i++) {
+      expect((await get("105", String(1000 + i))).status).toBe(404);
+    }
+    m.dbCalls = 0;
+
+    expect((await get("105", "1099")).status).toBe(429);
+    expect((await get("105", "0238")).status).toBe(429);
+    // Нулі попереду — те саме замовлення, а не обхід
+    expect((await get("0105", "0238")).status).toBe(429);
+    expect(m.dbCalls).toBe(0);
+  });
+
+  it("правильні цифри обнуляють лічильник замовлення — власнику перевірки не заважають", async () => {
+    for (let i = 0; i < 9; i++) await get("105", String(1000 + i));
+    expect((await get("105", "0238")).status).toBe(200);
+    for (let i = 0; i < 15; i++) expect((await get("105", "0238")).status).toBe(200);
+    expect(m.hits.get("order:no:105")).toBeUndefined();
+  });
+
+  it("час у журналі — київський, хоч сервер живе в UTC", async () => {
+    // 10:00 UTC 1 травня — у Києві 13:00 (літній час)
+    const body = await (await get("105", "0238")).json();
+    expect(body.log[0].time).toContain("13:00");
   });
 
   it("перевищено ліміт — 429", async () => {

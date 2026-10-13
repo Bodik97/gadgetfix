@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fake } from "./helpers/fakeDb";
-import { devices, leadMessages, leads } from "@/db/schema";
+import { claims } from "./helpers/claimingDb";
+import { devices, leadEvents, leadMessages, leads, reviews } from "@/db/schema";
 
 /**
  * Дії адмінки — ними змінюються заявки, гроші, відгуки й склад. Server action
@@ -17,12 +18,32 @@ const m = vi.hoisted(() => ({
   uploaded: [] as string[],
   deleted: [] as string[],
   delFails: false,
+  told: [] as string[],
+  offered: [] as (number | null)[],
+  watched: [] as unknown[][],
 }));
 
 vi.mock("@/db", async () => {
-  const { fake } = await import("./helpers/fakeDb");
-  return { getDb: () => fake.db };
+  const { claimingDb } = await import("./helpers/claimingDb");
+  return { getDb: () => claimingDb };
 });
+
+// Повідомлення клієнту й стеження за посилкою — назовні; тут важливо лише, чи їх викликали
+vi.mock("@/lib/clientBot", () => ({
+  notifyClientStatus: async (lead: { status: string }) => {
+    m.told.push(lead.status);
+    return true;
+  },
+  offerPrice: async (lead: { price: number | null }) => {
+    m.offered.push(lead.price);
+    return true;
+  },
+}));
+vi.mock("workflow/api", () => ({
+  start: async (_workflow: unknown, args: unknown[]) => {
+    m.watched.push(args);
+  },
+}));
 
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
@@ -104,6 +125,10 @@ beforeEach(() => {
   m.uploaded = [];
   m.deleted = [];
   m.delFails = false;
+  m.told = [];
+  m.offered = [];
+  m.watched = [];
+  claims.reset();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -140,7 +165,7 @@ describe("signIn", () => {
     actions.signIn(null, form({ email, password }));
 
   it("ліміт на пошту перевіряється до пароля", async () => {
-    m.limits["login:email:a@b.cc"] = { ok: false, retryAfter: 600 };
+    m.limits["login:email:a@b.cc:9.9.9.9"] = { ok: false, retryAfter: 600 };
     m.credentials = 0;
     expect(await signIn(" A@B.cc ", "x")).toBe("Забагато спроб входу. Спробуйте за 10 хв.");
     expect(m.sessions).toEqual([]);
@@ -165,7 +190,17 @@ describe("signIn", () => {
     m.credentials = 1;
     await expect(signIn("a@b.cc", "ok")).rejects.toThrow("REDIRECT:/admin");
     expect(m.sessions).toEqual([1]);
-    expect(m.released).toEqual(["login:email:a@b.cc"]);
+    expect(m.released).toEqual(["login:email:a@b.cc:9.9.9.9"]);
+  });
+
+  it("чужі спроби на пошту майстра з іншої адреси не зачиняють його самого", async () => {
+    // Хтось, знаючи пошту, вичерпав спроби зі свого компʼютера
+    m.limits["login:email:a@b.cc:6.6.6.6"] = { ok: false, retryAfter: 600 };
+    // Старий спільний лічильник «на пошту» більше ні на що не впливає
+    m.limits["login:email:a@b.cc"] = { ok: false, retryAfter: 600 };
+    m.credentials = 0;
+    await expect(signIn("a@b.cc", "ok")).rejects.toThrow("REDIRECT:/admin");
+    expect(m.sessions).toEqual([0]);
   });
 
   it("адмінка не налаштована — зрозуміле повідомлення, а не падіння", async () => {
@@ -181,12 +216,19 @@ describe("setStatus", () => {
   });
 
   it("новий статус — оновлення заявки й подія в хроніці", async () => {
+    fake.onSelect(leads, () => [LEAD]);
     await actions.setStatus(form({ id: LEAD.id, status: "in_progress" }));
     const w = writesText();
     expect(w[0]).toMatch(/^update "leads" set "status" = \$1/);
     expect(w[0]).toContain('"in_progress"');
     expect(w[1]).toMatch(/^insert into "lead_events"/);
     expect(w).toHaveLength(2);
+  });
+
+  it("заявку вже видалили — нічого не пишемо й не падаємо на події без заявки", async () => {
+    await actions.setStatus(form({ id: LEAD.id, status: "in_progress" }));
+    expect(fake.writes()).toEqual([]);
+    expect(m.told).toEqual([]);
   });
 
   it("«Відправлено» без ТТН не ставиться — статус дає лише збереження накладної", async () => {
@@ -209,6 +251,44 @@ describe("setStatus", () => {
     expect(device?.params).toEqual(expect.arrayContaining(["user_1", LEAD.id, "iPhone 13"]));
   });
 
+  it("«Завершено» — закриває умовний UPDATE: лише заявку, яка ще не закрита", async () => {
+    fake.onSelect(leads, () => [LEAD]);
+    await actions.setStatus(form({ id: LEAD.id, status: "done" }));
+    const [update, event] = fake.writes();
+    expect(update.sql).toMatch(/^update "leads" set .* where \("leads"\."id" = \$\d+ and "leads"\."status" <> \$\d+\) returning "id"$/);
+    expect(event.sql).toMatch(/^insert into "lead_events"/);
+    expect(m.told).toEqual(["done"]);
+  });
+
+  it("двоє закривають одночасно — другий не пише другої події й не шле друге «Завершено»", async () => {
+    claims.rows = []; // умова в UPDATE не спрацювала: заявку щойно закрив інший
+    const done = { ...LEAD, status: "done", warrantyUntil: new Date("2027-01-01T10:00:00Z") };
+    fake.onSelect(leads, () => [done]);
+    fake.onSelect(leadEvents, () => [{ at: new Date("2026-10-03T10:00:00Z") }]);
+    fake.onSelect(devices, () => [{ id: "d1" }]);
+
+    await actions.setStatus(form({ id: LEAD.id, status: "done" }));
+
+    expect(fake.writes().map((q) => q.sql.split(" ").slice(0, 3).join(" "))).toEqual(['update "leads" set']);
+    expect(m.told).toEqual([]);
+  });
+
+  it("закриття обірвалось після статусу — повтор доробляє подію, пристрій і повідомлення", async () => {
+    claims.rows = [];
+    const until = new Date("2027-01-01T10:00:00Z");
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", warrantyUntil: until }]);
+    // Події «done» в хроніці немає, пристрою в кабінеті теж
+    fake.onSelect(devices, () => []);
+
+    await actions.setStatus(form({ id: LEAD.id, status: "done" }));
+
+    const w = fake.writes();
+    expect(w.some((q) => q.sql.startsWith('insert into "lead_events"'))).toBe(true);
+    const device = w.find((q) => q.sql.startsWith('insert into "devices"'))!;
+    expect(device.params).toContain(until.toISOString());
+    expect(m.told).toEqual(["done"]);
+  });
+
   it("«Завершено» вдруге — пристрій не дублюється", async () => {
     fake.onSelect(leads, () => [LEAD]);
     fake.onSelect(devices, () => [{ id: "d1", clerkUserId: "user_1", leadId: LEAD.id, name: "x", warrantyUntil: new Date(), createdAt: new Date() }]);
@@ -225,10 +305,12 @@ describe("гарантія", () => {
   };
 
   it("видача запускає гарантію на строк, який обрав майстер", async () => {
-    fake.onSelect(leads, () => [{ ...LEAD, warrantyDays: 180 }]);
+    fake.onSelect(leads, () => [{ ...LEAD, warrantyDays: 120 }]);
     fake.onSelect(devices, () => []);
     await actions.setStatus(form({ id: LEAD.id, status: "done" }));
-    expect(daysBetween(new Date(), untilIn('update "leads"'))).toBe(180);
+    expect(daysBetween(new Date(), untilIn('update "leads"'))).toBe(120);
+    // У кабінеті клієнта — та сама дата, що й у заявці, а не порахована вдруге
+    expect(untilIn('insert into "devices"').toISOString()).toBe(untilIn('update "leads"').toISOString());
   });
 
   it("майстер не обирав — строк за видом роботи: після води 30 днів", async () => {
@@ -255,11 +337,61 @@ describe("гарантія", () => {
   it("строк, змінений після видачі, рахується від того самого дня видачі", async () => {
     const handedOver = new Date("2026-10-01T10:00:00Z");
     const until = new Date(handedOver);
-    until.setDate(until.getDate() + 90);
-    fake.onSelect(leads, () => [{ ...LEAD, status: "done", warrantyDays: 90, warrantyUntil: until }]);
+    until.setDate(until.getDate() + 60);
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", warrantyDays: 60, warrantyUntil: until }]);
 
-    await actions.setWarranty(form({ id: LEAD.id, days: "180" }));
-    expect(daysBetween(handedOver, untilIn('update "leads"'))).toBe(180);
+    await actions.setWarranty(form({ id: LEAD.id, days: "120" }));
+    expect(daysBetween(handedOver, untilIn('update "leads"'))).toBe(120);
+  });
+
+  const HANDED = new Date("2026-06-01T09:00:00Z");
+  const doneEvent = () => fake.onSelect(leadEvents, () => [{ at: HANDED }]);
+
+  it("день видачі береться з хроніки, а не з updatedAt, який зсуває кожна правка", async () => {
+    // Закрили «без гарантії», потім ще правили заявку — updatedAt уже не день видачі
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", warrantyDays: 0, warrantyUntil: null, updatedAt: new Date("2026-09-20T09:00:00Z") }]);
+    doneEvent();
+
+    await actions.setWarranty(form({ id: LEAD.id, days: "60" }));
+    expect(daysBetween(HANDED, untilIn('update "leads"'))).toBe(60);
+  });
+
+  it("заявку закривали без гарантії — зі строком пристрій зʼявляється в кабінеті", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", warrantyDays: 0, warrantyUntil: null }]);
+    fake.onSelect(devices, () => []);
+    doneEvent();
+
+    await actions.setWarranty(form({ id: LEAD.id, days: "30" }));
+    const device = fake.writes().find((q) => q.sql.startsWith('insert into "devices"'))!;
+    expect(device.params).toEqual(expect.arrayContaining(["user_1", LEAD.id]));
+    expect(daysBetween(HANDED, untilIn('insert into "devices"'))).toBe(30);
+  });
+
+  it("пристрій уже в кабінеті — дата оновлюється, другий не додається", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", warrantyDays: 60, warrantyUntil: new Date("2026-08-30T09:00:00Z") }]);
+    fake.onSelect(devices, () => [{ id: "d1" }]);
+    doneEvent();
+
+    await actions.setWarranty(form({ id: LEAD.id, days: "120" }));
+    expect(daysBetween(HANDED, untilIn('update "devices"'))).toBe(120);
+    expect(fake.writes().some((q) => q.sql.startsWith('insert into "devices"'))).toBe(false);
+  });
+
+  it("«без гарантії» після видачі — дата стирається, пристрій зникає з кабінету", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", warrantyDays: 90, warrantyUntil: new Date("2026-08-30T09:00:00Z") }]);
+    doneEvent();
+
+    await actions.setWarranty(form({ id: LEAD.id, days: "0" }));
+    const w = writesText();
+    expect(w[0]).toMatch(/^update "leads" set "warranty_days" = \$1, "warranty_until" = \$2/);
+    expect(fake.writes()[0].params.slice(0, 2)).toEqual([0, null]);
+    expect(w[1]).toMatch(/^delete from "devices" where "devices"\."lead_id" = \$1/);
+  });
+
+  it("до видачі строк лише запамʼятовується — пристроїв не чіпаємо", async () => {
+    fake.onSelect(leads, () => [LEAD]);
+    await actions.setWarranty(form({ id: LEAD.id, days: "30" }));
+    expect(fake.writes().map((q) => q.sql.split(" ").slice(0, 2).join(" "))).toEqual(['update "leads"']);
   });
 
   it("строк не зі списку не зберігається", async () => {
@@ -340,19 +472,73 @@ describe("addNote і setTtn", () => {
     expect(fake.writes()).toEqual([]);
   });
 
-  it("накладна — статус «Відправлено» і подія з номером", async () => {
-    await actions.setTtn(form({ id: LEAD.id, ttn: " 20450012345678 " }));
+  const TTN = "20450012345678";
+  const kinds = () => fake.writes().map((q) => q.sql.split(" ").slice(0, 3).join(" "));
+
+  it("накладна — статус «Відправлено», подія з номером, повідомлення клієнту й стеження за посилкою", async () => {
+    fake.onSelect(leads, () => [LEAD]);
+    await actions.setTtn(form({ id: LEAD.id, ttn: ` ${TTN} ` }));
     const w = writesText();
-    expect(w[0]).toMatch(/update "leads" set "ttn" = \$1, "status" = \$2/);
-    expect(w[0]).toContain('"shipped"');
-    expect(w[1]).toContain("накладна 20450012345678");
+    // «Відправлено» стає лише незакрита заявка — умова в самому запиті
+    expect(w[0]).toMatch(/^update "leads" set "ttn" = \$1, "status" = case when "leads"\."status" in \(\$2, \$3, \$4\) then 'shipped' else "leads"\."status" end/);
+    expect(fake.writes()[0].params.slice(0, 4)).toEqual([TTN, "new", "in_progress", "ready"]);
+    expect(w[1]).toContain(`накладна ${TTN}`);
+    expect(m.told).toEqual(["shipped"]);
+    expect(m.watched).toEqual([[LEAD.id, TTN]]);
   });
 
-  it("порожня накладна — очищає поле, статус не чіпає, події немає", async () => {
+  it("та сама накладна вдруге (Enter у полі) — нічого: ні запису, ні події, ні повідомлення, ні стеження", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, status: "shipped", ttn: TTN }]);
+    await actions.setTtn(form({ id: LEAD.id, ttn: TTN }));
+    expect(fake.writes()).toEqual([]);
+    expect(m.told).toEqual([]);
+    expect(m.watched).toEqual([]);
+  });
+
+  it("виправлення номера у відправленій заявці — лише номер і нове стеження, без другого «Відправлено»", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, status: "shipped", ttn: "20450000000000" }]);
+    await actions.setTtn(form({ id: LEAD.id, ttn: TTN }));
+    expect(kinds()).toEqual(['update "leads" set']);
+    expect(m.told).toEqual([]);
+    expect(m.watched).toEqual([[LEAD.id, TTN]]);
+  });
+
+  it("накладна в закритій заявці — номер зберігається, статус лишається, клієнта не турбуємо", async () => {
+    for (const status of ["done", "rejected"]) {
+      fake.reset();
+      fake.onSelect(leads, () => [{ ...LEAD, status }]);
+      await actions.setTtn(form({ id: LEAD.id, ttn: TTN }));
+      expect(kinds()).toEqual(['update "leads" set']);
+      // Закритих статусів серед тих, з яких переводимо у «Відправлено», немає
+      expect(fake.writes()[0].params).not.toContain(status);
+    }
+    expect(m.told).toEqual([]);
+    expect(m.watched).toEqual([]);
+  });
+
+  it("стерли накладну у відправленій заявці — вона повертається в «Готово», а не лишається «Відправлено» без ТТН", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, status: "shipped", ttn: TTN }]);
     await actions.setTtn(form({ id: LEAD.id, ttn: "" }));
     const w = writesText();
-    expect(w).toHaveLength(1);
-    expect(w[0]).not.toContain('"status"');
+    expect(w[0]).toMatch(/^update "leads" set "ttn" = \$1, "status" = case when "leads"\."status" = 'shipped' then 'ready' else "leads"\."status" end/);
+    expect(fake.writes()[0].params[0]).toBeNull();
+    expect(w[1]).toMatch(/^insert into "lead_events"/);
+    expect(w[1]).toContain('"ready"');
+    expect(m.told).toEqual([]);
+    expect(m.watched).toEqual([]);
+  });
+
+  it("стерли накладну в закритій заявці — лише поле, без події", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", ttn: TTN }]);
+    await actions.setTtn(form({ id: LEAD.id, ttn: "" }));
+    expect(kinds()).toEqual(['update "leads" set']);
+  });
+
+  it("порожнє поле без накладної або невідома заявка — нічого не пишемо", async () => {
+    await actions.setTtn(form({ id: LEAD.id, ttn: TTN }));
+    fake.onSelect(leads, () => [LEAD]);
+    await actions.setTtn(form({ id: LEAD.id, ttn: "  " }));
+    expect(fake.writes()).toEqual([]);
   });
 });
 
@@ -369,9 +555,51 @@ describe("setMoney", () => {
   it("від'ємна чи нечислова сума поле не чіпає", async () => {
     fake.onSelect(leads, () => [LEAD]);
     await actions.setMoney(form({ id: LEAD.id, price: "-5", partsCost: "abc" }));
-    const [update] = fake.writes();
-    expect(update.sql).not.toMatch(/"price"|"parts_cost"/);
-    expect(fake.writes()).toHaveLength(1); // без події про ціну
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("пишеться лише те поле, що прийшло: стара вкладка не затирає ціну й відмітки, які поставив інший майстер", async () => {
+    // У базі вже ціна 3000 і «оплачено»; з давно відкритої картки міняють лише деталь
+    fake.onSelect(leads, () => [{ ...LEAD, price: 3000, paidAt: new Date("2026-04-01T09:00:00Z") }]);
+    expect(await actions.setMoney(form({ id: LEAD.id, partsCost: "900" }))).toBeNull();
+
+    const w = fake.writes();
+    expect(w).toHaveLength(1);
+    expect(w[0].sql).toMatch(/^update "leads" set "parts_cost" = \$1, "updated_at" = \$2 where/);
+    expect(w[0].params[0]).toBe(900);
+    // Ціну не чіпали — клієнту її вдруге не пропонуємо
+    expect(m.offered).toEqual([]);
+  });
+
+  it("нова ціна — клієнту з ботом пропонуємо її один раз; та сама вдруге — ні події, ні пропозиції", async () => {
+    fake.onSelect(leads, () => [LEAD]);
+    await actions.setMoney(form({ id: LEAD.id, price: "3500" }));
+    expect(m.offered).toEqual([3500]);
+
+    fake.reset();
+    fake.onSelect(leads, () => [{ ...LEAD, price: 3500 }]);
+    await actions.setMoney(form({ id: LEAD.id, price: "3500" }));
+    expect(m.offered).toEqual([3500]);
+    expect(fake.writes()).toHaveLength(1);
+  });
+
+  it("передоплата більша за ціну — зрозуміла помилка, нічого не пишемо", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, price: 1000 }]);
+    expect(await actions.setMoney(form({ id: LEAD.id, prepayment: "1500" }))).toBe(
+      "Передоплата (1500 ₴) не може бути більшою за ціну (1000 ₴).",
+    );
+
+    // Так само, коли ціну опускають нижче вже вписаної передоплати
+    fake.reset();
+    fake.onSelect(leads, () => [{ ...LEAD, price: 2000, prepayment: 800 }]);
+    expect(await actions.setMoney(form({ id: LEAD.id, price: "500" }))).toMatch(/Передоплата \(800 ₴\)/);
+    expect(fake.writes()).toEqual([]);
+
+    // Рівна ціні — можна
+    fake.reset();
+    fake.onSelect(leads, () => [{ ...LEAD, price: 1000 }]);
+    expect(await actions.setMoney(form({ id: LEAD.id, prepayment: "1000" }))).toBeNull();
+    expect(fake.writes()).toHaveLength(1);
   });
 
   it("повторне збереження не зсуває дату оплати", async () => {
@@ -379,13 +607,14 @@ describe("setMoney", () => {
     fake.onSelect(leads, () => [{ ...LEAD, paidAt }]);
     await actions.setMoney(form({ id: LEAD.id, paid: "on" }));
     expect(fake.writes()[0].params).toContain(paidAt.toISOString());
+    expect(fake.writes()[0].sql).not.toMatch(/"prepaid_at"|"price"/);
   });
 
-  it("зняли відмітку «оплачено» — дата оплати стирається", async () => {
-    fake.onSelect(leads, () => [{ ...LEAD, paidAt: new Date() }]);
-    await actions.setMoney(form({ id: LEAD.id }));
-    expect(fake.writes()[0].sql).toMatch(/"paid_at" = \$\d+/);
-    expect(fake.writes()[0].params).toContain(null);
+  it("зняли відмітку «оплачено» — дата оплати стирається, передоплату не чіпаємо", async () => {
+    fake.onSelect(leads, () => [{ ...LEAD, paidAt: new Date(), prepaidAt: new Date() }]);
+    await actions.setMoney(form({ id: LEAD.id, paid: "off" }));
+    expect(fake.writes()[0].sql).toMatch(/^update "leads" set "paid_at" = \$1, "updated_at" = \$2 where/);
+    expect(fake.writes()[0].params[0]).toBeNull();
   });
 
   it("передоплата вперше — подія з сумою; повторно — без події", async () => {
@@ -423,6 +652,39 @@ describe("addReview", () => {
     const file = new File(["<svg/>"], "x.svg", { type: "text/html" });
     expect(await actions.addReview(form({ authorName: "Олег", text: "Швидко й чесно, раджу", image: file }))).toBe("Можна додавати лише фото.");
     expect(m.uploaded).toEqual([]);
+  });
+
+  it("SVG — теж «image/*», але не фото: приймаємо лише ті формати, що й у чаті", async () => {
+    const add = (type: string) =>
+      actions.addReview(form({ authorName: "Олег", text: "Швидко й чесно, раджу", image: new File(["x"], "x", { type }) }));
+
+    expect(await add("image/svg+xml")).toBe("Можна додавати лише фото.");
+    expect(await add("image/gif")).toBe("Можна додавати лише фото.");
+    expect(m.uploaded).toEqual([]);
+
+    for (const type of ["image/jpeg", "image/png", "image/webp", "image/heic"]) expect(await add(type)).toBeNull();
+    expect(m.uploaded).toHaveLength(4);
+  });
+});
+
+describe("deleteReview", () => {
+  it("прибирає фото зі сховища, потім сам відгук", async () => {
+    fake.onSelect(reviews, () => [{ path: "reviews/abc" }]);
+    await actions.deleteReview(form({ id: "r1" }));
+    expect(m.deleted).toEqual(["reviews/abc"]);
+    expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "reviews" where "reviews"."id" = $1']);
+  });
+
+  it("відгук без фото й збій сховища не заважають видаленню", async () => {
+    fake.onSelect(reviews, () => [{ path: null }]);
+    await actions.deleteReview(form({ id: "r1" }));
+    expect(m.deleted).toEqual([]);
+
+    fake.reset();
+    m.delFails = true;
+    fake.onSelect(reviews, () => [{ path: "reviews/abc" }]);
+    await actions.deleteReview(form({ id: "r2" }));
+    expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "reviews" where "reviews"."id" = $1']);
   });
 });
 

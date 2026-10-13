@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fake } from "./helpers/fakeDb";
-import { leads } from "@/db/schema";
+import { claims } from "./helpers/claimingDb";
+import { devices, leadEvents, leads } from "@/db/schema";
 
 /**
  * Стеження за посилкою: заявка закривається й гарантія стартує лише тоді,
@@ -8,8 +9,8 @@ import { leads } from "@/db/schema";
  */
 
 vi.mock("@/db", async () => {
-  const { fake } = await import("./helpers/fakeDb");
-  return { getDb: () => fake.db };
+  const { claimingDb } = await import("./helpers/claimingDb");
+  return { getDb: () => claimingDb };
 });
 vi.mock("workflow", () => ({ sleep: async () => {} }));
 
@@ -36,11 +37,13 @@ const np = (code: string | null) =>
 
 beforeEach(() => {
   fake.reset();
+  claims.reset();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => vi.unstubAllGlobals());
 
 const closed = () => fake.writes().some((q) => q.sql.startsWith('update "leads"') && q.params.includes("done"));
+const inserted = (table: string) => fake.writes().filter((q) => q.sql.startsWith(`insert into "${table}"`));
 
 describe("посилка Новою Поштою", () => {
   it("«отримано» — так, «у дорозі» — ні, без звʼязку — невідомо", async () => {
@@ -69,14 +72,48 @@ describe("посилка Новою Поштою", () => {
     expect(closed()).toBe(false);
   });
 
-  it("заявку вже закрили або накладну замінили — стеження припиняється", async () => {
-    fake.onSelect(leads, () => [{ ...LEAD, status: "done" }]);
+  it("заявку вже закрили як слід або накладну замінили — стеження припиняється, нічого не дублюється", async () => {
+    claims.rows = []; // заявка вже «done» — умовний UPDATE нічого не змінює
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", clerkUserId: "user_1", warrantyUntil: new Date("2027-01-01T10:00:00Z") }]);
+    fake.onSelect(leadEvents, () => [{ at: new Date("2026-10-03T10:00:00Z") }]);
+    fake.onSelect(devices, () => [{ id: "d1" }]);
     np("9");
     expect(await checkParcel(LEAD.id, LEAD.ttn)).toBe("stop");
+    expect(inserted("lead_events")).toEqual([]);
+    expect(inserted("devices")).toEqual([]);
 
     fake.reset();
     fake.onSelect(leads, () => [{ ...LEAD, ttn: "59000000000000" }]);
     expect(await checkParcel(LEAD.id, LEAD.ttn)).toBe("stop");
-    expect(closed()).toBe(false);
+    expect(fake.writes()).toEqual([]);
+
+    fake.reset();
+    fake.onSelect(leads, () => [{ ...LEAD, status: "rejected" }]);
+    expect(await checkParcel(LEAD.id, LEAD.ttn)).toBe("stop");
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("крок упав одразу після статусу «done» — повтор доробляє подію й пристрій, а не мовчки зупиняється", async () => {
+    claims.rows = [];
+    // Статус уже «done», але події в хроніці й пристрою в кабінеті ще немає
+    fake.onSelect(leads, () => [{ ...LEAD, status: "done", clerkUserId: "user_1", warrantyUntil: new Date("2027-01-01T10:00:00Z") }]);
+    fake.onSelect(devices, () => []);
+    np("9");
+
+    expect(await checkParcel(LEAD.id, LEAD.ttn)).toBe("stop");
+    expect(inserted("lead_events")).toHaveLength(1);
+    expect(inserted("devices")).toHaveLength(1);
+  });
+
+  it("клієнт натиснув «отримав» тієї ж миті — закриває лише один, другий події не пише", async () => {
+    // Рядок прочитано ще «shipped», але умовний UPDATE уже нічого не знайшов
+    claims.rows = [];
+    const done = { ...LEAD, status: "done", warrantyUntil: new Date("2027-01-01T10:00:00Z") };
+    fake.onSelect(leads, () => [fake.queries.length > 1 ? done : LEAD]);
+    fake.onSelect(leadEvents, () => [{ at: new Date() }]);
+    np("9");
+
+    expect(await checkParcel(LEAD.id, LEAD.ttn)).toBe("closed");
+    expect(inserted("lead_events")).toEqual([]);
   });
 });

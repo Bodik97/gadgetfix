@@ -11,6 +11,7 @@ const stamp = new Intl.DateTimeFormat("uk-UA", {
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Kyiv",
 });
 
 /** Поки чат відкритий, перепитуємо сервер. Вебсокет тут — зайва інфраструктура. */
@@ -29,6 +30,9 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
+  // Збій опитування — окремо від помилки надсилання: наступне вдале читання
+  // прибирає лише його, а «не вдалося надіслати» лишається, доки людина не відреагує
+  const [loadError, setLoadError] = useState("");
   const [sending, setSending] = useState(false);
   const [photo, setPhoto] = useState<Shrunk | null>(null);
   const [preparing, setPreparing] = useState(false);
@@ -45,8 +49,9 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
       if (!res.ok) throw new Error(String(res.status));
       const data = (await res.json()) as { messages: ChatMessage[] };
       setMessages(data.messages);
+      setLoadError("");
     } catch {
-      setError("Не вдалося завантажити листування. Спробуйте пізніше.");
+      setLoadError("Не вдалося завантажити листування. Спробуйте пізніше.");
     }
   }, [leadId, side]);
 
@@ -293,7 +298,7 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
         </button>
       </form>
 
-      <FormError>{error}</FormError>
+      <FormError>{error || loadError}</FormError>
     </section>
   );
 }

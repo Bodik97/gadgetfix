@@ -37,7 +37,10 @@ describe("getSignals", () => {
     expect(s.reviews).toHaveLength(1);
 
     const sql = fake.queries.map((q) => q.sql).join("\n");
-    expect(sql).toMatch(/"leads"\."delivery_requested" = \$\d+ and "leads"\."ttn" is null/);
+    // Закриті (видано в руки, відмова) відправки вже не чекають
+    expect(sql).toMatch(/"leads"\."delivery_requested" = \$\d+ and "leads"\."ttn" is null and "leads"\."status" not in \(\$\d+, \$\d+\)/);
+    const ship = fake.queries.find((q) => q.sql.includes('"delivery_requested"'))!;
+    expect(ship.params).toEqual(expect.arrayContaining(["done", "rejected"]));
     expect(sql).toMatch(/from "reviews" where "reviews"\."published" = \$\d+/);
     expect(sql).toMatch(/"lead_messages"\."author" = \$\d+ and "lead_messages"\."read_at" is null/);
   });

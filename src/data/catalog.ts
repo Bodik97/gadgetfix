@@ -19,8 +19,8 @@ export const sections: Section[] = [
     kind: "iphone",
     href: "/modeli",
     tab: "iPhone",
-    title: "Каталог моделей iPhone",
-    lead: "Натисніть на свою модель — відкриється сторінка з переліком робіт і термінами.",
+    title: "Ремонт iPhone за моделями",
+    lead: "Натисніть на свою модель — відкриється сторінка з роботами, цінами й термінами.",
     models: iphones,
   },
   {

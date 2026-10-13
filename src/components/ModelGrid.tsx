@@ -6,7 +6,10 @@ import { modelGroups, type Model, type ModelGroup } from "@/data/models";
 import { site } from "@/data/site";
 import styles from "./ModelGrid.module.css";
 
-/** Скільки карток показуємо за раз — решта підвантажується кнопкою */
+/**
+ * Скільки карток показуємо за раз — решту відкриває кнопка. У розмітці лежать
+ * усі: інакше на сторінки решти моделей не було б жодного посилання з розділу.
+ */
 const PAGE = 12;
 
 export default function ModelGrid({
@@ -30,8 +33,8 @@ export default function ModelGrid({
       (!query || m.name.toLowerCase().includes(query)),
   );
 
-  const shown = matched.slice(0, limit);
-  const rest = matched.length - shown.length;
+  const shown = Math.min(limit, matched.length);
+  const rest = matched.length - shown;
 
   return (
     <section className={`container ${styles.section}`}>
@@ -80,8 +83,8 @@ export default function ModelGrid({
       </div>
 
       <div className={styles.grid}>
-        {shown.map((m) => (
-          <Link key={m.slug} href={`/modeli/${m.slug}`} className={styles.card}>
+        {matched.map((m, i) => (
+          <Link key={m.slug} href={`/modeli/${m.slug}`} className={styles.card} hidden={i >= limit}>
             <span className={styles.media}>
               {m.image ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -127,12 +130,12 @@ export default function ModelGrid({
             Показати ще {Math.min(rest, PAGE)}
           </button>
           <span className={styles.counter}>
-            {shown.length} з {matched.length}
+            {shown} з {matched.length}
           </span>
         </div>
       )}
 
-      {shown.length === 0 && (
+      {shown === 0 && (
         <div className={styles.empty}>
           Такої моделі в списку немає — але майже завжди беремо.{" "}
           <a href={site.phones[0].href}>Зателефонуйте</a>, скажемо одразу.

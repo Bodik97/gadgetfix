@@ -1,4 +1,6 @@
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
+import { ARCHIVED } from "@/data/leadStatus";
 import { getDb } from "./index";
 export { monthStart } from "@/lib/month";
 import { leadEvents, leads, type LeadEvent } from "./schema";
@@ -17,7 +19,8 @@ export async function getCounters(): Promise<Counters> {
     getDb()
       .select({ toShip: count() })
       .from(leads)
-      .where(and(eq(leads.deliveryRequested, true), isNull(leads.ttn))),
+      // Закрита заявка відправки вже не чекає: пристрій видали в руки або від ремонту відмовились
+      .where(and(eq(leads.deliveryRequested, true), isNull(leads.ttn), notInArray(leads.status, ARCHIVED))),
   ]);
 
   return { total, fresh, toShip };
@@ -31,23 +34,34 @@ export type Money = {
 };
 
 
+const within = (column: PgColumn, from: Date, to?: Date) =>
+  to ? and(gte(column, from), lt(column, to)) : gte(column, from);
+
 /**
- * Гроші за проміжок. Рахуємо за датою оплати, а не за датою заявки: ремонт,
- * прийнятий у серпні й оплачений у вересні, належить вересню.
+ * Гроші за проміжок. Рахуємо за датою, коли гроші зайшли, а не за датою
+ * заявки: ремонт, прийнятий у серпні й оплачений у вересні, належить вересню.
+ *
+ * Так само, як журнал каси: завдаток — у день, коли його внесли, решта — у
+ * день повної оплати. Інакше плитка й журнал розходились би на роботі, де
+ * завдаток дали в одному місяці, а доплатили в наступному. Деталь і сама
+ * робота рахуються в день повної оплати.
  */
 export async function getMoney(from: Date, to?: Date): Promise<Money> {
-  const where = to
-    ? and(gte(leads.paidAt, from), lt(leads.paidAt, to))
-    : gte(leads.paidAt, from);
+  const paid = within(leads.paidAt, from, to);
+  const prepaid = within(leads.prepaidAt, from, to);
 
   const [row] = await getDb()
     .select({
-      revenue: sql<number>`coalesce(sum(${leads.price}), 0)::int`,
-      cost: sql<number>`coalesce(sum(${leads.partsCost}), 0)::int`,
-      jobs: count(),
+      revenue: sql<number>`(
+        coalesce(sum(case when ${paid} then coalesce(${leads.price}, 0)
+          - case when ${leads.prepaidAt} is not null then coalesce(${leads.prepayment}, 0) else 0 end end), 0)
+        + coalesce(sum(case when ${prepaid} then ${leads.prepayment} end), 0)
+      )::int`,
+      cost: sql<number>`coalesce(sum(case when ${paid} then ${leads.partsCost} end), 0)::int`,
+      jobs: sql<number>`(count(*) filter (where ${paid}))::int`,
     })
     .from(leads)
-    .where(where);
+    .where(or(paid, prepaid));
 
   return { ...row, profit: row.revenue - row.cost };
 }
@@ -80,7 +94,8 @@ export async function getOutstanding(): Promise<Outstanding> {
     .select({
       jobs: count(),
       billed: sql<number>`coalesce(sum(${leads.price}), 0)::int`,
-      prepaid: sql<number>`coalesce(sum(${leads.prepayment}), 0)::int`,
+      // Лише ті завдатки, що справді надійшли: вписана сума без відмітки — ще не гроші
+      prepaid: sql<number>`coalesce(sum(case when ${leads.prepaidAt} is not null then ${leads.prepayment} end), 0)::int`,
     })
     .from(leads)
     .where(

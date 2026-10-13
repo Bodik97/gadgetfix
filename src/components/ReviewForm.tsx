@@ -1,20 +1,35 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { submitReview, type ReviewResult } from "@/app/actions/reviews";
+import { useUser } from "@clerk/nextjs";
+import { hasLeftReview, submitReview, type ReviewResult } from "@/app/actions/reviews";
 import FormError from "./FormError";
 import styles from "./ReviewForm.module.css";
 
-export default function ReviewForm({
-  signedIn,
-  alreadyLeft,
-}: {
-  signedIn: boolean;
-  alreadyLeft: boolean;
-}) {
+export default function ReviewForm() {
   const [state, action, pending] = useActionState<ReviewResult | null, FormData>(submitReview, null);
   const [rating, setRating] = useState(5);
+
+  // Сторінка статична, тож про вхід і про вже залишений відгук дізнаємось тут.
+  // Поки відповіді немає, лишається запрошення увійти — без миготіння форми.
+  const { isSignedIn } = useUser();
+  const [alreadyLeft, setAlreadyLeft] = useState<boolean | null>(null);
+  const signedIn = Boolean(isSignedIn) && alreadyLeft !== null;
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let stale = false;
+    hasLeftReview()
+      // Не вдалося спитати — показуємо форму: другий відгук сервер однаково не прийме
+      .catch(() => false)
+      .then((left) => {
+        if (!stale) setAlreadyLeft(left);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [isSignedIn]);
 
   return (
     <div className={styles.box}>

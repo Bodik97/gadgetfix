@@ -1,6 +1,7 @@
 import { and, count, desc, eq, ilike, inArray, isNull, notInArray, or } from "drizzle-orm";
 import { getDb } from "./index";
 import { leads, type Lead } from "./schema";
+import { phoneKey, phoneKeySql } from "./clients";
 import { ARCHIVED } from "@/data/leadStatus";
 export { ARCHIVED, STAGES, STATUS_OPTIONS, describeStatus, type StatusInfo } from "@/data/leadStatus";
 
@@ -29,6 +30,9 @@ export type LeadFilter = {
   perPage: number;
 };
 
+/** Найбільше число, яке вміщує колонка order_no (int4) */
+const MAX_ORDER_NO = 2_147_483_647;
+
 /** Умова вибірки — спільна для списку і для підрахунку сторінок */
 function leadWhere({ q, status, shipping, scope = "all" }: LeadFilter) {
   const parts = [];
@@ -44,8 +48,14 @@ function leadWhere({ q, status, shipping, scope = "all" }: LeadFilter) {
       ilike(leads.problem, like),
     ];
 
-    // Номер замовлення майстер шукає так само, як ім'я — в тому ж полі
-    if (/^\d+$/.test(text)) fields.push(eq(leads.orderNo, Number(text)));
+    // Номер замовлення майстер шукає так само, як ім'я — в тому ж полі.
+    // Довші цифри — це телефон або ТТН: у колонку номера вони не влазять, і база відповіла б помилкою
+    if (/^\d+$/.test(text) && Number(text) <= MAX_ORDER_NO) fields.push(eq(leads.orderNo, Number(text)));
+
+    // Телефон шукаємо за тим самим ключем, яким рахуємо «N-е звернення»: у базі
+    // номер записаний то з «+380», то з «0», і точний збіг рядка знайшов би не всі
+    const key = /^[\d\s()+-]+$/.test(text) ? phoneKey(text) : null;
+    if (key) fields.push(eq(phoneKeySql, key));
 
     parts.push(or(...fields));
   }
@@ -53,7 +63,9 @@ function leadWhere({ q, status, shipping, scope = "all" }: LeadFilter) {
   if (scope === "active") parts.push(notInArray(leads.status, ARCHIVED));
   if (scope === "archive") parts.push(inArray(leads.status, ARCHIVED));
   if (status) parts.push(eq(leads.status, status));
-  if (shipping) parts.push(and(eq(leads.deliveryRequested, true), isNull(leads.ttn)));
+  if (shipping) {
+    parts.push(and(eq(leads.deliveryRequested, true), isNull(leads.ttn), notInArray(leads.status, ARCHIVED)));
+  }
 
   return parts.length ? and(...parts) : undefined;
 }

@@ -102,7 +102,8 @@ export async function getSignals(): Promise<Signals> {
         at: leads.updatedAt,
       })
       .from(leads)
-      .where(and(eq(leads.deliveryRequested, true), isNull(leads.ttn)))
+      // Закриті не чекають відправки: пристрій видали в руки або від ремонту відмовились
+      .where(and(eq(leads.deliveryRequested, true), isNull(leads.ttn), notInArray(leads.status, ARCHIVED)))
       .orderBy(asc(leads.updatedAt))
       .limit(LIMIT),
 

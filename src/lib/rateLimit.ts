@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { rateHits } from "@/db/schema";
 
@@ -20,6 +20,9 @@ import { rateHits } from "@/db/schema";
  * його немає. Для наших меж ця одиниця нічого не змінює.
  */
 export type Verdict = { ok: true } | { ok: false; retryAfter: number };
+
+/** Довше за це вікон у нас немає: старіші рядки нічиї, їх можна прибирати в будь-кого */
+const STALE_MS = 24 * 60 * 60_000;
 
 /** Скільки лишилось до звільнення місця — за найстарішим записом у вікні */
 async function retryAfter(subject: string, windowMs: number): Promise<number> {
@@ -61,8 +64,16 @@ export async function rateLimit(
 
   if ((res.rows ?? []).length > 0) {
     // Рядки поза вікном більше ні на що не впливають — прибираємо одразу,
-    // щоб таблиця не росла
-    await getDb().delete(rateHits).where(lt(rateHits.at, since));
+    // щоб таблиця не росла. Лише свої: в інших субʼєктів вікно може бути
+    // довшим, і їхні записи ще рахуються. Чужі — тільки зовсім давні
+    await getDb()
+      .delete(rateHits)
+      .where(
+        or(
+          and(eq(rateHits.subject, subject), lt(rateHits.at, since)),
+          lt(rateHits.at, new Date(Date.now() - STALE_MS)),
+        ),
+      );
     return { ok: true };
   }
 

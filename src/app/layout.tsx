@@ -10,7 +10,8 @@ import ChatBot from "@/components/ChatBot";
 import Footer from "@/components/Footer";
 import Analytics from "@/components/Analytics";
 import ScrollReveal from "@/components/ScrollReveal";
-import { site } from "@/data/site";
+import { jobRange, PRICED_JOBS, PRICES_PUBLISHED, uah } from "@/data/prices";
+import { BUSINESS_ID, site } from "@/data/site";
 import { siteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
@@ -42,14 +43,24 @@ export const metadata: Metadata = {
   },
 };
 
+// Вилка цін по всьому прайсу — для priceRange у розмітці
+const allPrices = PRICED_JOBS.flatMap((job) => {
+  const range = jobRange(job);
+  return range ? [range.min, range.max] : [];
+});
+
 const localBusiness = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
+  // Сторінки послуг і моделей посилаються на цей вузол як на виконавця
+  "@id": `${siteUrl()}${BUSINESS_ID}`,
   name: site.name,
   description: site.tagline,
   url: siteUrl(),
+  image: `${siteUrl()}/opengraph-image.png`,
   telephone: site.phones.map((p) => p.href.replace("tel:", "")),
-  areaServed: site.cities,
+  ...(PRICES_PUBLISHED && { priceRange: `${uah(Math.min(...allPrices))} – ${uah(Math.max(...allPrices))}` }),
+  areaServed: site.cities.map((city) => ({ "@type": "City", name: city })),
   address: site.cities.map((city) => ({
     "@type": "PostalAddress",
     addressLocality: city,

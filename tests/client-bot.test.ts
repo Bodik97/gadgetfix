@@ -1,6 +1,7 @@
+import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fake } from "./helpers/fakeDb";
-import { leads, telegramChats, type Lead } from "@/db/schema";
+import { leadEvents, leads, telegramChats, type Lead } from "@/db/schema";
 
 /**
  * Бот для клієнтів. Головне: чат закріплюється лише за посиланням із нашим
@@ -9,8 +10,8 @@ import { leads, telegramChats, type Lead } from "@/db/schema";
  */
 
 vi.mock("@/db", async () => {
-  const { fake } = await import("./helpers/fakeDb");
-  return { getDb: () => fake.db };
+  const { claimingDb } = await import("./helpers/claimingDb");
+  return { getDb: () => claimingDb };
 });
 
 // Справжній обмежувач рахує рядки в базі — тут він лише заважав би
@@ -40,6 +41,8 @@ const LEAD = {
 } as unknown as Lead;
 
 const CHAT = { id: "c1", subject: "t733150238", chatId: "555", createdAt: new Date() };
+/** Запис чату, закріпленого лише за заявкою LEAD */
+const LEAD_SUBJECT = "l11111111111111111111111111111111";
 
 type Sent = {
   chat_id: string;
@@ -91,16 +94,23 @@ describe("посилання на бота", () => {
   });
 
   it("веде в бота й уміщається в ліміт Telegram на параметр start", () => {
-    const link = bot.connectLink({ ...LEAD, phone: null, clerkUserId: "user_2abcdefghijklmnopqrstuvwxyz0" })!;
+    const link = bot.connectLink(LEAD)!;
     expect(link.startsWith("https://t.me/GadgetFixStatusBot?start=")).toBe(true);
     expect(payloadOf(link)).toMatch(/^[A-Za-z0-9_-]{1,64}$/);
   });
 
+  it("посилання закріплює чат лише за заявкою, навіть коли в ній є телефон", () => {
+    const payload = payloadOf(bot.connectLink(LEAD)!);
+    expect(payload.startsWith(`${LEAD_SUBJECT}-`)).toBe(true);
+    expect(payload).not.toContain("733150238");
+  });
+
   it("підпис звіряється: своє посилання читається, підроблене — ні", () => {
     const payload = payloadOf(bot.connectLink(LEAD)!);
-    expect(bot.readStart(payload)).toBe("t733150238");
-    expect(bot.readStart(payload.replace("t733150238", "t501234567"))).toBeNull();
-    expect(bot.readStart("t733150238")).toBeNull();
+    expect(bot.readStart(payload)).toBe(LEAD_SUBJECT);
+    expect(bot.readStart(payload.replace(LEAD_SUBJECT, "l" + "2".repeat(32)))).toBeNull();
+    expect(bot.readStart(payload.replace(LEAD_SUBJECT, "t733150238"))).toBeNull();
+    expect(bot.readStart(LEAD_SUBJECT)).toBeNull();
   });
 
   it("бот не налаштований — посилання немає", () => {
@@ -129,6 +139,30 @@ describe("повідомлення про статус", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].chat_id).toBe("555");
     expect(sent[0].text).toContain("Готово");
+  });
+
+  it("іде й тому, хто підключився за посиланням лише до цієї заявки", async () => {
+    fake.onSelect(telegramChats, (q) =>
+      q.params.includes(LEAD_SUBJECT) ? [{ id: "c2", subject: LEAD_SUBJECT, chatId: "900", createdAt: new Date() }] : [],
+    );
+    expect(await bot.notifyClientStatus(LEAD)).toBe(true);
+    expect(sent.map((s) => s.chat_id)).toEqual(["900"]);
+  });
+
+  it("підключені і за телефоном, і за заявкою — отримують обидва чати, той самий чат — один раз", async () => {
+    fake.onSelect(telegramChats, () => [
+      CHAT,
+      { id: "c2", subject: LEAD_SUBJECT, chatId: "900", createdAt: new Date() },
+      { id: "c3", subject: LEAD_SUBJECT, chatId: "555", createdAt: new Date() },
+    ]);
+    expect(await bot.notifyClientStatus(LEAD)).toBe(true);
+    expect(sent.map((s) => s.chat_id)).toEqual(["555", "900"]);
+  });
+
+  it("позначка «бот підключений» в адмінці бачить і чат за заявкою", async () => {
+    const other = { ...LEAD, id: "22222222-2222-2222-2222-222222222222", phone: "050 123 45 67" };
+    fake.onSelect(telegramChats, () => [{ subject: LEAD_SUBJECT }]);
+    expect(await bot.linkedLeads([LEAD, other])).toEqual(new Set([LEAD.id]));
   });
 
   it("не підключив — нічого не шлемо", async () => {
@@ -172,14 +206,105 @@ describe("webhook бота", () => {
     expect(fake.writes()).toHaveLength(0);
   });
 
-  it("Start за нашим посиланням закріплює чат і підтверджує клієнту", async () => {
+  it("чужий секрет тієї ж довжини відхиляється", async () => {
+    const res = await POST(
+      new Request("http://localhost/api/telegram/client", {
+        method: "POST",
+        headers: { "x-telegram-bot-api-secret-token": "0".repeat(bot.webhookSecret()!.length) },
+        body: JSON.stringify({ message: { text: "/status", chat: { id: 555, type: "private" } } }),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("Start за нашим посиланням закріплює чат за заявкою і підтверджує клієнту", async () => {
     const res = await POST(update(`/start ${payloadOf(bot.connectLink(LEAD)!)}`));
     expect(res.status).toBe(200);
 
     const [insert] = fake.writes();
     expect(insert.sql).toMatch(/^insert into "telegram_chats"/);
-    expect(insert.params).toEqual(expect.arrayContaining(["t733150238", "555"]));
+    expect(insert.params).toEqual(expect.arrayContaining([LEAD_SUBJECT, "555"]));
+    expect(insert.params).not.toContain("t733150238");
     expect(sent[0].text).toContain("статуси підключено");
+  });
+
+  /** Посилання старого зразка — «на телефон»: такі роздавав сайт раніше */
+  const oldPhoneLink = (subject: string) =>
+    // Підпис рахуємо так само, як бот, — тим самим токеном
+    `${subject}-${createHmac("sha256", "123:token").update(subject).digest("hex").slice(0, 20)}`;
+
+  it("старе посилання «на телефон» чат не закріплює — бот просить поділитися номером", async () => {
+    // Підпис справжній: без перевірки виду запису таке посилання спрацювало б
+    expect(bot.readStart(oldPhoneLink("t733150238"))).toBe("t733150238");
+
+    await POST(update(`/start ${oldPhoneLink("t733150238")}`));
+    expect(fake.writes()).toHaveLength(0);
+    expect(sent[0].reply_markup.keyboard[0][0]).toEqual({ text: bot.SHARE_BUTTON, request_contact: true });
+  });
+
+  it("чужий номер у заявці: посилання не перехоплює чат власника номера й показує лише цю заявку", async () => {
+    // Власник номера давно підключений за телефоном (чат 777) і має свій ремонт
+    const victimChat = { id: "c7", subject: "t733150238", chatId: "777", createdAt: new Date() };
+    const victimLead = { ...LEAD, orderNo: 1001, status: "in_progress", createdAt: new Date() };
+    // Сторонній лишив на сайті заявку з його номером і відкрив видане посилання (чат 555)
+    const planted = { ...LEAD, id: "22222222-2222-2222-2222-222222222222", orderNo: 2002, status: "in_progress", createdAt: new Date() };
+    const plantedSubject = "l22222222222222222222222222222222";
+
+    const chats = [victimChat];
+    fake.onSelect(telegramChats, (q) => chats.filter((c) => q.params.includes(c.subject) || q.params.includes(c.chatId)));
+    fake.onSelect(leads, (q) =>
+      [victimLead, planted].filter((l) => q.params.includes(l.id) || q.params.includes("733150238")),
+    );
+
+    await POST(update(`/start ${payloadOf(bot.connectLink(planted)!)}`));
+
+    const writes = fake.writes();
+    expect(writes).toHaveLength(1);
+    expect(writes[0].params).toEqual(expect.arrayContaining([plantedSubject, "555"]));
+    // Запис власника номера ніхто не чіпав
+    expect(JSON.stringify(writes)).not.toContain("t733150238");
+
+    chats.push({ id: "c5", subject: plantedSubject, chatId: "555", createdAt: new Date() });
+    sent = [];
+
+    // Сторонній бачить тільки заявку, яку сам створив
+    await POST(update(bot.CHECK_BUTTON));
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toContain("№2002");
+    expect(sent[0].text).not.toContain("№1001");
+
+    // Кнопкою чужу заявку теж не зачепити
+    await POST(
+      new Request("http://localhost/api/telegram/client", {
+        method: "POST",
+        headers: { "x-telegram-bot-api-secret-token": bot.webhookSecret()! },
+        body: JSON.stringify({
+          callback_query: { id: "q1", data: bot.receivedButton(victimLead), message: { message_id: 7, chat: { id: 555, type: "private" } } },
+        }),
+      }),
+    );
+    expect(fake.writes()).toHaveLength(1);
+
+    // Статус справжнього ремонту йде лише власнику номера
+    sent = [];
+    expect(await bot.notifyClientStatus(victimLead as Lead)).toBe(true);
+    expect(sent.map((s) => s.chat_id)).toEqual(["777"]);
+  });
+
+  it("статус не зібрався — клієнт отримує пояснення, а не порожнє повідомлення", async () => {
+    fake.onSelect(telegramChats, () => [CHAT]);
+    let asked = 0;
+    fake.onSelect(leads, () => {
+      // Перший запит — «чиї це заявки», другий — сам звіт: падає лише він
+      if (++asked > 1) throw new Error("db down");
+      return [{ ...LEAD, createdAt: new Date() }];
+    });
+
+    await POST(update(bot.CHECK_BUTTON));
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toContain("Не вдалося показати статус");
   });
 
   it("Start без посилання чи з підробленим нічого не закріплює", async () => {
@@ -294,6 +419,34 @@ describe("погодження ціни й чат через бота", () => {
     expect(JSON.stringify(inserted("lead_messages")[0].params)).toContain("Погоджуюсь на ціну");
     expect(calls.some((c) => c.method === "editMessageReplyMarkup" && c.body.message_id === 7)).toBe(true);
     expect(sent[0].text).toContain("погоджено");
+  });
+
+  it("те саме «Погоджуюсь» удруге (Telegram повторив) — другого запису й повідомлення немає", async () => {
+    fake.onSelect(telegramChats, () => [CHAT]);
+    fake.onSelect(leads, () => [PRICED]);
+    fake.onSelect(leadEvents, () => [
+      { id: "e1", leadId: PRICED.id, text: "Клієнт погодив ціну: 2400 ₴", status: null, byMaster: false, createdAt: new Date() },
+    ]);
+
+    await press(bot.priceButton("ok", PRICED, 2400));
+
+    expect(inserted("lead_events")).toHaveLength(0);
+    expect(inserted("lead_messages")).toHaveLength(0);
+    expect(sent).toHaveLength(0);
+    expect(calls.some((c) => c.method === "answerCallbackQuery")).toBe(true);
+  });
+
+  it("раніше погоджували іншу ціну — нова погоджується як слід", async () => {
+    fake.onSelect(telegramChats, () => [CHAT]);
+    fake.onSelect(leads, () => [PRICED]);
+    fake.onSelect(leadEvents, () => [
+      { id: "e1", leadId: PRICED.id, text: "Клієнт погодив ціну: 1900 ₴", status: null, byMaster: false, createdAt: new Date() },
+    ]);
+
+    await press(bot.priceButton("ok", PRICED, 2400));
+
+    expect(inserted("lead_events")[0].params).toEqual(expect.arrayContaining(["Клієнт погодив ціну: 2400 ₴"]));
+    expect(inserted("lead_messages")).toHaveLength(1);
   });
 
   it("«Передзвоніть мені» — майстер бачить прохання, у хроніку нічого не пишемо", async () => {

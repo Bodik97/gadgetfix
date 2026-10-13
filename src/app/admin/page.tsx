@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCounters, getMoney, monthStart } from "@/db/adminStats";
+import { getExpenseTotal } from "@/db/expenses";
 import { getSignals, getWorkload } from "@/db/signals";
 import { STATUS_OPTIONS } from "@/data/leadStatus";
 import { adminDirectory, currentAdmin } from "@/lib/admin";
@@ -28,9 +29,11 @@ export default async function AdminOverview() {
   const master = await currentAdmin();
   if (!master) redirect("/admin/vhid");
 
-  const [counters, money, signals, workload] = await Promise.all([
+  const [counters, money, spent, signals, workload] = await Promise.all([
     getCounters(),
     getMoney(monthStart()),
+    // «Чистими» — як у касі: без деталей і без витрат сервісу
+    getExpenseTotal(monthStart()),
     getSignals(),
     getWorkload(),
   ]);
@@ -255,7 +258,7 @@ export default async function AdminOverview() {
           <span className={styles.statLabel}>чекають відправки</span>
         </Link>
         <Link href="/admin/groshi" className={styles.stat}>
-          <span className={styles.statValue}>{uah(money.profit)}</span>
+          <span className={styles.statValue}>{uah(money.profit - spent)}</span>
           <span className={styles.statLabel}>чистими за місяць</span>
         </Link>
       </div>

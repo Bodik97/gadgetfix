@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { bookingModels } from "@/data/landing";
@@ -10,19 +10,41 @@ import FormError from "../FormError";
 import { LIMITS, plainText } from "@/lib/validate";
 import styles from "./QuickOrder.module.css";
 
+/**
+ * Після першої заявки сторінка оновлюється, і форма з порожнього стану
+ * переїжджає вниз — це вже новий компонент. Позначка живе поза ним, щоб
+ * «Заявку прийнято» не зникало разом зі старим.
+ */
+let justSent = false;
+
 export default function QuickOrder({ compact }: { compact?: boolean }) {
   const { user } = useUser();
   const router = useRouter();
   const params = useSearchParams();
 
   // Послуга й модель можуть прийти посиланням із сайту: ?service=…&model=…
-  const [service, setService] = useState(params.get("service") ?? "");
-  const [model, setModel] = useState(params.get("model") ?? "");
+  const presetService = params.get("service") ?? "";
+  const presetModel = params.get("model") ?? "";
+  const [service, setService] = useState(presetService);
+  const [model, setModel] = useState(presetModel);
   const [note, setNote] = useState("");
 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState(justSent);
+
+  // У списку моделі згруповані («iPhone 13 / 14»), а зі сторінки моделі приходить
+  // точна назва — додаємо її окремим рядком, інакше поле показувало б «Оберіть модель»
+  const models = presetModel && !bookingModels.includes(presetModel) ? [presetModel, ...bookingModels] : bookingModels;
+
+  // Прийшли з кнопки «Записатись» — форма може бути в самому низу сторінки,
+  // під активними ремонтами. Так само з підтвердженням після оновлення сторінки
+  const cardRef = useRef<HTMLDivElement>(null);
+  const preset = Boolean(presetService || presetModel);
+  useEffect(() => {
+    if (preset || justSent) cardRef.current?.scrollIntoView({ block: "center" });
+    justSent = false;
+  }, [preset]);
 
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const phone = user?.primaryPhoneNumber?.phoneNumber ?? "";
@@ -54,6 +76,8 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
       if (!res.ok) throw new Error(String(res.status));
 
       setSent(true);
+      // Лише з порожнього стану: там оновлення сторінки замінює цю форму новою
+      justSent = Boolean(compact);
       // Заявка має одразу з'явитись угорі, у «Зараз у роботі»
       router.refresh();
     } catch {
@@ -65,7 +89,7 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
 
   if (sent) {
     return (
-      <div className={styles.card}>
+      <div ref={cardRef} className={styles.card}>
         <div className={styles.done}>
           <span className={styles.doneIcon} aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -88,6 +112,7 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
           className="btn btn-ghost"
           onClick={() => {
             setSent(false);
+            justSent = false;
             setService("");
             setModel("");
             setNote("");
@@ -100,7 +125,7 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <div className={styles.card}>
+    <div ref={cardRef} className={styles.card}>
       <div className={styles.head}>
         {/* У порожньому стані заголовок дає сама секція — другий тут зайвий */}
         {!compact && <h3 className={styles.title}>Ще один ремонт</h3>}
@@ -136,7 +161,7 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
           onChange={(e) => setModel(e.target.value)}
         >
           <option value="">Оберіть модель</option>
-          {bookingModels.map((m) => (
+          {models.map((m) => (
             <option key={m} value={m}>
               {m}
             </option>

@@ -8,10 +8,11 @@ const dayName = new Intl.DateTimeFormat("uk-UA", {
   weekday: "short",
   day: "numeric",
   month: "long",
+  timeZone: "Europe/Kyiv",
 });
 
-const time = new Intl.DateTimeFormat("uk-UA", { hour: "2-digit", minute: "2-digit" });
-const shortDate = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit" });
+const time = new Intl.DateTimeFormat("uk-UA", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Kyiv" });
+const shortDate = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", timeZone: "Europe/Kyiv" });
 
 const kindLabel: Record<MoneyEntry["kind"], string> = {
   paid: "Оплата",

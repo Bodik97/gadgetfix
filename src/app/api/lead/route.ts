@@ -85,12 +85,13 @@ export async function POST(request: Request) {
 
   // Потрібне ім'я і хоча б один спосіб зв'язку. З кабінету при email-вході
   // телефону може не бути взагалі — тоді вистачає пошти.
+  // Пошта — лише з профілю: за нею заявка потрапляє в кабінет, тож пошту з
+  // тіла запиту не беремо — інакше заявку можна підкинути в чужий кабінет
   // Тіло приходить ззовні — поле не рядком вважаємо відсутнім, а не падаємо в 500
   const str = (v: unknown) => (typeof v === "string" ? v : "");
   // Телефон — лише справжній український номер; у базу йде в одному вигляді
   const phone = normalizeUaPhone(str(lead?.phone));
   const hasPhone = phone !== null;
-  const hasEmail = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(str(lead?.email)) && str(lead?.email).length <= 120;
 
   // Імʼя — лише літери. Із кабінету воно приходить із профілю, а не з поля
   // форми: якщо там не імʼя (скажімо, пошта), заявку не відхиляємо
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
   if (!name) {
     return NextResponse.json({ error: "Імʼя — лише літери, від 2 до 50" }, { status: 422 });
   }
-  if (!hasPhone && !hasEmail && !profileEmail) {
+  if (!hasPhone && !profileEmail) {
     return NextResponse.json({ error: "Потрібен телефон у форматі +380… або пошта" }, { status: 422 });
   }
 
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
       .values({
         name,
         phone,
-        email: hasEmail ? str(lead.email).trim() : profileEmail,
+        email: profileEmail,
         model: clean(lead.model),
         service: clean(lead.service),
         problem: clean(lead.problem, LIMITS.problem, true),
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
     // Заявку втрачати не можна: лишаємо слід у логах і пробуємо сповістити майстра
     console.error("[lead] не вдалося записати в базу:", e);
     try {
-      await notifyMaster(telegramText(lead));
+      await notifyMaster(telegramText({ ...lead, email: profileEmail ?? undefined }));
     } catch {}
     return NextResponse.json({ error: "Не вдалося зберегти заявку" }, { status: 500 });
   }
@@ -148,7 +149,7 @@ export async function POST(request: Request) {
         url: leadLink(orderNo, leadId),
         tag: `lead-${leadId}`,
       },
-      telegramText({ ...lead, name, phone: phone ?? undefined }, orderNo),
+      telegramText({ ...lead, name, phone: phone ?? undefined, email: profileEmail ?? undefined }, orderNo),
     );
 
     // Нагадування, доки заявку не візьмуть. Збій тут не має зачіпати клієнта:
@@ -160,9 +161,10 @@ export async function POST(request: Request) {
     }
   }
 
-  // Посилання на бота — форма покаже кнопку «Отримувати статус у Telegram»
+  // Посилання на бота — форма покаже кнопку «Отримувати статус у Telegram».
+  // Воно закріплює чат лише за цією заявкою: телефон у формі міг вписати будь-хто
   const telegram = leadId
-    ? connectLink({ id: leadId, phone, clerkUserId: userId ?? null })
+    ? connectLink({ id: leadId })
     : null;
 
   return NextResponse.json({ ok: true, telegram });

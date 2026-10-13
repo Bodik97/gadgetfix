@@ -78,7 +78,7 @@ export default function MailInForm() {
           </svg>
           <h3>Заявку прийнято</h3>
           <p className={styles.doneText}>
-            Надішлемо SMS з адресою відділення та номером замовлення протягом 25 хвилин.
+            Передзвонимо протягом 25 хвилин у робочі години й назвемо адресу відділення та номер замовлення.
           </p>
           <TelegramConnect href={telegram} />
           <button type="button" onClick={reset} className="btn btn-ghost">

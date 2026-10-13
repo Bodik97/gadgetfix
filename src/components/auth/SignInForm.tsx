@@ -41,6 +41,8 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  // Код просили після правильного пароля (новий пристрій): тоді signIn скидати не можна
+  const [afterPassword, setAfterPassword] = useState(false);
 
   const goToAccount = () => {
     onDone?.();
@@ -83,6 +85,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
         }
 
         setIsNew(false);
+        setAfterPassword(true);
         setNotice("Ви входите з нового пристрою. Надіслали код на пошту — введіть його, щоб підтвердити, що це ви.");
         setStep("codeLogin");
         return;
@@ -113,6 +116,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
           return;
         }
         setIsNew(false);
+        setAfterPassword(false);
         setNotice("Ви реєструвались раніше, коли паролів ще не було. Надіслали код — увійдіть, і задасте пароль у себе на сторінці.");
         setStep("codeLogin");
         return;
@@ -168,9 +172,32 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
         return;
       }
       setIsNew(false);
+      setAfterPassword(false);
       setStep("codeLogin");
     } catch {
       setError("Не вдалося надіслати код. Спробуйте ще раз.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Лист не дійшов або код не підійшов — надсилаємо ще раз тим самим способом, що й уперше */
+  const resendCode = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      if (isNew) {
+        const { error: sendError } = await signUp.verifications.sendEmailCode();
+        if (sendError) throw sendError;
+      } else {
+        if (!afterPassword) signIn.reset();
+        const { error: sendError } = await signIn.emailCode.sendCode({ emailAddress: email.trim() });
+        if (sendError) throw sendError;
+      }
+      setCode("");
+      setNotice("Надіслали код ще раз. Вводьте той, що в найновішому листі.");
+    } catch {
+      setError("Не вдалося надіслати код. Спробуйте ще раз за хвилину або зателефонуйте нам.");
     } finally {
       setBusy(false);
     }
@@ -247,6 +274,9 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
           </button>
 
           <div className={styles.actions}>
+            <button type="button" className={styles.linkBtn} onClick={resendCode} disabled={busy}>
+              Надіслати код ще раз
+            </button>
             <button type="button" className={styles.linkBtn} onClick={restart} disabled={busy}>
               Назад
             </button>

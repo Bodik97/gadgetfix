@@ -10,6 +10,7 @@ const time = new Intl.DateTimeFormat("uk-UA", {
   month: "2-digit",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Kyiv",
 });
 
 export default function NoteField({ id, events }: { id: string; events: LeadEvent[] }) {

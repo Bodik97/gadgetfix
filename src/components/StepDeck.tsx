@@ -240,7 +240,7 @@ function StepArt({ no }: { no: string }) {
   };
 
   switch (no) {
-    // Заявка: форма на телефоні, у відповідь прилітає SMS
+    // Заявка: форма на телефоні, у відповідь — дзвінок майстра
     case "01":
       return (
         <svg {...common}>
@@ -249,7 +249,7 @@ function StepArt({ no }: { no: string }) {
           <rect x="44" y="66" width="24" height="10" rx="5" fill="#DCF35A" stroke="none" />
           <g className={styles.pop}>
             <path d="M92 26h44a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8h-30l-10 9v-9h-4a8 8 0 0 1-8-8V34a8 8 0 0 1 8-8z" />
-            <text x="114" y="46" fill="#DCF35A" stroke="none" fontSize="12" textAnchor="middle" fontFamily="inherit">SMS</text>
+            <text x="114" y="46" fill="#DCF35A" stroke="none" fontSize="11" textAnchor="middle" fontFamily="inherit">дзвінок</text>
           </g>
         </svg>
       );

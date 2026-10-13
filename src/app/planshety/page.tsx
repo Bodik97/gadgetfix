@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import CatalogSection from "@/components/CatalogSection";
 import { getSection } from "@/data/catalog";
+import { site } from "@/data/site";
+import { WARRANTY_MAX } from "@/data/warranty";
 
 const section = getSection("ipad");
 
 export const metadata: Metadata = {
-  title: "Ремонт iPad у Львові",
-  description: `${section.models.length} моделей iPad: заміна скла, акумулятора та роз'єму заряджання. Безкоштовна діагностика, фіксована ціна, гарантія до 6 місяців.`,
+  title: `Ремонт iPad ${site.citiesIn} — ціни`,
+  description: `Ремонт iPad ${site.citiesIn}: ціни на заміну скла, акумулятора та роз'єму заряджання для ${section.models.length} моделей. Безкоштовна діагностика, фіксована ціна, гарантія ${WARRANTY_MAX}.`,
   alternates: { canonical: "/planshety" },
 };
 

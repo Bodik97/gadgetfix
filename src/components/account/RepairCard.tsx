@@ -15,6 +15,7 @@ const dateTime = new Intl.DateTimeFormat("uk-UA", {
   month: "long",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Kyiv",
 });
 
 /** Іконка стадії — щоб стан читався не лише кольором */

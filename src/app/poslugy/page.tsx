@@ -8,13 +8,21 @@ import ServiceCatalog from "@/components/ServiceCatalog";
 import Ticker from "@/components/Ticker";
 import { services } from "@/data/services";
 import { flow, promises, tickerItems } from "@/data/servicesPage";
-import { site } from "@/data/site";
+import { serviceFrom, PRICES_PUBLISHED, uah } from "@/data/prices";
+import { BUSINESS_ID, site } from "@/data/site";
+import { WARRANTY_MAX } from "@/data/warranty";
+import { siteUrl } from "@/lib/siteUrl";
 import styles from "./page.module.css";
 
+// Дві найчастіші роботи з цінами з прайсу — для опису в пошуку
+const screen = PRICES_PUBLISHED ? serviceFrom("zamina-ekrana") : null;
+const battery = PRICES_PUBLISHED ? serviceFrom("akumuliator") : null;
+const fromPrices =
+  screen && battery ? `: екран — від ${uah(screen.price)}, акумулятор — від ${uah(battery.price)}` : "";
+
 export const metadata: Metadata = {
-  title: "Послуги сервісу",
-  description:
-    "12 видів ремонту iPhone, iPad і Apple Watch: екран, акумулятор, роз'єм, камера, кнопки, діагностика складних випадків. Безкоштовна діагностика, фіксована ціна, гарантія до 6 місяців.",
+  title: { absolute: `Ремонт iPhone ${site.citiesIn} — послуги й ціни` },
+  description: `${services.length} видів ремонту iPhone, iPad і Apple Watch ${site.citiesIn}${fromPrices}. Безкоштовна діагностика, фіксована ціна, гарантія ${WARRANTY_MAX}.`,
   alternates: { canonical: "/poslugy" },
 };
 
@@ -28,7 +36,7 @@ const serviceSchema = {
       "@type": "Service",
       name: s.title,
       description: s.body,
-      provider: { "@type": "LocalBusiness", name: site.name },
+      provider: { "@id": `${siteUrl()}${BUSINESS_ID}` },
       areaServed: site.cities,
     },
   })),
@@ -47,7 +55,7 @@ export default function ServicesPage() {
             </span>
 
             <h1 className={`${styles.h1} nUp nUp-1`}>
-              Послуги сервісу GadgetFix
+              Послуги й ціни на ремонт iPhone
             </h1>
 
             <p className={`${styles.heroLead} nUp nUp-2`}>

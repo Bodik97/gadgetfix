@@ -1,4 +1,4 @@
-import { monthStart } from "@/lib/month";
+import { kyivDay, kyivDayStart, kyivYearStart, monthStart } from "@/lib/month";
 
 export const PERIODS = [
   { value: "month", label: "Цей місяць" },
@@ -19,16 +19,19 @@ export function isPeriod(v: string | undefined): v is PeriodValue {
 
 const isDay = (v: string | undefined): v is string => /^\d{4}-\d{2}-\d{2}$/.test(v ?? "");
 
-/** «2026-09-15» → Date на початок цього дня за місцевим часом */
-function dayStart(day: string): Date {
+/** «2026-09-15» → мить, коли цей день починається в Києві; `plus` — на стільки днів пізніше */
+function dayStart(day: string, plus = 0): Date {
   const [y, m, d] = day.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  return kyivDayStart(y, m, d + plus);
 }
 
+/** Дата → «2026-09-15» за київським календарем, а не за поясом сервера */
 export function dayString(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return kyivDay(d);
 }
+
+/** Умовний початок для «за весь час»: раніше записів у касі немає */
+const EPOCH = kyivDayStart(2020, 1, 1);
 
 function preset(period: PeriodValue): { from: Date; to?: Date } {
   switch (period) {
@@ -36,12 +39,10 @@ function preset(period: PeriodValue): { from: Date; to?: Date } {
       return { from: monthStart(1), to: monthStart(0) };
     case "quarter":
       return { from: monthStart(2) };
-    case "year": {
-      const d = new Date();
-      return { from: new Date(d.getFullYear(), 0, 1) };
-    }
+    case "year":
+      return { from: kyivYearStart() };
     case "all":
-      return { from: new Date(2020, 0, 1) };
+      return { from: EPOCH };
     default:
       return { from: monthStart(0) };
   }
@@ -54,11 +55,12 @@ function preset(period: PeriodValue): { from: Date; to?: Date } {
  */
 export function resolveRange(params: { period?: string; from?: string; to?: string }): Range {
   if (isDay(params.from) || isDay(params.to)) {
-    const from = isDay(params.from) ? dayStart(params.from) : new Date(2020, 0, 1);
+    const from = isDay(params.from) ? dayStart(params.from) : EPOCH;
 
-    // Кінцевий день має входити повністю, тому беремо початок наступного
+    // Кінцевий день має входити повністю, тому беремо початок наступного.
+    // Не «плюс 24 години»: у день переведення годинника доба має 23 або 25 годин
     const toDay = isDay(params.to) ? dayStart(params.to) : null;
-    const to = toDay ? new Date(toDay.getTime() + 24 * 60 * 60 * 1000) : undefined;
+    const to = isDay(params.to) ? dayStart(params.to, 1) : undefined;
 
     return {
       from,
@@ -79,6 +81,7 @@ export function resolveRange(params: { period?: string; from?: string; to?: stri
     fromDay: dayString(from),
     // У відкритого періоду кінця немає, але порожнє поле в календарі читається
     // як незаповнене — показуємо сьогодні, бо саме до сьогодні й рахуємо
-    toDay: to ? dayString(new Date(to.getTime() - 24 * 60 * 60 * 1000)) : dayString(new Date()),
+    // Остання мить перед межею — це й є останній день періоду
+    toDay: to ? dayString(new Date(to.getTime() - 1)) : dayString(new Date()),
   };
 }

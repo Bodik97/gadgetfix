@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import {
   CHECK_BUTTON,
   SHARE_BUTTON,
@@ -11,7 +12,7 @@ import {
   subjectOfPhone,
   webhookSecret,
 } from "@/lib/clientBot";
-import { addEvent } from "@/db/events";
+import { addEvent, getEvents } from "@/db/events";
 import { put } from "@vercel/blob";
 import { addMessage, MAX_MESSAGE } from "@/db/messages";
 import type { Lead } from "@/db/schema";
@@ -135,7 +136,16 @@ async function onButton(query: NonNullable<Update["callback_query"]>): Promise<v
   }
 
   if (action === "ok") {
-    await addEvent(lead.id, { text: `Клієнт погодив ціну: ${price} ₴` });
+    const approved = `Клієнт погодив ціну: ${price} ₴`;
+    // Telegram може принести те саме натискання двічі. Якщо останнє погодження
+    // в хроніці — саме ця ціна, удруге не пишемо ні в хроніку, ні майстру
+    const last = (await getEvents(lead.id)).findLast((e) => e.text.startsWith("Клієнт погодив ціну:"));
+    if (last?.text === approved) {
+      await answer("Дякуємо!");
+      return;
+    }
+
+    await addEvent(lead.id, { text: approved });
     await passToMasters(lead, `Погоджуюсь на ціну ${uah(price)}`);
     await answer("Дякуємо!");
     await sendToChat(chatId, `Дякуємо, ціну ${uah(price)} погоджено. Про наступні етапи напишемо сюди.`);
@@ -158,7 +168,10 @@ async function onButton(query: NonNullable<Update["callback_query"]>): Promise<v
  */
 export async function POST(request: Request): Promise<Response> {
   const secret = webhookSecret();
-  if (!secret || request.headers.get("x-telegram-bot-api-secret-token") !== secret) {
+  // Порівнюємо за сталий час: звичайне «!==» видає, скільки символів збіглося
+  const given = Buffer.from(request.headers.get("x-telegram-bot-api-secret-token") ?? "");
+  const expected = Buffer.from(secret ?? "");
+  if (!secret || given.length !== expected.length || !timingSafeEqual(given, expected)) {
     return new Response("Немає доступу", { status: 403 });
   }
 
@@ -206,7 +219,11 @@ export async function POST(request: Request): Promise<Response> {
   const payload = /^\/start(?:@\w+)?\s+(\S+)/.exec(text)?.[1];
   const subject = payload ? readStart(payload) : null;
 
-  if (subject) {
+  // За посиланням чат закріплюється лише за однією заявкою (чи акаунтом).
+  // Старі посилання «на телефон» не приймаємо: номер у формі на сайті міг
+  // вписати будь-хто, і таке посилання перехопило б сповіщення справжнього
+  // власника. Далі бот попросить поділитися номером — це єдиний шлях до телефону
+  if (subject && subject[0] !== "t") {
     await linkChat(subject, chatId);
     await sendToChat(
       chatId,
@@ -234,7 +251,7 @@ export async function POST(request: Request): Promise<Response> {
 
   // Кнопка чи команда — показуємо стан ремонтів
   if (!photo && (!text || text === CHECK_BUTTON || text.startsWith("/"))) {
-    await sendToChat(chatId, (await report()) ?? "");
+    await sendToChat(chatId, (await report()) ?? "Не вдалося показати статус. Спробуйте, будь ласка, трохи пізніше.");
     return new Response("ok");
   }
 

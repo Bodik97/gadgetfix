@@ -1,34 +1,62 @@
 "use client";
 
 import { useState } from "react";
-import CountUp from "./CountUp";
+import Link from "next/link";
 import { boardPrices, PRICES_PUBLISHED, uah, type ModelPrice } from "@/data/prices";
 import styles from "./ModelJobs.module.css";
 
+// Face ID і True Tone згадуємо лише там, де вони є: в iPhone з кнопкою Home їх немає
 const partNote = {
-  original:
-    "Оригінальні дисплеї: рідна кольоропередача, True Tone і Face ID працюють без застережень. Дорожче, але поводиться як заводський.",
-  analog:
-    "Якісні аналоги дисплеїв: перевірені постачальники, гарантія 3 місяці (на оригінал — 6). Дешевше, кольори трохи інші при максимальній яскравості.",
+  original: {
+    faceId: "Оригінальні дисплеї: рідна кольоропередача, True Tone і Face ID працюють без застережень. Дорожче, але поводиться як заводський.",
+    plain: "Оригінальні дисплеї: рідна кольоропередача. Дорожче, але поводиться як заводський.",
+  },
+  analog: `Якісні аналоги дисплеїв: перевірені постачальники, гарантія 2 місяці (на оригінал — 4). Дешевше, кольори трохи інші при максимальній яскравості.`,
 };
 
 const screenBody = {
-  original: "Оригінальний дисплей, перенесення рідного Face ID, перевірка True Tone.",
-  analog: "Якісний аналог дисплея від перевіреного постачальника, перенесення Face ID, перевірка сенсора.",
+  original: {
+    faceId: "Оригінальний дисплей, перенесення рідного Face ID, перевірка True Tone.",
+    plain: "Оригінальний дисплей, перевірка сенсора перед видачею.",
+  },
+  analog: {
+    faceId: "Якісний аналог дисплея від перевіреного постачальника, перенесення Face ID, перевірка сенсора.",
+    plain: "Якісний аналог дисплея від перевіреного постачальника, перевірка сенсора.",
+  },
 };
 
+/**
+ * Роботи після екрана. Заголовок — разом із моделлю: «Заміна акумулятора
+ * iPhone 13». time: null — термін моделі з каталогу.
+ */
 const restJobs = [
-  { slug: "akumuliator", title: "Акумулятор", body: "Новий АКБ, показуємо ємність до та після. Циклів — 0.", time: "до 2 днів" },
-  { slug: "roziem-zariadzhannia", title: "Роз'єм заряджання", body: "Спершу чистка — часто цього достатньо. Якщо ні, міняємо шлейф.", time: "від 40 хв" },
-  { slug: "kamera", title: "Камера / скло камери", body: "Мутне фото, пил під склом, не працює автофокус — модуль або лише скло.", time: "до 2 днів" },
-  { slug: "zalyv-vodoiu", title: "Залив водою", body: "Безкоштовна діагностика: дивимось, що постраждало, і чесно кажемо, чи візьмемось.", time: "діагностика безкоштовна" },
-  { slug: "ne-vmykaietsia", title: "Не вмикається", body: "Перевіряємо акумулятор, екран і роз'єм; якщо справа в платі — скажемо прямо.", time: "діагностика безкоштовна" },
-] as const;
+  { slug: "akumuliator", title: (m: string) => `Заміна акумулятора ${m}`, body: "Новий АКБ, показуємо ємність до та після. Циклів — 0.", time: null },
+  { slug: "roziem-zariadzhannia", title: (m: string) => `Ремонт роз'єму заряджання ${m}`, body: "Спершу чистка — часто цього достатньо. Якщо ні, міняємо шлейф.", time: "від 40 хв" },
+  { slug: "kamera", title: (m: string) => `Ремонт камери ${m}`, body: "Мутне фото, пил під склом, не працює автофокус — модуль або лише скло.", time: null },
+  { slug: "dynamik-i-mikrofon", title: (m: string) => `Ремонт динаміка і мікрофона ${m}`, body: "Вас не чують або звук хрипить — спершу чистимо сітки, заміна вже потім.", time: null },
+  { slug: "korpus", title: (m: string) => `Заміна корпусу і задньої кришки ${m}`, body: "Тріщини на склі спинки або погнута рамка — ставимо нове скло чи корпус.", time: null },
+  { slug: "knopky-y-vibro", title: (m: string) => `Ремонт кнопок і вібро ${m}`, body: "Не працює гучність, залипає бокова кнопка, зникла вібрація — міняємо шлейф або модуль.", time: null },
+  { slug: "zalyv-vodoiu", title: (m: string) => `${m} після заливу водою`, body: "Безкоштовна діагностика: дивимось, що постраждало, і чесно кажемо, чи візьмемось.", time: "діагностика безкоштовна" },
+  { slug: "ne-vmykaietsia", title: (m: string) => `${m} не вмикається`, body: "Перевіряємо акумулятор, екран і роз'єм; якщо справа в платі — скажемо прямо.", time: "діагностика безкоштовна" },
+];
 
 const boardFrom = new Map(boardPrices.map((b) => [b.slug, b.from]));
 
-export default function ModelJobs({ prices }: { prices?: ModelPrice }) {
+export default function ModelJobs({
+  prices,
+  name,
+  /** Термін моделі з каталогу: «до 2 днів», «1–2 дні» */
+  time,
+  /** Чи є в моделі Face ID і True Tone — від цього залежать тексти про екран */
+  faceId,
+}: {
+  prices?: ModelPrice;
+  name: string;
+  time: string;
+  faceId: boolean;
+}) {
   const [part, setPart] = useState<"original" | "analog">("analog");
+  const kind = faceId ? "faceId" : "plain";
 
   // Перемикач має сенс лише там, де деталь буває двох рівнів — тобто де є екран
   const screen = prices?.["zamina-ekrana"];
@@ -48,7 +76,7 @@ export default function ModelJobs({ prices }: { prices?: ModelPrice }) {
   // Роботи без ціни для цієї моделі не показуємо: у годинника немає ні камери,
   // ні роз'єму, і порожній рядок поруч із цінами читався б як «ціну приховали».
   const jobs = [
-    { slug: "zamina-ekrana", title: "Заміна екрана", body: tiered ? screenBody[part] : "Нове скло або модуль у зборі, з відновленням герметизації.", time: "до 2 днів" },
+    { slug: "zamina-ekrana", title: (m: string) => `Заміна екрана ${m}`, body: tiered ? screenBody[part][kind] : "Нове скло або модуль у зборі, з відновленням герметизації.", time: null },
     ...restJobs,
   ].filter((j) => priceOf(j.slug) !== null);
 
@@ -56,7 +84,7 @@ export default function ModelJobs({ prices }: { prices?: ModelPrice }) {
     <section className={`container ${styles.section}`}>
       <div className={styles.head}>
         <div>
-          <h2 className={styles.title}>Що робимо для цієї моделі</h2>
+          <h2 className={styles.title}>{PRICES_PUBLISHED ? `Ціни на ремонт ${name}` : `Що робимо для ${name}`}</h2>
         </div>
 
         {tiered && (
@@ -81,23 +109,27 @@ export default function ModelJobs({ prices }: { prices?: ModelPrice }) {
         )}
       </div>
 
-      {tiered && <p className={styles.note}>{partNote[part]}</p>}
+      {tiered && <p className={styles.note}>{part === "original" ? partNote.original[kind] : partNote.analog}</p>}
 
       <div className={styles.list}>
         {jobs.map((j) => {
           const price = priceOf(j.slug);
 
           return (
-            <div key={j.title} className={styles.job}>
-              <div className={styles.jobTitle}>{j.title}</div>
+            <div key={j.slug} className={styles.job}>
+              <h3 className={styles.jobTitle}>
+                <Link href={`/poslugy/${j.slug}`}>
+                  {j.title(name)}
+                </Link>
+              </h3>
               <div className={styles.jobBody}>{j.body}</div>
 
               <div className={styles.jobFoot}>
-                <span className={styles.jobTime}>{j.time}</span>
+                <span className={styles.jobTime}>{j.time ?? time}</span>
                 {PRICES_PUBLISHED && price && (
                   <span className={price.exact ? styles.price : styles.priceFrom}>
                     {!price.exact && "від "}
-                    <CountUp value={price.text} />
+                    {price.text}
                   </span>
                 )}
               </div>

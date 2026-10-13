@@ -45,6 +45,9 @@ export default function ChatBot() {
   const [lines, setLines] = useState<Line[]>([{ from: "bot", text: greeting }]);
   const [step, setStep] = useState<Step>("symptom");
   const [typing, setTyping] = useState(false);
+  // Скільки реплік помічника ще в черзі. Кнопки відповіді чекають останню:
+  // між двома репліками поспіль «друкує» на мить гасне, і вони блимали б
+  const [queued, setQueued] = useState(0);
 
   const [symptom, setSymptom] = useState<Symptom | null>(null);
   const [details, setDetails] = useState("");
@@ -81,10 +84,12 @@ export default function ChatBot() {
   };
 
   const say = (text: string, delay = 0) => {
+    setQueued((n) => n + 1);
     later(() => setTyping(true), delay);
     later(() => {
       setLines((l) => [...l, { from: "bot", text }]);
       setTyping(false);
+      setQueued((n) => n - 1);
     }, delay + TYPING_MS);
   };
 
@@ -135,6 +140,7 @@ export default function ChatBot() {
     setLines([{ from: "bot", text: greeting }]);
     setStep("symptom");
     setTyping(false);
+    setQueued(0);
     setSymptom(null);
     setDetails("");
     setModel("");
@@ -250,7 +256,7 @@ export default function ChatBot() {
       </div>
 
       <div className={styles.foot}>
-        {step === "symptom" && !typing && (
+        {step === "symptom" && queued === 0 && (
           <div className={styles.chips}>
             {symptoms.map((s) => (
               <button key={s.id} type="button" className={styles.chip} onClick={() => pickSymptom(s)}>
@@ -260,7 +266,7 @@ export default function ChatBot() {
           </div>
         )}
 
-        {step === "model" && !typing && (
+        {step === "model" && queued === 0 && (
           <div className={styles.chips}>
             {modelChips.map((m) => (
               <button key={m} type="button" className={styles.chip} onClick={() => pickModel(m)}>
@@ -273,7 +279,7 @@ export default function ChatBot() {
           </div>
         )}
 
-        {(step === "describe" || step === "modelText") && !typing && (
+        {(step === "describe" || step === "modelText") && queued === 0 && (
           <form className={styles.inline} onSubmit={submitDraft}>
             <label htmlFor="bot-draft" className="visually-hidden">
               {step === "describe" ? "Що сталося" : "Модель"}

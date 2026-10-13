@@ -13,8 +13,10 @@ import { esc } from "./telegram";
  * Окремий від службового бота майстрів — зі своїм токеном
  * (TELEGRAM_CLIENT_BOT_TOKEN) та імʼям (TELEGRAM_CLIENT_BOT_USERNAME).
  * Telegram не дає боту написати першим, тож клієнт сам відкриває його за
- * посиланням і тисне «Start». У посиланні — за ким закріпити чат і підпис,
- * щоб чужий номер не можна було підставити.
+ * посиланням і тисне «Start». У посиланні — за якою заявкою закріпити чат і
+ * підпис, щоб чужу не можна було підставити. За телефоном (усі заявки з цим
+ * номером) чат закріплює лише кнопка «Поділитися номером» у самому боті:
+ * там Telegram сам підтверджує, що номер належить тому, хто пише.
  *
  * Ніколи не кидаємо помилку назовні: зміна статусу в адмінці не має залежати
  * від Telegram.
@@ -40,17 +42,29 @@ export function subjectOf(lead: Who): string {
   const phone = phoneKey(lead.phone);
   if (phone) return `t${phone}`;
   if (lead.clerkUserId && /^[A-Za-z0-9_]{1,40}$/.test(lead.clerkUserId)) return `u${lead.clerkUserId}`;
-  return `l${lead.id.replace(/-/g, "")}`;
+  return leadSubject(lead);
 }
+
+/** Чат, закріплений лише за цією заявкою, — те, що дає посилання із сайту чи квитанції */
+const leadSubject = (lead: Pick<Lead, "id">) => `l${lead.id.replace(/-/g, "")}`;
+
+/** Усі записи, за якими клієнт цієї заявки міг підключити бота: телефон чи акаунт і сама заявка */
+const subjectsOf = (lead: Who): string[] => [...new Set([subjectOf(lead), leadSubject(lead)])];
 
 const sign = (value: string, token: string) =>
   createHmac("sha256", token).update(value).digest("hex").slice(0, 20);
 
-/** Посилання «відкрити бота й підключити статуси» — або null, якщо бот не налаштований */
-export function connectLink(lead: Who): string | null {
+/**
+ * Посилання «відкрити бота й підключити статуси» — або null, якщо бот не налаштований.
+ *
+ * Закріплює чат лише за цією заявкою, не за телефоном: номер у формі на сайті
+ * може вписати будь-хто, і посилання «на телефон» віддало б йому статуси й
+ * чат усіх ремонтів справжнього власника номера.
+ */
+export function connectLink(lead: Pick<Lead, "id">): string | null {
   const cfg = config();
   if (!cfg) return null;
-  const subject = subjectOf(lead);
+  const subject = leadSubject(lead);
   return `https://t.me/${cfg.username}?start=${subject}-${sign(subject, cfg.token)}`;
 }
 
@@ -83,14 +97,14 @@ export async function linkChat(subject: string, chatId: string): Promise<void> {
 export async function linkedLeads(rows: Who[]): Promise<Set<string>> {
   if (!config() || rows.length === 0) return new Set();
 
-  const bySubject = new Map(rows.map((r) => [r.id, subjectOf(r)]));
+  const bySubject = new Map(rows.map((r) => [r.id, subjectsOf(r)]));
   const found = await getDb()
     .select({ subject: telegramChats.subject })
     .from(telegramChats)
-    .where(inArray(telegramChats.subject, [...new Set(bySubject.values())]));
+    .where(inArray(telegramChats.subject, [...new Set([...bySubject.values()].flat())]));
 
   const linked = new Set(found.map((f) => f.subject));
-  return new Set(rows.filter((r) => linked.has(bySubject.get(r.id)!)).map((r) => r.id));
+  return new Set(rows.filter((r) => bySubject.get(r.id)!.some((s) => linked.has(s))).map((r) => r.id));
 }
 
 /** Підпис кнопки в боті: натиснув — отримав поточний стан своїх ремонтів */
@@ -216,6 +230,15 @@ export async function statusReport(chatId: string): Promise<string | null> {
 }
 
 /**
+ * Чати клієнта цієї заявки: підключений за телефоном чи акаунтом і/або за
+ * самою заявкою. Той самий чат двічі не повертаємо.
+ */
+async function chatsOf(lead: Who): Promise<(typeof telegramChats.$inferSelect)[]> {
+  const rows = await getDb().select().from(telegramChats).where(inArray(telegramChats.subject, subjectsOf(lead)));
+  return rows.filter((c, i) => rows.findIndex((x) => x.chatId === c.chatId) === i);
+}
+
+/**
  * Написати клієнту цієї заявки. Повертає, чи дійшло: false — бот не
  * підключений або клієнт його заблокував (тоді запис прибираємо).
  */
@@ -223,14 +246,14 @@ async function tellClient(lead: Who, html: string, buttons?: InlineButton[]): Pr
   if (!config()) return false;
 
   try {
-    const subject = subjectOf(lead);
-    const [chat] = await getDb().select().from(telegramChats).where(eq(telegramChats.subject, subject)).limit(1);
-    if (!chat) return false;
-
-    const status = await sendToChat(chat.chatId, html, buttons);
-    // 403 — клієнт зупинив бота: чат більше не наш
-    if (status === 403) await getDb().delete(telegramChats).where(eq(telegramChats.id, chat.id));
-    return status === 200;
+    let delivered = false;
+    for (const chat of await chatsOf(lead)) {
+      const status = await sendToChat(chat.chatId, html, buttons);
+      // 403 — клієнт зупинив бота: чат більше не наш
+      if (status === 403) await getDb().delete(telegramChats).where(eq(telegramChats.chatId, chat.chatId));
+      if (status === 200) delivered = true;
+    }
+    return delivered;
   } catch (e) {
     console.error("[client-bot] не надіслано:", e);
     return false;
@@ -334,9 +357,11 @@ export async function forwardMasterMessage(leadId: string, text: string, photo: 
     let photoSent = false;
 
     if (photo) {
-      const [chat] = await getDb().select().from(telegramChats).where(eq(telegramChats.subject, subjectOf(lead))).limit(1);
-      if (!chat) return false;
-      photoSent = (await sendPhoto(chat.chatId, photo, head)) === 200;
+      const chats = await chatsOf(lead);
+      if (chats.length === 0) return false;
+      for (const chat of chats) {
+        if ((await sendPhoto(chat.chatId, photo, head)) === 200) photoSent = true;
+      }
     }
 
     // Формат, який Telegram не взяв як фото (наприклад HEIC), — хоча б кажемо, де його подивитись

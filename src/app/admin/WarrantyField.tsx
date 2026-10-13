@@ -5,7 +5,7 @@ import { WARRANTY_TERMS } from "@/data/warranty";
 import { setWarranty } from "./actions";
 import styles from "./page.module.css";
 
-const dateFormat = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" });
+const dateFormat = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Kyiv" });
 
 /**
  * Строк гарантії для заявки. Майстер обирає його за тим, що саме поставив:

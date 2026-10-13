@@ -19,6 +19,9 @@ vi.mock("@/db", async () => {
   return { getDb: () => fake.db };
 });
 
+// Список майстрів береться з @/lib/admin, а той при завантаженні тягне cookies
+vi.mock("next/headers", () => ({ cookies: () => ({ get: () => undefined, set: () => {} }) }));
+
 vi.mock("web-push", () => ({
   default: {
     setVapidDetails: () => {},
@@ -41,9 +44,9 @@ import { sendPush } from "@/lib/push";
 import { alertMasters } from "@/lib/notify";
 import { remindByPush, stillWaiting } from "@/workflows/escalate-lead";
 
-const sub = (id: string, endpoint: string) => ({
+const sub = (id: string, endpoint: string, adminEmail = "b@gadgetfix.ua") => ({
   id,
-  adminEmail: "b@gadgetfix.ua",
+  adminEmail,
   endpoint,
   p256dh: "k",
   auth: "a",
@@ -61,6 +64,9 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "pub");
   vi.stubEnv("VAPID_PRIVATE_KEY", "priv");
   vi.stubEnv("ADMIN_EMAIL", "b@gadgetfix.ua");
+  vi.stubEnv("ADMIN_PASSWORD", "parol-pershoho");
+  vi.stubEnv("ADMIN_EMAIL_2", "");
+  vi.stubEnv("ADMIN_PASSWORD_2", "");
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -103,6 +109,39 @@ describe("alertMasters", () => {
   it("жоден телефон не підписаний — Telegram, щоб заявка не загубилась", async () => {
     expect(await alertMasters(PAYLOAD, "<b>tg</b>")).toBe("telegram");
     expect(m.telegram).toEqual(["<b>tg</b>"]);
+  });
+
+  describe("майстрів двоє", () => {
+    const SECOND = "d@gadgetfix.ua";
+    // Підписки кожного майстра вибираються окремим запитом — за його поштою
+    const subsOf = (byEmail: Record<string, ReturnType<typeof sub>[]>) =>
+      fake.onSelect(pushSubscriptions, (q) => byEmail[String(q.params[0])] ?? []);
+
+    beforeEach(() => {
+      vi.stubEnv("ADMIN_EMAIL_2", SECOND);
+      vi.stubEnv("ADMIN_PASSWORD_2", "parol-druhoho");
+    });
+
+    it("push є лише в одного — другий не лишається без сповіщення: Telegram теж іде", async () => {
+      subsOf({ "b@gadgetfix.ua": [sub("s1", "https://push/1")] });
+      expect(await alertMasters(PAYLOAD, "<b>tg</b>")).toBe("telegram");
+      expect(m.sent.map((s) => s.endpoint)).toEqual(["https://push/1"]);
+      expect(m.telegram).toEqual(["<b>tg</b>"]);
+    });
+
+    it("push дійшов обом — Telegram мовчить", async () => {
+      subsOf({ "b@gadgetfix.ua": [sub("s1", "https://push/1")], [SECOND]: [sub("s2", "https://push/2", SECOND)] });
+      expect(await alertMasters(PAYLOAD, "<b>tg</b>")).toBe("push");
+      expect(m.sent).toHaveLength(2);
+      expect(m.telegram).toEqual([]);
+    });
+
+    it("в одного з майстрів push не доставився (збій) — Telegram", async () => {
+      subsOf({ "b@gadgetfix.ua": [sub("s1", "https://push/1")], [SECOND]: [sub("s2", "https://push/2", SECOND)] });
+      m.failWith["https://push/2"] = 500;
+      expect(await alertMasters(PAYLOAD, "<b>tg</b>")).toBe("telegram");
+      expect(m.telegram).toEqual(["<b>tg</b>"]);
+    });
   });
 });
 

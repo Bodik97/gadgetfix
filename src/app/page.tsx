@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
 import BookingForm from "@/components/BookingForm";
 import CountUp from "@/components/CountUp";
 import PhoneStrip from "@/components/PhoneStrip";
@@ -8,9 +7,10 @@ import Reveal from "@/components/Reveal";
 import ReviewSlider from "@/components/ReviewSlider";
 import ReviewForm from "@/components/ReviewForm";
 import StatusCheck from "@/components/StatusCheck";
-import { getPublishedReviews, getReviewByUser } from "@/db/reviews";
+import { getPublishedReviews } from "@/db/reviews";
 import { services } from "@/data/services";
 import { site } from "@/data/site";
+import { WARRANTY_MAX } from "@/data/warranty";
 import { popular as popularModels } from "@/data/mailIn";
 import {
   bookingModels,
@@ -25,10 +25,16 @@ import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "GadgetFix — ремонт iPhone у Львові та Новому Роздолі",
-  description:
-    "Безкоштовна діагностика, фіксована ціна після неї, гарантія до 6 місяців. Екран чи акумулятор міняємо до 2 днів разом із замовленням деталі. Приймаємо й Новою Поштою.",
+  description: `Ремонт iPhone ${site.citiesIn}: безкоштовна діагностика, фіксована ціна, гарантія ${WARRANTY_MAX}. Екран чи акумулятор — до 2 днів разом із деталлю. Приймаємо й Новою Поштою.`,
   alternates: { canonical: "/" },
 };
+
+/**
+ * Головна статична: опубліковані відгуки перечитуються раз на 5 хвилин, а
+ * публікація з адмінки оновлює її одразу через revalidatePath("/"). Хто
+ * увійшов і чи вже лишав відгук — форма дізнається сама, у браузері.
+ */
+export const revalidate = 300;
 
 const faqSchema = {
   "@context": "https://schema.org",
@@ -54,9 +60,6 @@ export default async function Home() {
   }));
 
   const hasRealReviews = published.length > 0;
-
-  const { userId } = await auth();
-  const alreadyLeft = userId ? Boolean(await getReviewByUser(userId)) : false;
 
   return (
     <>
@@ -244,7 +247,7 @@ export default async function Home() {
                 новим людям, чого чекати від сервісу.
               </p>
             </div>
-            <ReviewForm signedIn={Boolean(userId)} alreadyLeft={alreadyLeft} />
+            <ReviewForm />
           </div>
         </div>
       </section>

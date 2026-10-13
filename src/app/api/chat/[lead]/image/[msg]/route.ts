@@ -5,6 +5,9 @@ import { canUseChat } from "@/lib/chatAccess";
 
 export const dynamic = "force-dynamic";
 
+/** id у базі — UUID: будь-що інше Postgres відкинув би помилкою, а це просто «не знайдено» */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Віддає фото з приватного сховища.
  *
@@ -17,6 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ lead: string; msg: string }> },
 ) {
   const { lead, msg } = await params;
+  if (!UUID.test(lead) || !UUID.test(msg)) return new NextResponse("Не знайдено", { status: 404 });
 
   // Фото бачить будь-хто, хто має доступ до чату з одного з боків
   const allowed =

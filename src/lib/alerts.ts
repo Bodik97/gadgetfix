@@ -35,7 +35,10 @@ export async function reportError(
   const path = request.path.split("?")[0];
   const where = context.routePath ?? path;
 
-  const key = `${where}|${message}`;
+  // У тексті помилки буває те, що прислав відвідувач (кривий id, число поза
+  // межами) — Postgres наводить таке в лапках. З ним кожен запит був би
+  // «новою» помилкою, тож для порівняння все в лапках прибираємо
+  const key = `${where}|${message.replace(/"[^"]*"|'[^']*'/g, "")}`;
   const prev = lastSent.get(key);
   if (prev !== undefined && now - prev < QUIET_MS) return;
   lastSent.set(key, now);

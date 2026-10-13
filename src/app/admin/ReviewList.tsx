@@ -7,6 +7,7 @@ const dateFormat = new Intl.DateTimeFormat("uk-UA", {
   month: "2-digit",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Kyiv",
 });
 
 export default function ReviewList({ reviews }: { reviews: Review[] }) {

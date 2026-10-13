@@ -168,11 +168,15 @@ export function getModelPrice(slug: string): ModelPrice | undefined {
   return modelPrices[slug];
 }
 
-/** Вилка ціни роботи по всьому каталогу — зведена таблиця на сторінці послуг */
-export function jobRange(job: PricedJob): { min: Money; max: Money } | null {
+/**
+ * Вилка ціни роботи по всьому каталогу — зведена таблиця на сторінці послуг.
+ * only — slug-и моделей, якщо вилка потрібна лише по частині каталогу (самі iPhone).
+ */
+export function jobRange(job: PricedJob, only?: readonly string[]): { min: Money; max: Money } | null {
   const all: Money[] = [];
 
-  for (const price of Object.values(modelPrices)) {
+  for (const [slug, price] of Object.entries(modelPrices)) {
+    if (only && !only.includes(slug)) continue;
     const v = price[job];
     if (v === undefined) continue;
     if (typeof v === "number") all.push(v);

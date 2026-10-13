@@ -6,7 +6,16 @@ import FormError from "./FormError";
 import TelegramConnect from "./TelegramConnect";
 import styles from "./StatusCheck.module.css";
 
-export default function StatusCheck() {
+export default function StatusCheck({
+  id = "status",
+  title = "Телефон уже в нас? Перевірте етап",
+  lead = "Номер замовлення з квитанції та останні 4 цифри вашого телефону — і побачите, що робимо саме зараз.",
+}: {
+  /** Якір блоку: на сторінці «Поштою» на нього веде кнопка «Де моя посилка» */
+  id?: string;
+  title?: string;
+  lead?: string;
+}) {
   const [orderNo, setOrderNo] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
@@ -51,14 +60,11 @@ export default function StatusCheck() {
   };
 
   return (
-    <section id="status" className={styles.section}>
+    <section id={id} className={styles.section}>
       <div className={styles.box}>
         <div>
-          <h2 className={styles.title}>Телефон уже в нас? Перевірте етап</h2>
-          <p className={styles.lead}>
-            Номер замовлення з квитанції та останні 4 цифри вашого телефону — і побачите, що
-            робимо саме зараз.
-          </p>
+          <h2 className={styles.title}>{title}</h2>
+          <p className={styles.lead}>{lead}</p>
         </div>
 
         <div className={styles.form}>

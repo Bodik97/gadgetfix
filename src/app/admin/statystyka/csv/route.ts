@@ -3,9 +3,14 @@ import { isAdmin } from "@/lib/admin";
 import { resolveRange } from "../../groshi/period";
 import { CLICK_LABELS, DEVICE_LABELS, DIRECT } from "../labels";
 
-/** Один стовпчик CSV: лапки подвоюємо, бо всередині може бути «;» або перенос */
+/**
+ * Один стовпчик CSV: лапки подвоюємо, бо всередині може бути «;» або перенос.
+ * Текст, що починається з «=», «+», «-», «@», Excel виконав би як формулу —
+ * а шлях сторінки чи джерело приходять ззовні. Апостроф попереду лишає його текстом.
+ */
 function cell(v: string | number): string {
-  return `"${String(v).replace(/"/g, '""')}"`;
+  const s = typeof v === "string" && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v);
+  return `"${s.replace(/"/g, '""')}"`;
 }
 
 const row = (...cells: (string | number)[]) => cells.map(cell).join(";");

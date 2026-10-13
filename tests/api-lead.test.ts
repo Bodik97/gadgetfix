@@ -124,10 +124,18 @@ describe("POST /api/lead: що приймаємо", () => {
     expect(m.inserted).toHaveLength(1);
   });
 
-  it("ім'я + пошта без телефону — теж приймаємо", async () => {
-    const res = await post({ name: "Олег", email: "oleg@example.com" });
+  it("пошта з тіла запиту в базу не йде — анонім не підкине заявку в чужий кабінет", async () => {
+    const res = await post({ name: "Олег", phone: "0733150238", email: "victim@example.com" });
     expect(res.status).toBe(200);
-    expect(m.inserted[0]).toMatchObject({ phone: null, email: "oleg@example.com" });
+    expect(m.inserted[0]).toMatchObject({ email: null, clerkUserId: null });
+    expect(m.notified[0]).not.toContain("victim@example.com");
+  });
+
+  it("залогінений: пошта завжди з профілю, а не з тіла запиту", async () => {
+    m.userId = "user_1";
+    m.profileEmail = "profile@example.com";
+    await post({ name: "Олег", phone: "0733150238", email: "victim@example.com" });
+    expect(m.inserted[0]).toMatchObject({ email: "profile@example.com", clerkUserId: "user_1" });
   });
 
   it("залогінений без телефону й пошти — пошта береться з профілю, заявка прив'язується", async () => {
@@ -192,6 +200,8 @@ describe("POST /api/lead: що відхиляємо", () => {
     expect((await post({ name: "Олег" })).status).toBe(422);
     expect((await post({ name: "Олег", phone: "123" })).status).toBe(422);
     expect((await post({ name: "Олег", email: "не-пошта" })).status).toBe(422);
+    // Пошта без входу в кабінет — не спосіб звʼязку: її ніхто не підтвердив
+    expect((await post({ name: "Олег", email: "oleg@example.com" })).status).toBe(422);
     expect(m.inserted).toHaveLength(0);
   });
 

@@ -1,7 +1,7 @@
 /**
  * Український номер у формат E.164 (+380XXXXXXXXX).
  * Приймає те, як люди реально пишуть: 073 315 02 38, 0733150238,
- * +38 (073) 315-02-38, 380733150238.
+ * +38 (073) 315-02-38, 380733150238, 8 073 315 02 38.
  */
 export function normalizeUaPhone(input: string): string | null {
   const digits = input.replace(/\D/g, "");
@@ -12,15 +12,24 @@ export function normalizeUaPhone(input: string): string | null {
       ? `38${digits}`
       : digits.length === 9
         ? `380${digits}` // без нуля: 73 315 02 38
-        : digits;
+        : digits.length === 11 && digits.startsWith("80")
+          ? `3${digits}` // по-старому, через вісімку: 8 073 315 02 38
+          : digits;
 
   if (full.length !== 12 || !full.startsWith("380")) return null;
 
-  // Код оператора — друга й третя цифри після 380 не можуть починатися з 0
-  if (full[3] === "0") return null;
+  // Лише мобільні коди операторів. Без цього «380» чи «80», набрані вдруге після
+  // готового «+38», давали номер на кшталт +380380731234 — на вигляд повний, а подзвонити нікуди
+  if (!MOBILE_CODES.has(full.slice(3, 5))) return null;
 
   return `+${full}`;
 }
+
+/** Коди мобільних операторів України — дві цифри після «+380» */
+const MOBILE_CODES = new Set([
+  "39", "50", "63", "66", "67", "68", "73", "75", "77", "89",
+  "91", "92", "93", "94", "95", "96", "97", "98", "99",
+]);
 
 /** Для показу: +380731234567 → 073 123 45 67 */
 export function formatUaPhone(e164: string): string {

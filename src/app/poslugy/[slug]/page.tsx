@@ -7,13 +7,40 @@ import Reveal from "@/components/Reveal";
 import ServicePrices from "@/components/ServicePrices";
 import { serviceDetails } from "@/data/serviceDetails";
 import { services } from "@/data/services";
-import { jobRange, PRICED_JOBS, PRICES_PUBLISHED, uah } from "@/data/prices";
-import { site } from "@/data/site";
+import { iphones } from "@/data/models";
+import { boardPrices, jobRange, PRICED_JOBS, PRICES_PUBLISHED, serviceFrom, uah, type PricedJob } from "@/data/prices";
+import { BUSINESS_ID, site } from "@/data/site";
+import { WARRANTY_MAX } from "@/data/warranty";
+import { siteUrl } from "@/lib/siteUrl";
 import styles from "./page.module.css";
 
 export function generateStaticParams() {
   return services.map((s) => ({ slug: s.slug }));
 }
+
+const iphoneSlugs = iphones.map((m) => m.slug);
+
+const isPriced = (slug: string): slug is PricedJob => (PRICED_JOBS as readonly string[]).includes(slug);
+
+/**
+ * Ціна для заголовка, шапки й розмітки. У робіт із таблицею по моделях —
+ * вилка по самих iPhone: сторінка називається «… iPhone», і «від» має бути
+ * про них, а не про найдешевший планшет чи годинник.
+ */
+function priceOf(slug: string): { low: number; high?: number; exact: boolean } | null {
+  if (!PRICES_PUBLISHED) return null;
+
+  if (isPriced(slug)) {
+    const range = jobRange(slug, iphoneSlugs);
+    return range && { low: range.min, high: range.max, exact: false };
+  }
+
+  const from = serviceFrom(slug);
+  return from && { low: from.price, high: from.exact ? from.price : undefined, exact: from.exact };
+}
+
+/** Роботи «після діагностики»: сума — лише орієнтир, у заголовок її не виносимо */
+const isBoard = (slug: string) => boardPrices.some((b) => b.slug === slug);
 
 export async function generateMetadata({
   params,
@@ -22,11 +49,29 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const service = services.find((s) => s.slug === slug);
-  if (!service) return {};
+  const detail = serviceDetails[slug];
+  if (!service || !detail) return {};
+
+  const price = priceOf(slug);
+  const name = `${detail.h1} ${site.citiesIn}`;
+  const sum = price && `${price.exact ? "" : "від "}${uah(price.low)}`;
+
+  // Довгу назву з ціною пошуковик обріже — тоді ціна лишається тільки в описі
+  const withPrice = sum && !isBoard(slug) ? `${name} — ${sum}` : name;
+
+  const first = !sum
+    ? `${name}.`
+    : isBoard(slug)
+      ? `${name}. Діагностика безкоштовна, роботи — ${sum}.`
+      : `${name} — ${sum}${isPriced(slug) ? " разом із деталлю" : ""}.`;
+  // Гарантію обіцяємо лише там, де вона є в переліку «Що входить у ціну»
+  const warranty = detail.included.some((x) => x.startsWith("Гарантія"))
+    ? `, гарантія ${WARRANTY_MAX}${isBoard(slug) ? "" : " на роботу й деталь"}`
+    : "";
 
   return {
-    title: `${service.title} — як ми це робимо`,
-    description: serviceDetails[slug]?.intro ?? service.body,
+    title: { absolute: withPrice.length <= 65 ? withPrice : name },
+    description: `${first} Ціну фіксуємо до початку робіт${warranty}.`,
     alternates: { canonical: `/poslugy/${service.slug}` },
   };
 }
@@ -38,10 +83,39 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
   const detail = serviceDetails[slug];
   if (!service || !detail) notFound();
 
-  // Вилка по каталогу — лише для робіт, ціна яких залежить від моделі
-  const range = PRICED_JOBS.includes(slug as (typeof PRICED_JOBS)[number])
-    ? jobRange(slug as (typeof PRICED_JOBS)[number])
-    : null;
+  const price = priceOf(slug);
+
+  const base = siteUrl();
+  const schema = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      name: detail.h1,
+      description: service.body,
+      url: `${base}/poslugy/${service.slug}`,
+      provider: { "@id": `${base}${BUSINESS_ID}` },
+      areaServed: site.cities,
+      ...(price && {
+        offers: price.exact
+          ? { "@type": "Offer", price: price.low, priceCurrency: "UAH" }
+          : {
+              "@type": "AggregateOffer",
+              lowPrice: price.low,
+              ...(price.high !== undefined && { highPrice: price.high }),
+              priceCurrency: "UAH",
+            },
+      }),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Головна", item: `${base}/` },
+        { "@type": "ListItem", position: 2, name: "Послуги", item: `${base}/poslugy` },
+        { "@type": "ListItem", position: 3, name: service.title, item: `${base}/poslugy/${service.slug}` },
+      ],
+    },
+  ];
 
   const others = services.filter((s) => s.slug !== slug && serviceDetails[s.slug]).slice(0, 4);
 
@@ -75,7 +149,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           />
         </span>
 
-        <h1 className={styles.h1}>{service.title}</h1>
+        <h1 className={styles.h1}>{detail.h1}</h1>
         <p className={styles.intro}>{detail.intro}</p>
 
         <div className={styles.meta}>
@@ -85,9 +159,10 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
               {t}
             </span>
           ))}
-          {PRICES_PUBLISHED && range && (
+          {price && (
             <span className={styles.price}>
-              {uah(range.min)} — {uah(range.max)}
+              {!price.exact && "від "}
+              {uah(price.low)}
             </span>
           )}
         </div>
@@ -112,6 +187,8 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           <p>{detail.warning}</p>
         </aside>
       )}
+
+      {isPriced(slug) && <ServicePrices job={slug} />}
 
     </div>
     </div>
@@ -173,8 +250,6 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
 
     <div className="band" data-theme="dark">
     <div className={styles.page}>
-      {range && <ServicePrices job={slug as (typeof PRICED_JOBS)[number]} />}
-
       <section className={styles.section} aria-labelledby="inshi">
         <h2 id="inshi" className={styles.h2}>
           Інші роботи
@@ -190,6 +265,11 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
       </section>
     </div>
     </div>
+
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }}
+    />
     </>
   );
 }

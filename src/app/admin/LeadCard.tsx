@@ -35,13 +35,14 @@ const statusClass: Record<Lead["status"], string> = {
   rejected: styles.statusClosed,
 };
 
-const dayFormat = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" });
+const dayFormat = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Kyiv" });
 
 const dateFormat = new Intl.DateTimeFormat("uk-UA", {
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Kyiv",
 });
 
 export default function LeadCard({
@@ -70,10 +71,11 @@ export default function LeadCard({
   team: Team;
 }) {
   const s = describeStatus(r.status);
-  const waitingShip = r.deliveryRequested && !r.ttn;
   const mine = r.assignee === team.me;
   // Закрита заявка вже нічия в роботі — лишається лише памʼять, хто її робив
   const closed = ARCHIVED.includes(r.status);
+  // Закрита відправки вже не чекає, навіть якщо клієнт колись її просив
+  const waitingShip = r.deliveryRequested && !r.ttn && !closed;
   const assigneeName = r.assignee ? (team.names[r.assignee] ?? r.assignee.split("@")[0]) : null;
 
   return (

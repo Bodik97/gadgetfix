@@ -8,10 +8,15 @@ export const site = {
   hours: "Пн–Сб 8:00–18:00",
   hoursNote: "Нд за домовленістю",
   cities: ["Львів", "Новий Розділ"],
+  /** Ті самі міста в місцевому відмінку — для заголовків і описів сторінок */
+  citiesIn: "у Львові та Новому Роздолі",
   messengers: [
     { label: "Viber", href: "viber://chat?number=%2B380631164377" },
   ],
 } as const;
+
+/** Якір вузла LocalBusiness у JSON-LD: сторінки посилаються на нього через @id */
+export const BUSINESS_ID = "/#business";
 
 export const nav = [
   { href: "/", label: "Головна" },

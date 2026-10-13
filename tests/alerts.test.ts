@@ -54,6 +54,18 @@ describe("reportError", () => {
     expect(m.sent).toHaveLength(3);
   });
 
+  it("той самий збій із різним чужим вводом у тексті — одне сповіщення, а не потік", async () => {
+    const t = Date.UTC(2026, 9, 4, 10, 0);
+    for (const id of ["abc", "zzz", "1' or '1'='1", "../../etc/passwd"]) {
+      await reportError(new Error(`invalid input syntax for type uuid: "${id}"`), req, ctx, t);
+    }
+    await reportError(new Error('value "9999999999" is out of range for type integer'), req, ctx, t);
+    await reportError(new Error('value "8888888888" is out of range for type integer'), req, ctx, t);
+    // Дві різні помилки — два повідомлення, скільки б значень не перебрали
+    expect(m.sent).toHaveLength(2);
+    expect(m.sent[0]).toContain("abc");
+  });
+
   it("не Error, а рядок — теж доходить", async () => {
     await reportError("щось зовсім дивне", req, ctx);
     expect(m.sent[0]).toContain("щось зовсім дивне");

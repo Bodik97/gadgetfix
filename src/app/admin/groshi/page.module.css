@@ -234,7 +234,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 150px minmax(60px, 1fr) repeat(4, auto);
+  grid-template-columns: 150px minmax(60px, 1fr) repeat(5, auto);
   align-items: center;
   gap: 18px;
   padding: 15px 22px;

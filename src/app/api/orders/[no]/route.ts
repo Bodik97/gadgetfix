@@ -4,7 +4,7 @@ import { getDb } from "@/db";
 import { getEvents } from "@/db/events";
 import { describeStatus, STAGES } from "@/db/leads";
 import { leads } from "@/db/schema";
-import { clientIp, rateLimit } from "@/lib/rateLimit";
+import { clientIp, rateLimit, release } from "@/lib/rateLimit";
 import { digits, lastFour } from "@/lib/phone";
 import { connectLink } from "@/lib/clientBot";
 
@@ -26,7 +26,16 @@ export type Order = {
 const NOT_FOUND = "Не знайшли замовлення з таким номером і телефоном.";
 
 const formatTime = (d: Date) =>
-  d.toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  d.toLocaleString("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Kyiv",
+  });
+
+/** Найбільший номер, який уміщається в колонку order_no (int4) */
+const MAX_ORDER_NO = 2147483647;
 
 export async function GET(request: Request, { params }: { params: Promise<{ no: string }> }) {
   // Перебір номерів замовлень — теж форма атаки
@@ -51,15 +60,35 @@ export async function GET(request: Request, { params }: { params: Promise<{ no: 
     );
   }
 
+  // Такого номера в базі бути не може, а Postgres на ньому впав би з помилкою
+  const orderNo = Number(clean);
+  if (orderNo > MAX_ORDER_NO) {
+    return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
+  }
+
+  // 4 цифри — це 10 000 варіантів, і з різних адрес їх можна перебрати.
+  // Тому рахуємо ще й спроби на саме замовлення: 10 невдалих за годину.
+  // Місце займаємо до перевірки, інакше вгаданий код пройшов би й понад межу
+  const tries = `order:no:${orderNo}`;
+  if (!(await rateLimit(tries, 10, 60 * 60_000)).ok) {
+    return NextResponse.json(
+      { error: "Забагато спроб для цього замовлення. Спробуйте за годину або зателефонуйте нам." },
+      { status: 429 },
+    );
+  }
+
   const [lead] = await getDb()
     .select()
     .from(leads)
-    .where(eq(leads.orderNo, Number(clean)))
+    .where(eq(leads.orderNo, orderNo))
     .limit(1);
 
   if (!lead || lastFour(lead.phone) !== check) {
     return NextResponse.json({ error: NOT_FOUND }, { status: 404 });
   }
+
+  // Правильні цифри — це не спроба підбору: лічильник замовлення обнуляємо
+  await release(tries);
 
   const info = describeStatus(lead.status);
   const events = await getEvents(lead.id);

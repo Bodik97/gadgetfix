@@ -24,8 +24,18 @@ const CHECKS = 6 * 21;
 export async function checkParcel(leadId: string, ttn: string): Promise<"closed" | "stop" | "wait"> {
   "use step";
   const [lead] = await getDb().select().from(leads).where(eq(leads.id, leadId)).limit(1);
-  // Заявку вже закрили іншим шляхом або накладну замінили — це стеження зайве
-  if (!lead || lead.status !== "shipped" || lead.ttn !== ttn) return "stop";
+  // Накладну замінили або заявку видалили — це стеження зайве
+  if (!lead || lead.ttn !== ttn) return "stop";
+
+  // Заявку вже закрито — нами ж, якщо це повтор кроку після збою посеред
+  // закриття, або клієнтом чи майстром. closeOrder доробить те, чого бракує
+  // (подія, пристрій, повідомлення), а де все на місці — нічого не змінить
+  if (lead.status === "done") {
+    await closeOrder(lead);
+    return "stop";
+  }
+
+  if (lead.status !== "shipped") return "stop";
 
   if (!(await parcelReceived(ttn))) return "wait";
 

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getMoney, getOutstanding, monthStart } from "@/db/adminStats";
-import { categoryLabel, getExpenses } from "@/db/expenses";
+import { categoryLabel, getExpenses, getExpenseTotal } from "@/db/expenses";
 import { getMoneyJournal } from "@/db/moneyJournal";
 import { isAdmin } from "@/lib/admin";
 import Expenses from "./Expenses";
 import PeriodFilter from "./PeriodFilter";
 import Journal from "./Journal";
-import { resolveRange } from "./period";
+import { dayString, resolveRange } from "./period";
 import styles from "./page.module.css";
 import shared from "../page.module.css";
 
@@ -20,8 +20,9 @@ export const dynamic = "force-dynamic";
 
 const uah = (n: number) => `${n.toLocaleString("uk-UA")} ₴`;
 
-const monthName = new Intl.DateTimeFormat("uk-UA", { month: "long", year: "numeric" });
-const day = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit" });
+// Сервер живе за UTC — без явного поясу дати з'їжджали б на дві-три години
+const monthName = new Intl.DateTimeFormat("uk-UA", { month: "long", year: "numeric", timeZone: "Europe/Kyiv" });
+const day = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", timeZone: "Europe/Kyiv" });
 
 /** Скільки місяців показуємо в історії */
 const MONTHS = 6;
@@ -51,10 +52,13 @@ export default async function MoneyPage({
 
   // Кожен місяць — окремий проміжок [початок, початок наступного)
   const months = await Promise.all(
-    Array.from({ length: MONTHS }, (_, i) => i).map(async (back) => ({
-      from: monthStart(back),
-      money: await getMoney(monthStart(back), back === 0 ? undefined : monthStart(back - 1)),
-    })),
+    Array.from({ length: MONTHS }, (_, i) => i).map(async (back) => {
+      const start = monthStart(back);
+      const end = back === 0 ? undefined : monthStart(back - 1);
+      const [money, spent] = await Promise.all([getMoney(start, end), getExpenseTotal(start, end)]);
+      // «Чистими» скрізь означає одне: за вирахуванням і деталей, і витрат сервісу
+      return { from: start, money, spent, net: money.profit - spent };
+    }),
   );
 
   const current = months[0];
@@ -62,12 +66,12 @@ export default async function MoneyPage({
 
   // На скільки відсотків місяць відрізняється від попереднього
   const delta =
-    previous && previous.money.profit > 0
-      ? Math.round(((current.money.profit - previous.money.profit) / previous.money.profit) * 100)
+    previous && previous.net > 0
+      ? Math.round(((current.net - previous.net) / previous.net) * 100)
       : null;
 
-  const best = Math.max(...months.map((m) => m.money.profit), 1);
-  const anyMoney = months.some((m) => m.money.jobs > 0);
+  const best = Math.max(...months.map((m) => m.net), 1);
+  const anyMoney = months.some((m) => m.money.jobs > 0 || m.money.revenue > 0 || m.spent > 0);
 
   return (
     <section className={shared.wrap}>
@@ -160,7 +164,7 @@ export default async function MoneyPage({
       <Journal entries={journal} />
 
       <Expenses
-        today={new Date().toISOString().slice(0, 10)}
+        today={dayString(new Date())}
         rows={spending.map((e) => ({
           id: e.id,
           день: day.format(e.spentAt),
@@ -176,7 +180,7 @@ export default async function MoneyPage({
         <div className={styles.table}>
           {months.map((m) => {
             const label = monthName.format(m.from);
-            const width = Math.max(2, Math.round((m.money.profit / best) * 100));
+            const width = Math.max(2, Math.round((m.net / best) * 100));
 
             return (
               <div key={label} className={styles.row}>
@@ -195,9 +199,14 @@ export default async function MoneyPage({
                   {m.money.cost > 0 ? "−" : ""}
                   {uah(m.money.cost)}
                 </span>
+                <span className={styles.cell}>
+                  <span className={styles.cellLabel}>витрати</span>
+                  {m.spent > 0 ? "−" : ""}
+                  {uah(m.spent)}
+                </span>
                 <span className={styles.cellStrong}>
                   <span className={styles.cellLabel}>чистими</span>
-                  {uah(m.money.profit)}
+                  {uah(m.net)}
                 </span>
                 <span className={styles.cell}>
                   <span className={styles.cellLabel}>ремонтів</span>

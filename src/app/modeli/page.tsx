@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import CatalogSection from "@/components/CatalogSection";
 import { getSection } from "@/data/catalog";
+import { site } from "@/data/site";
+import { WARRANTY_MAX } from "@/data/warranty";
 
 const section = getSection("iphone");
 
 export const metadata: Metadata = {
-  title: "Каталог моделей iPhone",
-  description: `${section.models.length} моделей iPhone: перелік робіт і терміни. Оберіть свою модель — покажемо, що робимо і скільки це триває.`,
+  title: { absolute: `Ремонт iPhone за моделями ${site.citiesIn} — ціни` },
+  description: `Ремонт iPhone ${site.citiesIn}: ціни на заміну екрана, акумулятора, роз'єму й камери для ${section.models.length} моделей. Діагностика безкоштовна, гарантія ${WARRANTY_MAX}.`,
   alternates: { canonical: "/modeli" },
 };
 

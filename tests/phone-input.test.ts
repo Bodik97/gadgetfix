@@ -19,6 +19,25 @@ describe("поле телефону", () => {
     }
   });
 
+  /** Набір по одній цифрі в кінець поля — так, як це робить компонент на кожне натискання */
+  const typed = (keys: string) => {
+    let value = "";
+    for (const key of keys) {
+      const local = localDigits(formatPhone(localDigits(value)) + key);
+      value = local ? `+38${local}` : "";
+    }
+    return value;
+  };
+
+  it("код країни чи вісімка, набрані вдруге після +38, не потрапляють у номер", () => {
+    expect(typed("380731234567")).toBe("+380731234567");
+    expect(typed("80731234567")).toBe("+380731234567");
+    expect(typed("0731234567")).toBe("+380731234567");
+    expect(typed("731234567")).toBe("+380731234567");
+    expect(localDigits("+38 +380731234567")).toBe("0731234567");
+    expect(localDigits("8 073 123 45 67")).toBe("0731234567");
+  });
+
   it("цифри, набрані перед +38, — теж номер, а не код країни", () => {
     expect(localDigits("0+38 ")).toBe("0");
     expect(localDigits("073+38 1234567")).toBe("0731234567");
@@ -42,5 +61,10 @@ describe("поле телефону", () => {
     expect(phoneComplete("+380731234567")).toBe(true);
     expect(phoneComplete("+38073123456")).toBe(false);
     expect(phoneComplete("")).toBe(false);
+  });
+
+  it("десять цифр без справжнього коду оператора — номер не повний", () => {
+    expect(phoneComplete("+380380731234")).toBe(false);
+    expect(phoneComplete("+380807312345")).toBe(false);
   });
 });

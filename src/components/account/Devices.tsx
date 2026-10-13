@@ -1,7 +1,8 @@
 import type { Device } from "@/db/schema";
+import { plural } from "./plural";
 import styles from "./Devices.module.css";
 
-const dateFmt = new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "long", year: "numeric" });
+const dateFmt = new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Kyiv" });
 
 function daysLeft(until: Date): number {
   return Math.ceil((until.getTime() - Date.now()) / 86_400_000);
@@ -30,7 +31,7 @@ export default function Devices({ devices }: { devices: Device[] }) {
                 {active ? (
                   <>
                     <span className={styles.warrantyMain}>
-                      {left} {left === 1 ? "день" : left < 5 ? "дні" : "днів"} гарантії
+                      {left} {plural(left, "день", "дні", "днів")} гарантії
                     </span>
                     <span className={styles.warrantyDate}>до {dateFmt.format(d.warrantyUntil)}</span>
                   </>

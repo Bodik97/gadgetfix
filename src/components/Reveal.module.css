@@ -1,17 +1,19 @@
+/* Обидва класи ставить скрипт: без нього блок просто видимий */
 .hidden,
 .shown {
-  /* transform + opacity — єдине, що браузер анімує без перерахунку розкладки */
-  transition: opacity .55s var(--ease), transform .55s var(--ease);
   will-change: opacity, transform;
 }
 
 .hidden {
+  /* Ховаємо миттєво, без переходу: блок у цю мить ще нижче екрана */
   opacity: 0;
   /* Виїзд знизу: крок ніби піднімається з-під наступного */
   transform: translateY(26px);
 }
 
 .shown {
+  /* transform + opacity — єдине, що браузер анімує без перерахунку розкладки */
+  transition: opacity .55s var(--ease), transform .55s var(--ease);
   opacity: 1;
   transform: none;
 }

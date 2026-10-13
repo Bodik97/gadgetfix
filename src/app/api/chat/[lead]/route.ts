@@ -12,6 +12,9 @@ import { forwardMasterMessage } from "@/lib/clientBot";
 
 export const dynamic = "force-dynamic";
 
+/** id у базі — UUID: будь-що інше Postgres відкинув би помилкою, а це просто «не знайдено» */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** Фото стискається на клієнті, тож більше сюди приходити не має */
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
@@ -31,6 +34,7 @@ function sideFrom(value: string | null): ChatSide {
 
 export async function GET(request: Request, { params }: { params: Promise<{ lead: string }> }) {
   const { lead } = await params;
+  if (!UUID.test(lead)) return NextResponse.json({ error: "Не знайдено" }, { status: 404 });
   const role = sideFrom(new URL(request.url).searchParams.get("side"));
 
   if (!(await canUseChat(lead, role))) {
@@ -60,6 +64,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ lead
 
 export async function POST(request: Request, { params }: { params: Promise<{ lead: string }> }) {
   const { lead } = await params;
+  if (!UUID.test(lead)) return NextResponse.json({ error: "Не знайдено" }, { status: 404 });
 
   const limit = await rateLimit(`chat:ip:${clientIp(request)}`, 30, 60_000);
   if (!limit.ok) {

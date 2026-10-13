@@ -4,15 +4,15 @@ import CountUp from "@/components/CountUp";
 import Accordion from "@/components/Accordion";
 import MailInForm from "@/components/MailInForm";
 import PackingList from "@/components/PackingList";
+import StatusCheck from "@/components/StatusCheck";
 import StepDeck from "@/components/StepDeck";
-import TtnTracker from "@/components/TtnTracker";
 import { faq, heroStats, popular, steps } from "@/data/mailIn";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Ремонт поштою — Нова Пошта по Україні",
   description:
-    "Надішліть iPhone Новою Поштою з будь-якого міста: безкоштовна діагностика, фіксована ціна після дзвінка, повернення за наш кошт, гарантія до 6 місяців.",
+    "Надішліть iPhone Новою Поштою з будь-якого міста: безкоштовна діагностика, фіксована ціна після дзвінка, повернення за наш кошт, гарантія до 4 місяців.",
   alternates: { canonical: "/poshtoyu" },
 };
 
@@ -146,7 +146,11 @@ export default function MailInPage() {
       </div>
 
       <div className="band" data-theme="dark">
-      <TtnTracker />
+      <StatusCheck
+        id="track"
+        title="Де моя посилка"
+        lead="Введіть номер замовлення та останні 4 цифри свого телефону — покажемо, на якому етапі ремонт. Номер називає майстер, коли передзвонює; він також є у вашому кабінеті."
+      />
 
       {/* Оформлення */}
       <section id="send" className={`container ${styles.send}`}>
@@ -154,7 +158,7 @@ export default function MailInPage() {
           <div>
             <h2 className={styles.sendTitle}>Заповніть — надішлемо адресу відділення</h2>
             <p className={styles.sendLead}>
-              Після заявки приходить SMS з адресою, отримувачем і номером замовлення. Далі просто
+              Після заявки передзвонюємо й називаємо адресу, отримувача і номер замовлення. Далі просто
               віддаєте пакунок на пошту.
             </p>
 

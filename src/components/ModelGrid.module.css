@@ -78,6 +78,11 @@
   transition: transform .25s, border-color .25s, background .25s;
 }
 
+/* Картки понад ліміт є в розмітці, але сховані до «Показати ще» */
+.card[hidden] {
+  display: none;
+}
+
 .card:hover {
   color: inherit;
   transform: translateY(-5px);

@@ -9,6 +9,7 @@ const stamp = new Intl.DateTimeFormat("uk-UA", {
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Kyiv",
 });
 
 export default function Timeline({ events }: { events: LeadEvent[] }) {

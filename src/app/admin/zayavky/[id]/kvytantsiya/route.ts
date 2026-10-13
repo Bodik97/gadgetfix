@@ -25,6 +25,7 @@ const dateFormat = new Intl.DateTimeFormat("uk-UA", {
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Kyiv",
 });
 
 const uah = (n: number) => `${n.toLocaleString("uk-UA")} ₴`;

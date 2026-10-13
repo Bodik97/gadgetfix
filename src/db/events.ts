@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { getDb } from "./index";
 import { devices, leadEvents, leads, type Device, type Lead, type LeadEvent } from "./schema";
 
@@ -37,25 +37,43 @@ export async function addEvent(
 }
 
 /**
+ * Коли пристрій віддали клієнту — час першої події «done» у хроніці. На
+ * відміну від updatedAt, пізніші правки заявки цю дату не зсувають.
+ * null — заявку закрили ще до появи хроніки.
+ */
+export async function getHandoverDate(leadId: string): Promise<Date | null> {
+  const [row] = await getDb()
+    .select({ at: leadEvents.createdAt })
+    .from(leadEvents)
+    .where(and(eq(leadEvents.leadId, leadId), eq(leadEvents.status, "done")))
+    .orderBy(asc(leadEvents.createdAt))
+    .limit(1);
+
+  return row?.at ?? null;
+}
+
+/**
  * Ремонт завершено — заносимо пристрій у список клієнта з датою кінця гарантії.
  * Повторний виклик нічого не дублює: на одну заявку один пристрій.
+ *
+ * Дата — та сама, що в заявці (lead.warrantyUntil), а не порахована заново:
+ * кабінет і адмінка мають показувати один день. Без гарантії пристрою в
+ * списку немає. Заявку без акаунта привʼязати нема до кого: список пристроїв
+ * ведеться за акаунтом клієнта.
  */
-export async function registerDevice(lead: Lead, warrantyDays: number): Promise<void> {
-  if (!lead.clerkUserId) return;
+export async function registerDevice(lead: Lead): Promise<void> {
+  if (!lead.clerkUserId || !lead.warrantyUntil) return;
 
   const db = getDb();
   const existing = await db.select().from(devices).where(eq(devices.leadId, lead.id)).limit(1);
   if (existing.length > 0) return;
-
-  const until = new Date();
-  until.setDate(until.getDate() + warrantyDays);
 
   await db.insert(devices).values({
     clerkUserId: lead.clerkUserId,
     leadId: lead.id,
     name: lead.model ?? lead.service ?? lead.problem?.slice(0, 40) ?? "Пристрій",
     work: lead.problem,
-    warrantyUntil: until,
+    warrantyUntil: lead.warrantyUntil,
   });
 }
 
