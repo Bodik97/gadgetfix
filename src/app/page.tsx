@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Accordion from "@/components/Accordion";
 import BookingForm from "@/components/BookingForm";
 import CountUp from "@/components/CountUp";
 import FaqAside from "@/components/FaqAside";
@@ -311,12 +312,7 @@ export default async function Home() {
           </div>
 
           <div className={styles.faqList}>
-            {faq.map((f) => (
-              <details key={f.q} name="faq" className={styles.faqItem}>
-                <summary className={styles.faqQ}>{f.q}</summary>
-                <p className={styles.faqA}>{f.a}</p>
-              </details>
-            ))}
+            <Accordion items={faq} />
           </div>
         </div>
       </section>

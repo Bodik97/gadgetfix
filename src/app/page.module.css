@@ -542,61 +542,6 @@
   min-width: 0;
 }
 
-.faqItem {
-  border-top: 1px solid rgb(var(--fg-rgb) / .14);
-  padding: 22px 0;
-}
-
-.faqItem:last-child {
-  border-bottom: 1px solid rgb(var(--fg-rgb) / .14);
-}
-
-.faqQ {
-  font-family: var(--font-unbounded), sans-serif;
-  font-size: 18.5px;
-  letter-spacing: -.02em;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-}
-
-.faqQ::after {
-  content: "+";
-  color: var(--accent-text);
-  font-size: 22px;
-  line-height: 1;
-  transition: transform .3s var(--ease);
-  flex: none;
-}
-
-.faqItem[open] .faqQ::after {
-  transform: rotate(45deg);
-}
-
-/* Плавне розкриття відповіді там, де браузер це вміє; в інших — миттєве */
-.faqItem {
-  interpolate-size: allow-keywords;
-}
-
-.faqItem::details-content {
-  block-size: 0;
-  overflow: clip;
-  transition: block-size .35s var(--ease), content-visibility .35s allow-discrete;
-}
-
-.faqItem[open]::details-content {
-  block-size: auto;
-}
-
-.faqA {
-  margin-top: 14px;
-  font-size: 15.5px;
-  line-height: 1.6;
-  color: var(--text-2);
-  max-width: 60ch;
-}
-
 /* ---------- Статус і запис ---------- */
 /* Відступи — місце для іконок шляху посилки (ParcelDecor): ті самі розміри, що там */
 .statusWrap {
