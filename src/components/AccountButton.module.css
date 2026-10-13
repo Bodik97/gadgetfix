@@ -95,8 +95,8 @@
   height: 44px;
 }
 
-@media (max-width: 860px) {
-  /* На телефоні лишається сама іконка — підпис з'їдає рядок */
+@media (max-width: 1000px) {
+  /* На вузькому екрані лишається сама іконка — підпис з'їдає рядок */
   .button {
     padding: 8px;
     width: 46px;
@@ -112,7 +112,9 @@
     width: 46px;
     height: 46px;
   }
+}
 
+@media (max-width: 860px) {
   .toast {
     right: 12px;
     border-radius: 22px;

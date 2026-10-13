@@ -52,7 +52,7 @@
   border: 1px solid rgb(var(--fg-rgb) / .12);
   /* Непрозоре тло ховає пунктир під кружечком */
   background: var(--bg);
-  animation: bob 4.2s ease-in-out infinite alternate;
+  animation: bob var(--dur, 3.4s) ease-in-out var(--delay, 0s) infinite alternate;
 }
 
 .step svg {
@@ -60,32 +60,33 @@
   height: 40px;
 }
 
-/* Кружечки гойдаються не в такт — так шлях виглядає живим */
-.step:nth-child(2) { animation-delay: -.7s; }
-.step:nth-child(3) { animation-delay: -1.4s; }
-.step:nth-child(4) { animation-delay: -2.1s; }
-.step:nth-child(5) { animation-delay: -2.8s; }
-.step:nth-child(6) { animation-delay: -3.5s; }
+/* У кожного кружечка свій темп, розмах і зсув — рухаються не в такт */
+.step:nth-child(1) { --dur: 3.4s; --amp: 7px; --delay: -.4s; }
+.step:nth-child(2) { --dur: 2.3s; --amp: 4px; --delay: -1.9s; }
+.step:nth-child(3) { --dur: 4.1s; --amp: 9px; --delay: -3.2s; }
+.step:nth-child(4) { --dur: 2.8s; --amp: 5px; --delay: -.9s; }
+.step:nth-child(5) { --dur: 3.7s; --amp: 8px; --delay: -2.6s; }
+.step:nth-child(6) { --dur: 2.5s; --amp: 6px; --delay: -1.3s; }
 
 /* Під карткою — кілька іконок без рамок, тихіше */
 .extras {
   bottom: 0;
   height: var(--bottom);
   justify-content: space-around;
-  opacity: .55;
+  opacity: .8;
 }
 
 .extra svg {
-  width: 34px;
-  height: 34px;
+  width: 52px;
+  height: 52px;
 }
 
 .extra:nth-child(1) { transform: rotate(-8deg); }
 .extra:nth-child(3) { transform: rotate(9deg); }
 
 @keyframes bob {
-  from { transform: translateY(4px); }
-  to { transform: translateY(-4px); }
+  from { transform: translateY(var(--amp, 6px)); }
+  to { transform: translateY(calc(var(--amp, 6px) * -1)); }
 }
 
 @media (max-width: 700px) {
@@ -110,7 +111,7 @@
   }
 
   .extra svg {
-    width: 28px;
-    height: 28px;
+    width: 38px;
+    height: 38px;
   }
 }

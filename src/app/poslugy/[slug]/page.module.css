@@ -253,10 +253,17 @@
 }
 
 /* ---------- Інші роботи ---------- */
+/* Чотири картки: один рядок або два по дві — без «хвоста» */
 .others {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .others {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .other {

@@ -4,6 +4,7 @@ import CountUp from "@/components/CountUp";
 import Reveal from "@/components/Reveal";
 import Accordion from "@/components/Accordion";
 import BookingForm from "@/components/BookingForm";
+import FaqAside from "@/components/FaqAside";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
 import styles from "./page.module.css";
@@ -25,6 +26,13 @@ const steps = [
   { no: "02", title: "Підбір запчастини", body: "Шукаємо деталь у постачальників. Якщо модель рідкісна — знімаємо стару деталь і надсилаємо фото в магазин, щоб підібрали точно таку." },
   { no: "03", title: "Остаточна ціна", body: "Коли деталь знайдена, називаємо фінальну суму й термін. Далі вона не змінюється." },
   { no: "04", title: "Ремонт і перевірка", body: "Ставимо деталь, перевіряємо все перед видачею. Гарантія 2 місяці на аналог, 4 місяці на оригінал." },
+];
+
+const sendNotes = [
+  "Діагностика безкоштовна",
+  "Остаточна ціна — до початку ремонту, далі не змінюється",
+  "Гарантія 2 місяці на аналог, 4 місяці на оригінал",
+  `${site.hours} · ${site.hoursNote}`,
 ];
 
 const faq = [
@@ -136,6 +144,17 @@ export default function AndroidPage() {
               Вкажіть у описі марку й модель телефона, наприклад «Samsung A54, розбитий екран».
               Передзвонимо, коли знатимемо, що деталь є і скільки коштує.
             </p>
+
+            <div className={styles.notes}>
+              {sendNotes.map((text) => (
+                <div key={text} className={styles.note}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: "var(--accent-text)" }} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                  <span>{text}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <BookingForm source="model" model="Android" submitLabel="Надіслати заявку" />
@@ -146,6 +165,7 @@ export default function AndroidPage() {
       <section className={`container ${styles.faqSection}`}>
         <div>
           <h2 className={styles.faqTitle}>Про ремонт Android</h2>
+          <FaqAside />
         </div>
         <div className={styles.faqList}>
           <Accordion items={faq} />

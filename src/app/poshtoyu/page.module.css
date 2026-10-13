@@ -222,10 +222,23 @@
   gap: 12px;
 }
 
+/* Шість моделей: рядок із шести, два по три або три по дві — без «хвоста» */
 .popularGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 14px;
+}
+
+@media (max-width: 1100px) {
+  .popularGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .popularGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .popularCard {

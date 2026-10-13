@@ -269,8 +269,47 @@
   }
 }
 
+/* ---------- Лінійний малюнок тлом темної смуги ---------- */
+.bandArt {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* Силует Львова вздовж нижнього краю — «репутація в місті» */
+.bandArtCity {
+  background-image: url("/assets/bg-lviv-skyline.svg");
+  background-size: max(100%, 640px) auto;
+  background-position: 50% 100%;
+  opacity: .8;
+}
+
+/* Місце під силует, щоб вежі не діставали до тексту */
+.bandArtCity + .statement {
+  padding-bottom: clamp(150px, 21vw, 300px);
+}
+
+/* Маршрути з міст України до Львова — «надішліть поштою» */
+.bandArtRoutes {
+  background-image: url("/assets/bg-ukraine-routes.svg");
+  background-size: auto 84%;
+  background-position: 98% 50%;
+  opacity: .6;
+}
+
+/* На вузькому екрані карта лягає під текст — робимо тихішою */
+@media (max-width: 700px) {
+  .bandArtRoutes {
+    background-size: 150% auto;
+    background-position: 30% 100%;
+    opacity: .4;
+  }
+}
+
 /* ---------- Репутація: одна думка на всю смугу ---------- */
 .statement {
+  position: relative;
   padding-block: clamp(80px, 11vw, 168px);
   display: grid;
   justify-items: center;
@@ -440,6 +479,7 @@
 
 /* ---------- Поштою ---------- */
 .mail {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: clamp(32px, 5vw, 88px);

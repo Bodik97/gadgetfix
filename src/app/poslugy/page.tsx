@@ -15,6 +15,12 @@ import { siteUrl } from "@/lib/siteUrl";
 import styles from "./page.module.css";
 
 // Дві найчастіші роботи з цінами з прайсу — для опису в пошуку
+const bookPoints = [
+  "Діагностика безкоштовна",
+  "Ціну фіксуємо до початку робіт",
+  "Гарантія 2 місяці на аналог, 4 місяці на оригінал",
+];
+
 const screen = PRICES_PUBLISHED ? serviceFrom("zamina-ekrana") : null;
 const battery = PRICES_PUBLISHED ? serviceFrom("akumuliator") : null;
 const fromPrices =
@@ -156,6 +162,15 @@ export default function ServicesPage() {
                   {site.hours} · {site.hoursNote}
                 </span>
               </div>
+
+              {bookPoints.map((text) => (
+                <div key={text} className={styles.contact}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: "var(--accent-text)" }} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                  <span>{text}</span>
+                </div>
+              ))}
             </div>
           </div>
 

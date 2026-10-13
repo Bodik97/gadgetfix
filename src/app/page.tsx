@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BookingForm from "@/components/BookingForm";
 import CountUp from "@/components/CountUp";
+import FaqAside from "@/components/FaqAside";
 import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
 import ReviewSlider from "@/components/ReviewSlider";
@@ -152,6 +153,7 @@ export default async function Home() {
 
       {/* Репутація */}
       <section className="band" data-theme="dark">
+        <div className={`${styles.bandArt} ${styles.bandArtCity}`} aria-hidden="true" />
         <div className={`container ${styles.statement}`}>
           <h2 className={styles.statementTitle}>Кожен ремонт — це наша репутація в місті</h2>
           <p className={styles.statementText}>
@@ -255,6 +257,7 @@ export default async function Home() {
 
       {/* Поштою */}
       <section className="band" data-theme="dark">
+        <div className={`${styles.bandArt} ${styles.bandArtRoutes}`} aria-hidden="true" />
         <div className={`container ${styles.block} ${styles.mail}`}>
           <div>
             <h2 className={styles.h2}>Не у Львові? Надішліть Новою Поштою</h2>
@@ -282,7 +285,10 @@ export default async function Home() {
       {/* FAQ */}
       <section id="faq" className="band stripe-alt">
         <div className={`container ${styles.block} ${styles.faqSection}`}>
-          <h2 className={styles.h2}>Коротко про головне</h2>
+          <div>
+            <h2 className={styles.h2}>Коротко про головне</h2>
+            <FaqAside />
+          </div>
 
           <div className={styles.faqList}>
             {faq.map((f) => (

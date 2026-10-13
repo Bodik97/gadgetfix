@@ -15,7 +15,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  flex-wrap: wrap;
+}
+
+/* Логотип не стискається, коли в рядку тісно */
+.nav > :first-child {
+  flex: none;
 }
 
 .navPlain {
@@ -34,8 +38,8 @@
   display: flex;
   align-items: center;
   gap: 26px;
-  flex-wrap: wrap;
   font-size: 14.5px;
+  white-space: nowrap;
 }
 
 .link {
@@ -102,6 +106,46 @@
   padding: 11px 20px;
   font-size: 14.5px;
   white-space: nowrap;
+}
+
+/* ---------- Планшет і вузьке вікно ----------
+   Шапка лишається одним рядком: ущільнюємо відступи, а номер текстом
+   замінюємо кнопкою-дзвінком. */
+@media (max-width: 1140px) {
+  .nav {
+    gap: 14px;
+  }
+
+  .links {
+    gap: 16px;
+    font-size: 14px;
+  }
+
+  .actions {
+    gap: 8px;
+  }
+
+  .phone {
+    display: none;
+  }
+
+  .callButton {
+    display: inline-flex;
+  }
+
+  .cta {
+    padding-inline: 16px;
+  }
+}
+
+@media (max-width: 1000px) {
+  .nav {
+    gap: 10px;
+  }
+
+  .links {
+    gap: 12px;
+  }
 }
 
 /* ---------- Мобільна шапка ---------- */
