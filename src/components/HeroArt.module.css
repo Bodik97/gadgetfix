@@ -1,0 +1,47 @@
+.art {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 50% 50%;
+  pointer-events: none;
+}
+
+/* Послуги: інструменти майстра з обох боків заголовка */
+.tools {
+  background-image: url("/assets/hero-tools.svg");
+}
+
+/* Каталоги: віяло пристроїв з обох боків заголовка */
+.devices {
+  background-image: url("/assets/hero-devices.svg");
+}
+
+/* Android: сітка деталей, серед яких знайдено потрібну. Ліворуч, під
+   текстом, сітка згасає. */
+.parts {
+  background-image: url("/assets/hero-parts.svg");
+  mask-image: linear-gradient(90deg, transparent 38%, #000 70%);
+}
+
+/* Поштою: шлях посилки до Львова */
+.route {
+  background-image: url("/assets/hero-route.svg");
+}
+
+/* На телефоні малюнок опиняється під текстом — робимо тихішим */
+@media (max-width: 860px) {
+  .art {
+    opacity: .5;
+  }
+
+  .tools,
+  .devices {
+    background-position: 12% 50%;
+  }
+
+  .parts {
+    background-position: 78% 50%;
+    mask-image: linear-gradient(180deg, transparent 30%, #000 75%);
+  }
+}

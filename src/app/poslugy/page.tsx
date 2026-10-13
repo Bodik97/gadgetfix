@@ -12,6 +12,7 @@ import { serviceFrom, PRICES_PUBLISHED, uah } from "@/data/prices";
 import { BUSINESS_ID, site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
 import { siteUrl } from "@/lib/siteUrl";
+import HeroArt from "@/components/HeroArt";
 import styles from "./page.module.css";
 
 // Дві найчастіші роботи з цінами з прайсу — для опису в пошуку
@@ -53,6 +54,7 @@ export default function ServicesPage() {
     <>
       {/* Герой */}
       <section className={`band ${styles.hero}`} data-theme="dark">
+        <HeroArt name="tools" />
         <div className={styles.heroInner}>
           <div className={styles.heroCopy}>
             <span className={`${styles.badge} nUp`}>

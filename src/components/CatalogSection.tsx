@@ -2,6 +2,7 @@ import Link from "next/link";
 import ModelGrid from "./ModelGrid";
 import Ticker from "./Ticker";
 import { sections, type Section } from "@/data/catalog";
+import HeroArt from "./HeroArt";
 import styles from "./CatalogSection.module.css";
 
 const tickerItems = [
@@ -15,6 +16,7 @@ export default function CatalogSection({ section }: { section: Section }) {
   return (
     <>
       <section className={`band ${styles.hero}`} data-theme="dark">
+        <HeroArt name="devices" />
         <div className={styles.heroInner}>
           <span className={`${styles.badge} nUp`}>
             <span className="pulse" />

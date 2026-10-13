@@ -7,6 +7,7 @@ import BookingForm from "@/components/BookingForm";
 import FaqAside from "@/components/FaqAside";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
+import HeroArt from "@/components/HeroArt";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -69,6 +70,7 @@ export default function AndroidPage() {
     <>
       {/* Герой */}
       <section className={`band ${styles.hero}`} data-theme="dark">
+        <HeroArt name="parts" />
         <div className={styles.heroInner}>
           <div className={styles.heroCopy}>
             <span className={`${styles.badge} nUp`}>

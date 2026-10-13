@@ -697,7 +697,8 @@ button,
 /* Смуга-обгортка над готовими секціями: ті не розраховані починатись
    одразу під скосом, тож даємо їм повітря згори */
 div.band {
-  padding-top: clamp(24px, 3.4vw, 56px);
+  --band-pad: clamp(24px, 3.4vw, 56px);
+  padding-top: var(--band-pad);
 }
 
 .band[data-theme="dark"] {

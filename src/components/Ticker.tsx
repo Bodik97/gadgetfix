@@ -37,12 +37,14 @@ export default function Ticker({ items }: { items: Item[] }) {
   );
 
   return (
-    <div className={styles.wrap}>
-      <div className={`${styles.track} ticker-track`}>
-        {row}
-        <span aria-hidden="true" className={styles.clone}>
+    <div className={styles.tilt}>
+      <div className={styles.wrap}>
+        <div className={`${styles.track} ticker-track`}>
           {row}
-        </span>
+          <span aria-hidden="true" className={styles.clone}>
+            {row}
+          </span>
+        </div>
       </div>
     </div>
   );

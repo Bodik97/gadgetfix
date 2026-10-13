@@ -7,6 +7,7 @@ import PackingList from "@/components/PackingList";
 import StatusCheck from "@/components/StatusCheck";
 import StepDeck from "@/components/StepDeck";
 import { faq, heroStats, popular, steps } from "@/data/mailIn";
+import HeroArt from "@/components/HeroArt";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -31,6 +32,7 @@ export default function MailInPage() {
     <>
       {/* Герой */}
       <section className={`band ${styles.hero}`} data-theme="dark">
+        <HeroArt name="route" />
         <div className={styles.heroInner}>
           <div className={styles.heroCopy}>
             <span className={`${styles.badge} nUp`}>

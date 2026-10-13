@@ -1,6 +1,18 @@
+/* Стрічка лягає впритул під скіс попередньої смуги й нахилена під той самий
+   кут: скіс підіймається на --skew за ширину екрана. Середина стрічки
+   проходить на пів скосу вище за початок своєї смуги. */
+.tilt {
+  overflow-x: clip;
+  margin-top: calc(var(--skew) * -.5 - var(--band-pad, 0px));
+  margin-bottom: calc(var(--skew) * .5);
+}
+
 .wrap {
   position: relative;
   overflow: hidden;
+  /* Трохи ширша за екран, щоб після повороту не оголились кути */
+  margin-inline: -2%;
+  rotate: calc(-1 * atan2(var(--skew), 100vw));
   border-top: 1px solid rgb(var(--fg-rgb) / .08);
   border-bottom: 1px solid rgb(var(--fg-rgb) / .08);
   background: rgb(var(--fg-rgb) / .02);
