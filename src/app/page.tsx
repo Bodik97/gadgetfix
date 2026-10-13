@@ -4,6 +4,7 @@ import Accordion from "@/components/Accordion";
 import BookingForm from "@/components/BookingForm";
 import CountUp from "@/components/CountUp";
 import FaqAside from "@/components/FaqAside";
+import HeroStatus from "@/components/HeroStatus";
 import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
 import ReviewSlider from "@/components/ReviewSlider";
@@ -89,10 +90,14 @@ export default async function Home() {
       {/* Герой */}
       <section className={`band ${styles.hero}`} data-theme="dark">
         <div className={styles.heroInner}>
-          <p className={`${styles.heroStatus} nUp`}>
-            <span className="pulse" />
-            {site.hours} · передзвонимо за 25 хвилин
-          </p>
+          {/* Великий логотип над заголовком. Кольори логотипа не змінюються,
+              а герой темний в обох темах — плашка не потрібна. */}
+          <div className={`${styles.heroLogo} nUp`}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- векторний SVG, оптимізатор картинок тут нічого не дасть */}
+            <img src="/brand/gadgetfix-logo-dark.svg" alt={site.name} width={739} height={136} />
+          </div>
+
+          <HeroStatus />
 
           <h1 className={`${styles.h1} nUp nUp-1`}>Ремонт iPhone без сюрпризів у ціні</h1>
 

@@ -123,8 +123,12 @@
 }
 
 /* ---------- Картки заявок ---------- */
+/* minmax(0, …): без нього колонка розтягувалась під найширший нерозривний
+   вміст картки (довгий пункт у списку гарантії), і на телефоні вся сторінка
+   ставала ширшою за екран */
 .cards {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -432,6 +436,7 @@
 /* ---------- Права колонка: статус ---------- */
 .cardSide {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   justify-items: stretch;
   flex: 0 1 220px;
@@ -661,7 +666,7 @@
 
 .event {
   display: grid;
-  grid-template-columns: 86px 1fr;
+  grid-template-columns: 86px minmax(0, 1fr);
   gap: 12px;
   font-size: 13.5px;
   line-height: 1.45;
@@ -673,6 +678,7 @@
 }
 
 .eventText {
+  overflow-wrap: anywhere;
   color: rgb(var(--text-rgb) / .82);
 }
 
@@ -716,7 +722,7 @@
 
 @media (max-width: 560px) {
   .event {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
 
@@ -818,6 +824,7 @@
    поруч із розгорнутим чатом вони розтягувались на всю його висоту */
 .chatRow {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   padding-top: 14px;
   margin-top: 14px;
@@ -1143,6 +1150,7 @@
 /* ---------- Статус: наступний крок + список ---------- */
 .statusControl {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 

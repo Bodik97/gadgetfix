@@ -78,6 +78,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="uk"
+      // Типова тема — світла; збережений вибір відвідувача підставляє скрипт нижче
+      data-theme="light"
       data-scroll-behavior="smooth"
       className={`${unbounded.variable} ${manrope.variable}`}
       // Тему ставить скрипт нижче ще до гідратації — атрибут на <html> різнитиметься

@@ -57,11 +57,6 @@ export default function ServicesPage() {
         <HeroArt name="tools" />
         <div className={styles.heroInner}>
           <div className={styles.heroCopy}>
-            <span className={`${styles.badge} nUp`}>
-              <span className="pulse" />
-              Діагностика безкоштовна · ціна фіксується до робіт
-            </span>
-
             <h1 className={`${styles.h1} nUp nUp-1`}>
               Послуги й ціни на ремонт iPhone
             </h1>

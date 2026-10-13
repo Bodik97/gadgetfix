@@ -18,11 +18,6 @@ export default function CatalogSection({ section }: { section: Section }) {
       <section className={`band ${styles.hero}`} data-theme="dark">
         <HeroArt name="devices" />
         <div className={styles.heroInner}>
-          <span className={`${styles.badge} nUp`}>
-            <span className="pulse" />
-            {section.models.length} моделей · діагностика безкоштовна
-          </span>
-
           <h1 className={`${styles.h1} nUp nUp-1`}>{section.title}</h1>
           <p className={`${styles.heroLead} nUp nUp-2`}>{section.lead}</p>
 

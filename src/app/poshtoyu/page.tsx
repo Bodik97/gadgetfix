@@ -37,11 +37,6 @@ export default function MailInPage() {
         <HeroArt name="route" />
         <div className={styles.heroInner}>
           <div className={styles.heroCopy}>
-            <span className={`${styles.badge} nUp`}>
-              <span className="pulse" />
-              Приймаємо посилки з усієї України
-            </span>
-
             <h1 className={`${styles.h1} nUp nUp-1`}>
               Ремонт поштою — без поїздки до Львова
             </h1>

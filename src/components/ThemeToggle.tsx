@@ -6,8 +6,9 @@ import styles from "./ThemeToggle.module.css";
 export const THEME_KEY = "gf-theme";
 
 /**
- * Ставить тему ще до першого малювання — інакше світла тема на мить
- * спалахувала б темною. Виконується як inline-скрипт у <head>.
+ * Типова тема — світла (атрибут на <html> у layout). Якщо відвідувач раніше
+ * обрав темну, скрипт ставить її ще до першого малювання — інакше вона на
+ * мить спалахувала б світлою. Виконується як inline-скрипт у <head>.
  */
 export const THEME_SCRIPT = `try{var t=localStorage.getItem("${THEME_KEY}");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}`;
 

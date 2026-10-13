@@ -1,0 +1,72 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+/* Місце під блискавку: від його центру б'ють розряди */
+.mark {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+/* Світіння, яке спалахує під час удару блискавки */
+.glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--lime-rgb) / .7), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Полотно з мініблискавками: більше за іконку, розряди виходять за плашку */
+.sparks {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 112px;
+  height: 112px;
+  translate: -50% -50%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px rgb(var(--lime-rgb) / .9));
+}
+
+.bolt {
+  position: relative;
+  fill: var(--accent);
+}
+
+.text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.hours {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* На телефоні рядок не вміщається — графік і примітка стають стовпчиком,
+   і весь блок лишається по центру */
+@media (max-width: 480px) {
+  .text {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

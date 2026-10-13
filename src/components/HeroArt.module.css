@@ -1,3 +1,5 @@
+/* Малюнок видно на всьому герої, але під текстом маска його пригашує, а на
+   вільних краях лишає на повну — так є і фон, і читабельний заголовок. */
 .art {
   position: absolute;
   inset: 0;
@@ -7,21 +9,31 @@
   pointer-events: none;
 }
 
-/* Послуги: інструменти майстра з обох боків заголовка */
+/* Заголовок по центру — під ним малюнок тихий, з боків на повну */
+.tools,
+.devices {
+  mask-image: radial-gradient(ellipse 46% 85% at 50% 50%, rgb(0 0 0 / .28) 72%, #000 100%);
+}
+
+/* Послуги: інструменти майстра */
 .tools {
   background-image: url("/assets/hero-tools.svg");
 }
 
-/* Каталоги: віяло пристроїв з обох боків заголовка */
+/* Каталоги: віяло пристроїв */
 .devices {
   background-image: url("/assets/hero-devices.svg");
 }
 
-/* Android: сітка деталей, серед яких знайдено потрібну. Ліворуч, під
-   текстом, сітка згасає. */
+/* Текст ліворуч — під ним малюнок тихий, у правій половині на повну */
+.parts,
+.route {
+  mask-image: linear-gradient(90deg, rgb(0 0 0 / .28) 46%, #000 66%);
+}
+
+/* Android: сітка деталей, серед яких знайдено потрібну */
 .parts {
   background-image: url("/assets/hero-parts.svg");
-  mask-image: linear-gradient(90deg, transparent 38%, #000 70%);
 }
 
 /* Поштою: шлях посилки до Львова */
@@ -29,19 +41,31 @@
   background-image: url("/assets/hero-route.svg");
 }
 
-/* На телефоні малюнок опиняється під текстом — робимо тихішим */
+/* На телефоні текст займає всю ширину, і вирізка з великого малюнка лягала
+   випадковими шматками. Тому тут окремий фон — рівний візерунок із дрібних
+   іконок тієї самої теми: тихий під текстом, яскравіший угорі та внизу. */
 @media (max-width: 860px) {
   .art {
-    opacity: .5;
+    background-repeat: repeat;
+    background-size: 200px;
+    background-position: 50% 0;
+    opacity: .8;
+    mask-image: linear-gradient(180deg, #000 0, rgb(0 0 0 / .45) 18%, rgb(0 0 0 / .45) 82%, #000 100%);
   }
 
-  .tools,
+  .tools {
+    background-image: url("/assets/hero-tools-tile.svg");
+  }
+
   .devices {
-    background-position: 12% 50%;
+    background-image: url("/assets/hero-devices-tile.svg");
   }
 
   .parts {
-    background-position: 78% 50%;
-    mask-image: linear-gradient(180deg, transparent 30%, #000 75%);
+    background-image: url("/assets/hero-parts-tile.svg");
+  }
+
+  .route {
+    background-image: url("/assets/hero-route-tile.svg");
   }
 }
