@@ -16,7 +16,8 @@ export const metadata: Metadata = {
 
 const facts = [
   { value: "0", unit: "₴", note: "діагностика" },
-  { value: "4", unit: "міс.", note: "гарантія на оригінал, 2 міс. — на аналог" },
+  { value: "4", unit: "міс.", note: "гарантія на оригінальну деталь" },
+  { value: "2", unit: "міс.", note: "гарантія на деталь-аналог" },
 ];
 
 const steps = [
