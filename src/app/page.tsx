@@ -83,6 +83,11 @@ export default async function Home() {
     rating: r.rating,
     // Фото роботи лежить у приватному сховищі — віддаємо своїм маршрутом
     image: r.imagePath ? `/api/reviews/${r.id}/image` : null,
+    // Пара від клієнта: показуємо лише обидва фото разом, інакше порівнювати нічого
+    pair:
+      r.beforePath && r.afterPath
+        ? { before: `/api/reviews/${r.id}/image?v=before`, after: `/api/reviews/${r.id}/image?v=after` }
+        : null,
   }));
 
   const hasRealReviews = published.length > 0;

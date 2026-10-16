@@ -12,6 +12,8 @@ export type ReviewCard = {
   /** Фото з акаунта клієнта, якщо він його ставив */
   avatar: string | null;
   image: string | null;
+  /** Фото до і після ремонту від самого клієнта */
+  pair: { before: string; after: string } | null;
 };
 
 function GoogleMark() {
@@ -109,7 +111,21 @@ export default function ReviewSlider({ reviews }: { reviews: ReviewCard[] }) {
               ))}
             </div>
 
-            {r.image && (
+            {r.pair && (
+              <div className={styles.pair}>
+                {(["before", "after"] as const).map((v) => (
+                  <a key={v} href={r.pair![v]} target="_blank" rel="noopener" className={styles.pairPhoto}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={r.pair![v]} alt={v === "before" ? "До ремонту" : "Після ремонту"} loading="lazy" />
+                    <span className={v === "after" ? styles.pairTagAfter : styles.pairTag}>
+                      {v === "before" ? "До" : "Після"}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {r.image && !r.pair && (
               <a href={r.image} target="_blank" rel="noopener" className={styles.photo}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={r.image} alt="Фото виконаної роботи" loading="lazy" />

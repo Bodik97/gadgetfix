@@ -123,6 +123,54 @@
   object-fit: cover;
 }
 
+/* Фото до і після від клієнта — поруч, щоб різницю було видно одразу */
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pairPhoto {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgb(var(--fg-rgb) / .04);
+}
+
+.pairPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .3s;
+}
+
+.pairPhoto:hover img {
+  transform: scale(1.04);
+}
+
+.pairTag,
+.pairTagAfter {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pairTag {
+  background: rgb(0 0 0 / .6);
+  color: #fff;
+}
+
+.pairTagAfter {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
 .text {
   margin: 0;
   font-size: 16px;
