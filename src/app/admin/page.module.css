@@ -1338,3 +1338,8 @@
   max-width: 60ch;
   white-space: pre-line;
 }
+
+/* Кнопка «Додати…» над списком — не впритул до першої картки */
+.addRow {
+  margin-bottom: 20px;
+}

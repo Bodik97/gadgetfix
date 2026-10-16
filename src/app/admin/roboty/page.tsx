@@ -29,7 +29,9 @@ export default async function WorksPage() {
         </div>
       </div>
 
-      <AddWork />
+      <div className={styles.addRow}>
+        <AddWork />
+      </div>
 
       {works.length === 0 ? (
         <div className={styles.empty}>Робіт ще немає — блок на головній прихований, доки не додасте першу.</div>

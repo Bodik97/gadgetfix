@@ -32,7 +32,9 @@ export default async function ReviewsPage() {
         </div>
       </div>
 
-      <AddReview />
+      <div className={styles.addRow}>
+        <AddReview />
+      </div>
 
       <ReviewList reviews={reviews} />
     </section>
