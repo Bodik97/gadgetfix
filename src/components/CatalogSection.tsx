@@ -63,7 +63,7 @@ export default function CatalogSection({ section }: { section: Section }) {
           <div>
             <h2 className={styles.ctaTitle}>Не бачите своєї моделі?</h2>
             <p className={styles.ctaLead}>
-              Напишіть модель і симптом — відповімо за 25 хвилин, разом із орієнтиром по ціні й
+              Напишіть модель і симптом — відповімо до 25 хвилин, разом із орієнтиром по ціні й
               терміну.
             </p>
           </div>

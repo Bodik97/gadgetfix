@@ -43,7 +43,7 @@ function BookingFormInner({
   initialChoice = "",
   bare,
   simple = false,
-  subtitle = "Впишіть імʼя й телефон — передзвонимо за 25 хвилин. Модель і опис допоможуть одразу назвати ціну.",
+  subtitle = "Впишіть імʼя й телефон — передзвонимо до 25 хвилин. Модель і опис допоможуть одразу назвати ціну.",
   problemMax = LIMITS.problem,
 }: Props & { initialChoice?: string }) {
   // Форма буває на сторінці двічі — у тексті й у вікні запису; з однаковими id
@@ -251,7 +251,7 @@ function BookingFormInner({
         </button>
 
         <p className={styles.note}>
-          Передзвонимо за 25 хвилин у робочий час. Діагностика безкоштовна.{" "}
+          Передзвонимо до 25 хвилин у робочий час. Діагностика безкоштовна.{" "}
           <a href="/personalni-dani" target="_blank" rel="noopener">
             Як ми зберігаємо дані
           </a>

@@ -11,6 +11,9 @@ import RepairCard from "@/components/account/RepairCard";
 import SetPassword from "@/components/account/SetPassword";
 import SignOutButton from "@/components/account/SignOutButton";
 import { plural } from "@/components/account/plural";
+import ReviewForm from "@/components/ReviewForm";
+import { getReviewByUser } from "@/db/reviews";
+import type { Review } from "@/db/schema";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { getDevices, getEvents } from "@/db/events";
 import { unreadByLead } from "@/db/messages";
@@ -32,6 +35,19 @@ const dateShort = new Intl.DateTimeFormat("uk-UA", {
   timeZone: "Europe/Kyiv",
 });
 
+/** Що з відгуком і знижкою за нього — одним реченням */
+function reviewStatus(r: Review): string {
+  if (r.discountLeadId) return "Дякуємо за відгук! Знижку 15% ви вже використали.";
+  if (r.discountAt) {
+    return "Дякуємо за відгук! У вас знижка 15% на наступний ремонт — майстер врахує її в ціні.";
+  }
+  if (r.published) return "Дякуємо — ваш відгук уже на сайті.";
+  if (r.leadId && r.beforePath && r.afterPath) {
+    return "Відгук на перевірці. Щойно опублікуємо — нарахуємо знижку 15% на наступний ремонт.";
+  }
+  return "Відгук на перевірці — зазвичай публікуємо того ж дня.";
+}
+
 export default async function MyRepairsPage() {
   // Маршрут закритий у middleware — сюди потрапляє лише авторизований клієнт
   const user = await currentUser();
@@ -44,10 +60,11 @@ export default async function MyRepairsPage() {
   const active = leads.filter((l) => describeStatus(l.status).active);
   const finished = leads.filter((l) => !describeStatus(l.status).active);
 
-  const [eventsPerActive, userDevices, unread] = await Promise.all([
+  const [eventsPerActive, userDevices, unread, review] = await Promise.all([
     Promise.all(active.map((l) => getEvents(l.id))),
     user ? getDevices(user.id) : Promise.resolve([]),
     unreadByLead(active.map((l) => l.id), "master"),
+    user ? getReviewByUser(user.id) : Promise.resolve(undefined),
   ]);
 
   const rows = finished.map((l) => {
@@ -154,6 +171,27 @@ export default async function MyRepairsPage() {
           <History rows={rows} />
         </section>
       )}
+
+      <section className={styles.section} aria-labelledby="vidhuk">
+        <h2 id="vidhuk" className={styles.h2}>
+          {review ? "Ваш відгук" : "Відгук і знижка 15%"}
+        </h2>
+        {review ? (
+          <p className={review.discountAt && !review.discountLeadId ? styles.bonus : styles.hint}>
+            {reviewStatus(review)}
+          </p>
+        ) : (
+          <>
+            <p className={styles.hint}>
+              Розкажіть, як пройшов ремонт, і додайте фото пристрою до і після. Після перевірки
+              відгуку отримаєте знижку 15% на наступний ремонт гаджетів.
+              {!finished.some((l) => l.status === "done") &&
+                " Знижка діє, коли у вас є виданий ремонт, замовлений через сайт."}
+            </p>
+            <ReviewForm />
+          </>
+        )}
+      </section>
 
       {/* Коли щось уже в роботі, форма лишається внизу — як додаткова дія */}
       {active.length > 0 && (

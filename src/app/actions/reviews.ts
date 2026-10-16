@@ -5,6 +5,8 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { getDb } from "@/db";
 import { reviews } from "@/db/schema";
 import { getReviewByUser } from "@/db/reviews";
+import { getClientLeads } from "@/db/leads";
+import { readPair, savePhoto } from "@/lib/photoPair";
 import { alertMasters } from "@/lib/notify";
 import { esc } from "@/lib/telegram";
 
@@ -37,6 +39,10 @@ export async function submitReview(_prev: ReviewResult | null, formData: FormDat
     return { ok: false, error: "Оберіть оцінку від 1 до 5." };
   }
 
+  // Фото необовʼязкові: без них відгук приймаємо, лише знижки за нього не буде
+  const pair = readPair(formData, false);
+  if (typeof pair === "string") return { ok: false, error: pair };
+
   const existing = await getReviewByUser(user.id);
   if (existing) {
     return { ok: false, error: "Ви вже лишали відгук. Дякуємо!" };
@@ -51,6 +57,15 @@ export async function submitReview(_prev: ReviewResult | null, formData: FormDat
     return { ok: false, error: "Спершу підтвердіть пошту — це захищає відгуки від накруток." };
   }
 
+  // Знижка — лише тим, хто справді ремонтувався через сайт: є видана заявка в кабінеті
+  const repairs = await getClientLeads(user.id, email?.emailAddress);
+  const repair = repairs.find((l) => l.status === "done");
+
+  const [beforePath, afterPath] = await Promise.all([
+    pair.before ? savePhoto("reviews", pair.before) : null,
+    pair.after ? savePhoto("reviews", pair.after) : null,
+  ]);
+
   await getDb().insert(reviews).values({
     clerkUserId: user.id,
     authorName: user.firstName?.trim() || "Клієнт",
@@ -60,10 +75,14 @@ export async function submitReview(_prev: ReviewResult | null, formData: FormDat
     viaGoogle: isGmail,
     // hasImage відрізняє справжнє фото від згенерованих Clerk ініціалів
     avatarUrl: user.hasImage ? user.imageUrl : null,
+    beforePath,
+    afterPath,
+    leadId: repair?.id ?? null,
   });
 
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/moi-remonty");
 
   // Новий відгук чекає модерації — без сигналу він пролежав би непоміченим
   const author = user.firstName?.trim() || "Клієнт";

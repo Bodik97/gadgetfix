@@ -1,15 +1,25 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { hasLeftReview, submitReview, type ReviewResult } from "@/app/actions/reviews";
+import BeforeAfterPicker, { appendPair, type PhotoPair } from "./BeforeAfterPicker";
 import FormError from "./FormError";
 import styles from "./ReviewForm.module.css";
 
 export default function ReviewForm() {
   const [state, action, pending] = useActionState<ReviewResult | null, FormData>(submitReview, null);
   const [rating, setRating] = useState(5);
+  const [photos, setPhotos] = useState<PhotoPair>({ before: null, after: null });
+
+  // Стиснені фото живуть у стані, а не в полях форми — докладаємо їх при відправці
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    appendPair(form, photos);
+    startTransition(() => action(form));
+  };
 
   // Сторінка статична, тож про вхід і про вже залишений відгук дізнаємось тут.
   // Поки відповіді немає, лишається запрошення увійти — без миготіння форми.
@@ -61,7 +71,7 @@ export default function ReviewForm() {
             </p>
           </div>
         ) : (
-          <form action={action} className={styles.form}>
+          <form onSubmit={submit} className={styles.form}>
             <div className={styles.ratingRow}>
               <span className={styles.label}>Оцінка</span>
               <div className={styles.stars} role="radiogroup" aria-label="Оцінка від 1 до 5">
@@ -111,6 +121,15 @@ export default function ReviewForm() {
                 maxLength={1000}
                 required
               />
+            </div>
+
+            <div className={styles.row}>
+              <span className={styles.label}>Фото пристрою до і після ремонту</span>
+              <BeforeAfterPicker value={photos} onChange={setPhotos} />
+              <p className={styles.bonus}>
+                Ремонтувались через сайт? Додайте обидва фото — після перевірки відгуку отримаєте{" "}
+                <strong>знижку 15%</strong> на наступний ремонт гаджетів.
+              </p>
             </div>
 
             {state && !state.ok && <FormError>{state.error}</FormError>}

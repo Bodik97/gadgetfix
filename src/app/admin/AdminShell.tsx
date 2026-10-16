@@ -83,6 +83,17 @@ const items = [
     ),
   },
   {
+    href: "/admin/roboty",
+    label: "Роботи",
+    badge: null,
+    icon: (
+      <>
+        <rect x="3" y="5" width="8" height="14" rx="1.5" />
+        <rect x="13" y="5" width="8" height="14" rx="1.5" />
+      </>
+    ),
+  },
+  {
     href: "/admin/groshi",
     label: "Каса",
     badge: null,

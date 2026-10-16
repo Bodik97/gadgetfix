@@ -224,7 +224,7 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
           <div>
             <h2 className={styles.bookTitle}>Записатись на {model.name}</h2>
             <p className={styles.bookLead}>
-              Залиште телефон — передзвонимо за 25 хвилин і скажемо орієнтир по вашій ситуації.
+              Залиште телефон — передзвонимо до 25 хвилин і скажемо орієнтир по вашій ситуації.
             </p>
 
             <div className={styles.related}>

@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNotNull } from "drizzle-orm";
 import { getDb } from "./index";
 import { reviews, type Review } from "./schema";
 
@@ -26,4 +26,12 @@ export async function getReviewByUser(clerkUserId: string): Promise<Review | und
     .limit(1);
 
   return rows[0];
+}
+
+/**
+ * Нараховані знижки за відгуки — для карток заявок.
+ * Їх одиниці, тож беремо всі одразу, а не по клієнту.
+ */
+export async function getReviewDiscounts(): Promise<Review[]> {
+  return getDb().select().from(reviews).where(isNotNull(reviews.discountAt));
 }

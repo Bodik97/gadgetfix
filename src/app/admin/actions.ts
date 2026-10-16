@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { del, put } from "@vercel/blob";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { devices, leadMessages, leads, pushSubscriptions, reviews, type Lead } from "@/db/schema";
+import { devices, leadMessages, leads, pushSubscriptions, reviews, works, type Lead } from "@/db/schema";
 import { STATUS_OPTIONS } from "@/db/leads";
 import { guessWarrantyDays, isWarrantyTerm, warrantyEnd } from "@/data/warranty";
 import { addEvent, getHandoverDate, getLeadById, registerDevice } from "@/db/events";
@@ -17,6 +17,7 @@ import { sendPush } from "@/lib/push";
 import { notifyClientStatus, offerPrice } from "@/lib/clientBot";
 import { closeOrder } from "@/lib/handover";
 import { normalizeUaPhone } from "@/lib/phone";
+import { dropPhotos, readPair, savePhoto } from "@/lib/photoPair";
 import { LIMITS, plainText, validName } from "@/lib/validate";
 import { start } from "workflow/api";
 import { watchParcel } from "@/workflows/watch-parcel";
@@ -349,10 +350,42 @@ export async function setReviewPublished(formData: FormData): Promise<void> {
   const publish = String(formData.get("publish") ?? "") === "1";
   if (!id) return;
 
-  await getDb().update(reviews).set({ published: publish }).where(eq(reviews.id, id));
+  const [review] = await getDb().select().from(reviews).where(eq(reviews.id, id)).limit(1);
+  if (!review) return;
+
+  // Знижка 15% — за схвалений відгук з обома фото від клієнта, що ремонтувався через сайт.
+  // Нараховуємо раз: якщо відгук потім сховати, знижка в людини лишається.
+  const earned = publish && !review.discountAt && review.leadId && review.beforePath && review.afterPath;
+
+  await getDb()
+    .update(reviews)
+    .set({ published: publish, ...(earned ? { discountAt: new Date() } : {}) })
+    .where(eq(reviews.id, id));
 
   revalidatePath("/admin");
   revalidatePath("/");
+  revalidatePath("/moi-remonty");
+}
+
+/** Майстер врахував знижку за відгук у ціні цієї заявки */
+export async function applyReviewDiscount(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) redirect("/admin/vhid");
+
+  const reviewId = String(formData.get("reviewId") ?? "");
+  const leadId = String(formData.get("leadId") ?? "");
+  if (!reviewId || !leadId) return;
+
+  // Лише нарахована й ще не використана: подвійний клік не перепише заявку
+  const applied = await getDb()
+    .update(reviews)
+    .set({ discountLeadId: leadId })
+    .where(and(eq(reviews.id, reviewId), isNotNull(reviews.discountAt), isNull(reviews.discountLeadId)))
+    .returning({ id: reviews.id });
+
+  if (applied.length > 0) await addEvent(leadId, { text: "Врахували знижку 15% за відгук." });
+
+  revalidatePath("/admin");
+  revalidatePath("/moi-remonty");
 }
 
 /** Видалити відгук назовсім */
@@ -362,12 +395,10 @@ export async function deleteReview(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const [review] = await getDb().select({ path: reviews.imagePath }).from(reviews).where(eq(reviews.id, id)).limit(1);
+  const [review] = await getDb().select().from(reviews).where(eq(reviews.id, id)).limit(1);
 
-  // Фото лежить у сховищі окремо від бази; збій там не має лишати відгук невидаленим
-  if (review?.path) {
-    await del(review.path).catch((e) => console.error("[deleteReview] фото не прибралось:", review.path, e));
-  }
+  // Фото лежать у сховищі окремо від бази; збій там не має лишати відгук невидаленим
+  if (review) await dropPhotos([review.imagePath, review.beforePath, review.afterPath]);
 
   await getDb().delete(reviews).where(eq(reviews.id, id));
 
@@ -517,6 +548,48 @@ export async function addReview(formData: FormData): Promise<string | null> {
   revalidatePath("/admin/vidhuky");
   revalidatePath("/");
   return null;
+}
+
+/** Результат роботи для головної: фото до і після та короткий опис */
+export async function addWork(formData: FormData): Promise<string | null> {
+  if (!(await isAdmin())) redirect("/admin/vhid");
+
+  const device = String(formData.get("device") ?? "").trim().slice(0, 60);
+  const text = String(formData.get("text") ?? "").trim().slice(0, 300);
+
+  if (device.length < 2) return "Впишіть модель пристрою.";
+  if (text.length < 10) return "Опишіть ремонт хоча б одним реченням.";
+
+  const pair = readPair(formData, true);
+  if (typeof pair === "string") return pair;
+
+  const [beforePath, afterPath] = await Promise.all([
+    savePhoto("works", pair.before!),
+    savePhoto("works", pair.after!),
+  ]);
+
+  await getDb().insert(works).values({ device, text, beforePath, afterPath });
+
+  revalidatePath("/admin/roboty");
+  revalidatePath("/");
+  return null;
+}
+
+/** Прибрати роботу з сайту разом із фото */
+export async function deleteWork(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) redirect("/admin/vhid");
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const [work] = await getDb().select().from(works).where(eq(works.id, id)).limit(1);
+  if (!work) return;
+
+  await dropPhotos([work.beforePath, work.afterPath]);
+  await getDb().delete(works).where(eq(works.id, id));
+
+  revalidatePath("/admin/roboty");
+  revalidatePath("/");
 }
 
 /** Записати витрату: оренду, рекламу, інструмент — усе, що не деталь конкретного ремонту */

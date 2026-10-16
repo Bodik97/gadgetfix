@@ -130,7 +130,7 @@ export default function ServicesPage() {
           <div>
             <h2 className={styles.bookTitle}>Оберіть послугу — решту з&apos;ясуємо в розмові</h2>
             <p className={styles.bookLead}>
-              Передзвонимо за 25 хвилин у робочі години й одразу скажемо орієнтир по ціні та терміну.
+              Передзвонимо до 25 хвилин у робочі години й одразу скажемо орієнтир по ціні та терміну.
             </p>
 
             <div className={styles.contacts}>

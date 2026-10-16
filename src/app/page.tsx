@@ -9,9 +9,11 @@ import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
 import ReviewSlider from "@/components/ReviewSlider";
 import ReviewForm from "@/components/ReviewForm";
+import WorkSlider from "@/components/WorkSlider";
 import ParcelDecor from "@/components/ParcelDecor";
 import StatusCheck from "@/components/StatusCheck";
 import { getPublishedReviews } from "@/db/reviews";
+import { getWorks } from "@/db/works";
 import { services } from "@/data/services";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
@@ -71,7 +73,7 @@ const faqSchema = {
 };
 
 export default async function Home() {
-  const published = await getPublishedReviews(6);
+  const [published, works] = await Promise.all([getPublishedReviews(6), getWorks(12)]);
   const shownReviews = published.map((r) => ({
     id: r.id,
     text: r.text,
@@ -246,9 +248,18 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Відгуки */}
+      {/* Результати робіт і відгуки — одна смуга: спершу показуємо, потім розповідають клієнти */}
       <section className="band stripe-alt">
         <div className={`container ${styles.block}`}>
+          {works.length > 0 && (
+            <div className={styles.works}>
+              <div className={styles.reviewsHead}>
+                <h2 className={styles.h2}>Результати робіт</h2>
+              </div>
+              <WorkSlider works={works.map((w) => ({ id: w.id, device: w.device, text: w.text }))} />
+            </div>
+          )}
+
           <div className={styles.reviewsHead}>
             <div>
               <h2 className={styles.h2}>Що кажуть клієнти</h2>
@@ -333,7 +344,7 @@ export default async function Home() {
         <section id="book" className={`container ${styles.book}`}>
         <div className={styles.bookGrid}>
           <div className={styles.bookCopy}>
-            <h2 className={styles.h2}>Опишіть проблему — відповімо за 25 хвилин</h2>
+            <h2 className={styles.h2}>Опишіть проблему — відповімо до 25 хвилин</h2>
             <p className={styles.bookLead}>
               Достатньо моделі та кількох слів про симптом. Передзвонимо, скажемо орієнтовну ціну й
               термін.

@@ -12,6 +12,7 @@ import TtnField from "./TtnField";
 import WarrantyField from "./WarrantyField";
 import { guessWarrantyDays, warrantyActive } from "@/data/warranty";
 import AssignButton from "./AssignButton";
+import { applyReviewDiscount } from "./actions";
 import styles from "./page.module.css";
 
 /** Хто зараз в адмінці і як звати кожного майстра за поштою */
@@ -53,6 +54,7 @@ export default function LeadCard({
   priceHint = null,
   defaultOpen = false,
   telegram = null,
+  discount = null,
   team,
 }: {
   lead: Lead;
@@ -67,6 +69,8 @@ export default function LeadCard({
   defaultOpen?: boolean;
   /** Чи підключив клієнт бота зі статусами; null — бот не налаштований, позначки немає */
   telegram?: boolean | null;
+  /** Знижка 15% за відгук: чекає, щоб її врахували, або вже врахована в цій заявці */
+  discount?: { reviewId: string; applied: boolean } | null;
   /** Хто дивиться і як звати майстрів — щоб показати, хто взяв заявку */
   team: Team;
 }) {
@@ -132,6 +136,11 @@ export default function LeadCard({
               ) : (
                 <span className={styles.tagAnon}>гарантія минула</span>
               ))}
+            {discount && (
+              <span className={styles.tagMine} title="Клієнт лишив відгук із фото до і після">
+                {discount.applied ? "знижку −15% враховано" : "знижка −15% за відгук"}
+              </span>
+            )}
             {/* Чат і доставка ховаються в згорнутій картці — сигнал про них лишаємо зверху */}
             {unread > 0 && <span className={styles.tagHot}>{unread} нов. у чаті</span>}
             {waitingShip && <span className={styles.tagHot}>чекає ТТН</span>}
@@ -201,6 +210,17 @@ export default function LeadCard({
         paidAt={r.paidAt}
         hint={priceHint}
       />
+
+      {discount && !discount.applied && (
+        <form action={applyReviewDiscount} className={styles.discountRow}>
+          <input type="hidden" name="reviewId" value={discount.reviewId} />
+          <input type="hidden" name="leadId" value={r.id} />
+          <span className={styles.hint}>
+            Клієнт має знижку 15% за відгук. Зменшіть ціну й відмітьте — знижка одноразова.
+          </span>
+          <button type="submit" className="btn btn-ghost">Знижку враховано</button>
+        </form>
+      )}
 
       {r.status !== "rejected" && (
         <WarrantyField

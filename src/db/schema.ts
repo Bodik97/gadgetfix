@@ -146,6 +146,17 @@ export const reviews = pgTable(
     imageWidth: integer("image_width"),
     imageHeight: integer("image_height"),
 
+    /** Фото пристрою до і після ремонту, які додав сам клієнт — умова знижки */
+    beforePath: text("before_path"),
+    afterPath: text("after_path"),
+
+    /** Виданий ремонт клієнта на момент відгуку. NULL — ремонту через сайт не було, знижки немає. */
+    leadId: uuid("lead_id"),
+    /** Коли нарахували знижку 15% — при схваленні відгуку з обома фото й виданим ремонтом */
+    discountAt: timestamp("discount_at", { withTimezone: true }),
+    /** Заявка, на яку майстер застосував знижку. NULL — знижка ще чекає. */
+    discountLeadId: uuid("discount_lead_id"),
+
     rating: integer("rating").notNull(),
     text: text("text").notNull(),
 
@@ -170,6 +181,24 @@ export const reviews = pgTable(
 );
 
 export type Review = typeof reviews.$inferSelect;
+
+/** Результат роботи для головної: фото до і після та короткий опис. Додає майстер. */
+export const works = pgTable(
+  "works",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** «iPhone 13 Pro» — заголовок картки */
+    device: text("device").notNull(),
+    /** Що зробили — пара речень під фото */
+    text: text("text").notNull(),
+    beforePath: text("before_path").notNull(),
+    afterPath: text("after_path").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("works_created_at_idx").on(t.createdAt)],
+);
+
+export type Work = typeof works.$inferSelect;
 
 /** Подія в хроніці ремонту — те, що клієнт бачить у кабінеті як стрічку подій */
 export const leadEvents = pgTable(

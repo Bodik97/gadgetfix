@@ -74,7 +74,7 @@ export default function HeroStatus() {
       </span>
       <span className={styles.text}>
         <strong className={styles.hours}>{site.hours}</strong>
-        <span className={styles.note}>передзвонимо за 25 хвилин</span>
+        <span className={styles.note}>передзвонимо до 25 хвилин</span>
       </span>
     </p>
   );

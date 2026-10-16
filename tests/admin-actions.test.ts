@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fake } from "./helpers/fakeDb";
 import { claims } from "./helpers/claimingDb";
-import { devices, leadEvents, leadMessages, leads, reviews } from "@/db/schema";
+import { devices, leadEvents, leadMessages, leads, reviews, works } from "@/db/schema";
 
 /**
  * Дії адмінки — ними змінюються заявки, гроші, відгуки й склад. Server action
@@ -139,8 +139,8 @@ describe("без входу майстра жодна дія не змінює �
     // Нова дія без перевірки має потрапити сюди, а не прослизнути повз
     expect(guarded.map(([n]) => n).sort()).toEqual(
       [
-        "addNote", "addReview", "createExpense", "createLead", "createPart", "deleteExpense", "deleteLead",
-        "deletePart", "deleteReview", "removePushSubscription", "savePushSubscription", "sendTestPush",
+        "addNote", "addReview", "addWork", "applyReviewDiscount", "createExpense", "createLead", "createPart",
+        "deleteExpense", "deleteLead", "deletePart", "deleteReview", "deleteWork", "removePushSubscription", "savePushSubscription", "sendTestPush",
         "setAssignee", "setMoney", "setReviewPublished", "setStatus", "setTtn", "setWarranty",
         "shiftPart",
       ].sort(),
@@ -669,22 +669,90 @@ describe("addReview", () => {
 
 describe("deleteReview", () => {
   it("прибирає фото зі сховища, потім сам відгук", async () => {
-    fake.onSelect(reviews, () => [{ path: "reviews/abc" }]);
+    fake.onSelect(reviews, () => [{ imagePath: "reviews/abc", beforePath: "reviews/b", afterPath: "reviews/a" }]);
     await actions.deleteReview(form({ id: "r1" }));
-    expect(m.deleted).toEqual(["reviews/abc"]);
+    expect(m.deleted).toEqual(["reviews/abc", "reviews/b", "reviews/a"]);
     expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "reviews" where "reviews"."id" = $1']);
   });
 
   it("відгук без фото й збій сховища не заважають видаленню", async () => {
-    fake.onSelect(reviews, () => [{ path: null }]);
+    fake.onSelect(reviews, () => [{ imagePath: null }]);
     await actions.deleteReview(form({ id: "r1" }));
     expect(m.deleted).toEqual([]);
 
     fake.reset();
     m.delFails = true;
-    fake.onSelect(reviews, () => [{ path: "reviews/abc" }]);
+    fake.onSelect(reviews, () => [{ imagePath: "reviews/abc" }]);
     await actions.deleteReview(form({ id: "r2" }));
     expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "reviews" where "reviews"."id" = $1']);
+  });
+});
+
+describe("знижка 15% за відгук", () => {
+  const REVIEW = { id: "r1", leadId: LEAD.id, beforePath: "reviews/b", afterPath: "reviews/a", discountAt: null };
+  const updateOf = () => fake.writes().find((q) => q.sql.startsWith('update "reviews"'))!;
+
+  it("схвалення відгуку з обома фото й виданим ремонтом нараховує знижку", async () => {
+    fake.onSelect(reviews, () => [REVIEW]);
+    await actions.setReviewPublished(form({ id: "r1", publish: "1" }));
+    expect(updateOf().sql).toMatch(/"discount_at" = \$\d/);
+  });
+
+  it("без одного з фото, без ремонту чи повторно — знижки немає", async () => {
+    for (const r of [
+      { ...REVIEW, afterPath: null },
+      { ...REVIEW, leadId: null },
+      { ...REVIEW, discountAt: new Date() },
+    ]) {
+      fake.reset();
+      fake.onSelect(reviews, () => [r]);
+      await actions.setReviewPublished(form({ id: "r1", publish: "1" }));
+      expect(updateOf().sql).not.toMatch(/discount_at/);
+    }
+  });
+
+  it("сховати відгук — знижку не нараховуємо", async () => {
+    fake.onSelect(reviews, () => [REVIEW]);
+    await actions.setReviewPublished(form({ id: "r1", publish: "0" }));
+    expect(updateOf().sql).not.toMatch(/discount_at/);
+  });
+
+  it("врахована знижка пишеться в хроніку заявки лише раз", async () => {
+    await actions.applyReviewDiscount(form({ reviewId: "r1", leadId: LEAD.id }));
+    expect(updateOf().sql).toMatch(/"discount_at" is not null and "reviews"\."discount_lead_id" is null/);
+    expect(writesText().some((t) => t.startsWith('insert into "lead_events"') && t.includes("знижку 15%"))).toBe(true);
+
+    fake.reset();
+    claims.rows = [];
+    await actions.applyReviewDiscount(form({ reviewId: "r1", leadId: LEAD.id }));
+    expect(fake.writes().some((q) => q.sql.startsWith('insert into "lead_events"'))).toBe(false);
+  });
+});
+
+describe("результати робіт", () => {
+  const photo = () => new File(["x"], "p.jpg", { type: "image/jpeg" });
+  const GOOD = { device: "iPhone 13 Pro", text: "Замінили розбитий дисплей на оригінальний" };
+
+  it("без обох фото — помилка, нічого не зберігаємо", async () => {
+    expect(await actions.addWork(form({ ...GOOD, before: photo() }))).toMatch(/обидва фото/);
+    expect(m.uploaded).toEqual([]);
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("з обома фото — два файли у сховищі й запис у базі", async () => {
+    expect(await actions.addWork(form({ ...GOOD, before: photo(), after: photo() }))).toBeNull();
+    expect(m.uploaded).toHaveLength(2);
+    expect(m.uploaded.every((p) => p.startsWith("works/"))).toBe(true);
+    const [insert] = fake.writes();
+    expect(insert.sql).toMatch(/^insert into "works"/);
+    expect(insert.params).toEqual(expect.arrayContaining([GOOD.device, GOOD.text, ...m.uploaded]));
+  });
+
+  it("видалення прибирає обидва фото", async () => {
+    fake.onSelect(works, () => [{ id: "w1", beforePath: "works/b", afterPath: "works/a" }]);
+    await actions.deleteWork(form({ id: "w1" }));
+    expect(m.deleted).toEqual(["works/b", "works/a"]);
+    expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "works" where "works"."id" = $1']);
   });
 });
 

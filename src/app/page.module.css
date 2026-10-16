@@ -616,3 +616,8 @@
 .contactLink:hover {
   color: var(--accent-text);
 }
+
+/* Результати робіт стоять над відгуками в тій самій смузі */
+.works {
+  margin-bottom: clamp(64px, 8vw, 112px);
+}

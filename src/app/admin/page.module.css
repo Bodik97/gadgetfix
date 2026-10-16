@@ -1284,3 +1284,48 @@
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+/* Знижка за відгук: підказка й кнопка в розгорнутій картці */
+.discountRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgb(var(--lime-rgb) / .08);
+  border: 1px solid rgb(var(--lime-rgb) / .3);
+}
+
+/* Фото до і після у відгуку клієнта */
+.reviewPhotos {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.reviewPhotos a {
+  position: relative;
+  width: 96px;
+  height: 72px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.reviewPhotos img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reviewPhotos span {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / .6);
+  color: #fff;
+  font-size: 11px;
+}

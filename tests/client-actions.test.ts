@@ -20,6 +20,7 @@ const m = vi.hoisted(() => ({
   user: null as User | null,
   pushed: [] as unknown[],
   notified: [] as string[],
+  uploaded: [] as string[],
 }));
 
 vi.mock("@/db", async () => {
@@ -34,6 +35,12 @@ vi.mock("@/lib/notify", () => ({
     return "push";
   },
 }));
+vi.mock("@vercel/blob", () => ({
+  put: async (path: string) => {
+    m.uploaded.push(path);
+    return { pathname: path };
+  },
+}));
 vi.mock("@clerk/nextjs/server", () => ({
   auth: async () => ({ userId: m.userId }),
   currentUser: async () => m.user,
@@ -42,7 +49,7 @@ vi.mock("@clerk/nextjs/server", () => ({
 import { requestDelivery } from "@/app/moi-remonty/actions";
 import { submitReview } from "@/app/actions/reviews";
 
-const form = (fields: Record<string, string>) => {
+const form = (fields: Record<string, string | File>) => {
   const f = new FormData();
   for (const [k, v] of Object.entries(fields)) f.append(k, v);
   return f;
@@ -62,6 +69,7 @@ beforeEach(() => {
   m.user = null;
   m.pushed = [];
   m.notified = [];
+  m.uploaded = [];
 });
 
 describe("requestDelivery", () => {
@@ -181,5 +189,33 @@ describe("submitReview", () => {
     m.user = USER;
     await submit(GOOD);
     expect(fake.writes()[0].params).not.toContain(USER.imageUrl);
+  });
+
+  const photo = () => new File(["x"], "photo.jpg", { type: "image/jpeg" });
+  const DONE_LEAD = "22222222-2222-2222-2222-222222222222";
+
+  it("фото до і після йдуть у сховище, виданий ремонт привʼязується — це умова знижки", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [{ id: DONE_LEAD, status: "done", createdAt: new Date() }]);
+    expect(await submitReview(null, form({ ...GOOD, before: photo(), after: photo() }))).toEqual({ ok: true });
+
+    expect(m.uploaded).toHaveLength(2);
+    expect(m.uploaded.every((p) => p.startsWith("reviews/"))).toBe(true);
+    expect(fake.writes()[0].params).toEqual(expect.arrayContaining([...m.uploaded, DONE_LEAD]));
+  });
+
+  it("без виданого ремонту відгук приймаємо, але без привʼязки до заявки", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [{ id: DONE_LEAD, status: "in_progress", createdAt: new Date() }]);
+    expect(await submitReview(null, form({ ...GOOD, before: photo(), after: photo() }))).toEqual({ ok: true });
+    expect(fake.writes()[0].params).not.toContain(DONE_LEAD);
+  });
+
+  it("не фото — помилка, у сховище й базу нічого не йде", async () => {
+    m.user = USER;
+    const svg = new File(["<svg/>"], "x.svg", { type: "image/svg+xml" });
+    expect(await submitReview(null, form({ ...GOOD, before: svg }))).toEqual({ ok: false, error: "Можна додавати лише фото." });
+    expect(m.uploaded).toEqual([]);
+    expect(fake.writes()).toEqual([]);
   });
 });

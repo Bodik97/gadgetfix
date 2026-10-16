@@ -10,6 +10,15 @@ const dateFormat = new Intl.DateTimeFormat("uk-UA", {
   timeZone: "Europe/Kyiv",
 });
 
+/** Що зі знижкою 15% за цей відгук — щоб майстер знав, що дасть схвалення */
+function discountNote(r: Review): string {
+  if (r.discountLeadId) return "Знижку 15% клієнт уже використав.";
+  if (r.discountAt) return "Знижку 15% нараховано — чекає на наступний ремонт.";
+  if (!r.leadId) return "Без знижки: у клієнта немає виданого ремонту через сайт.";
+  if (!r.beforePath || !r.afterPath) return "Без знижки: немає обох фото до і після.";
+  return "Після схвалення клієнт отримає знижку 15% на наступний ремонт.";
+}
+
 export default function ReviewList({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) {
     return <div className={styles.empty}>Відгуків ще немає.</div>;
@@ -39,6 +48,27 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
             </div>
 
             <p className={styles.problem}>{r.text}</p>
+
+            {(r.beforePath || r.afterPath) && (
+              <div className={styles.reviewPhotos}>
+                {r.beforePath && (
+                  <a href={`/api/reviews/${r.id}/image?v=before`} target="_blank" rel="noopener">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/reviews/${r.id}/image?v=before`} alt="До ремонту" loading="lazy" />
+                    <span>до</span>
+                  </a>
+                )}
+                {r.afterPath && (
+                  <a href={`/api/reviews/${r.id}/image?v=after`} target="_blank" rel="noopener">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/reviews/${r.id}/image?v=after`} alt="Після ремонту" loading="lazy" />
+                    <span>після</span>
+                  </a>
+                )}
+              </div>
+            )}
+
+            {!r.byMaster && <p className={styles.hint}>{discountNote(r)}</p>}
           </div>
 
           <div className={styles.cardSide}>

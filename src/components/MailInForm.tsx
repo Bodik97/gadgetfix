@@ -207,7 +207,7 @@ export default function MailInForm() {
         </button>
 
         <p className={styles.note}>
-          Передзвонимо за 25 хвилин у робочий час і підкажемо, як надіслати. Діагностика
+          Передзвонимо до 25 хвилин у робочий час і підкажемо, як надіслати. Діагностика
           безкоштовна.{" "}
           <a href="/personalni-dani" target="_blank" rel="noopener">
             Як ми зберігаємо дані

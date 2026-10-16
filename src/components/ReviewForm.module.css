@@ -102,3 +102,13 @@
   opacity: .6;
   cursor: progress;
 }
+
+.bonus {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.bonus strong {
+  color: var(--accent-text);
+}
