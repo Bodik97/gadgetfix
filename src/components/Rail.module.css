@@ -1,0 +1,71 @@
+/* Горизонтальна стрічка карток зі стрілками — спільна для стрічок на головній */
+.wrap {
+  display: grid;
+  gap: 16px;
+}
+
+/* Стрічка з прилипанням: картка завжди зупиняється рівно */
+.track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  /* Місце під тінь і фокусну рамку, щоб їх не зрізало */
+  padding: 4px;
+  margin: -4px;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.track:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+  border-radius: 24px;
+}
+
+/* ---------- Стрілки ---------- */
+.controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: border-color .15s, color .15s, opacity .15s;
+}
+
+.arrow:hover:not(:disabled) {
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+}
+
+.arrow:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.arrow:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+  /* Гортають пальцем — стрілки лише забирають місце */
+  .controls {
+    display: none;
+  }
+}

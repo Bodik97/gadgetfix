@@ -7,12 +7,12 @@ import FaqAside from "@/components/FaqAside";
 import HeroStatus from "@/components/HeroStatus";
 import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
-import ReviewSlider from "@/components/ReviewSlider";
 import ReviewForm from "@/components/ReviewForm";
+import ReviewShowcase from "@/components/ReviewShowcase";
 import WorkSlider from "@/components/WorkSlider";
 import ParcelDecor from "@/components/ParcelDecor";
 import StatusCheck from "@/components/StatusCheck";
-import { getPublishedReviews } from "@/db/reviews";
+import { getPublishedReviews, getReviewStats } from "@/db/reviews";
 import { getWorks } from "@/db/works";
 import { services } from "@/data/services";
 import { site } from "@/data/site";
@@ -72,12 +72,26 @@ const faqSchema = {
   })),
 };
 
+const reviewDate = new Intl.DateTimeFormat("uk-UA", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Kyiv",
+});
+
 export default async function Home() {
-  const [published, works] = await Promise.all([getPublishedReviews(6), getWorks(12)]);
+  const [published, works, reviewStats] = await Promise.all([
+    getPublishedReviews(8),
+    getWorks(12),
+    getReviewStats(),
+  ]);
   const shownReviews = published.map((r) => ({
     id: r.id,
     text: r.text,
-    author: [r.authorName, r.city, r.device].filter(Boolean).join(" · "),
+    name: r.authorName,
+    city: r.city,
+    device: r.device,
+    date: reviewDate.format(r.createdAt),
     viaGoogle: r.viaGoogle,
     avatar: r.avatarUrl,
     rating: r.rating,
@@ -266,22 +280,10 @@ export default async function Home() {
           )}
 
           <div className={styles.reviewsHead}>
-            <div>
-              <h2 className={styles.h2}>Що кажуть клієнти</h2>
-            </div>
-
-            {hasRealReviews && (
-              <p className={styles.reviewsProof}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-                  <path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
-                Пишуть лише клієнти з акаунтом і підтвердженою поштою
-              </p>
-            )}
+            <h2 className={styles.h2}>Що кажуть клієнти</h2>
           </div>
 
-          {hasRealReviews && <ReviewSlider reviews={shownReviews} />}
+          {hasRealReviews && <ReviewShowcase reviews={shownReviews} stats={reviewStats} />}
 
 
           <div className={styles.reviewFormWrap}>

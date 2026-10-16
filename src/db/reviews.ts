@@ -1,4 +1,4 @@
-import { desc, eq, isNotNull } from "drizzle-orm";
+import { desc, eq, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "./index";
 import { reviews, type Review } from "./schema";
 
@@ -34,4 +34,13 @@ export async function getReviewByUser(clerkUserId: string): Promise<Review | und
  */
 export async function getReviewDiscounts(): Promise<Review[]> {
   return getDb().select().from(reviews).where(isNotNull(reviews.discountAt));
+}
+
+/** Середня оцінка й кількість опублікованих відгуків — для підсумку над стрічкою */
+export async function getReviewStats(): Promise<{ count: number; average: number }> {
+  const [row] = await getDb()
+    .select({ count: sql<number>`count(*)::int`, average: sql<number>`coalesce(avg(${reviews.rating}), 0)::float` })
+    .from(reviews)
+    .where(eq(reviews.published, true));
+  return { count: row?.count ?? 0, average: row?.average ?? 0 };
 }

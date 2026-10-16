@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import slider from "./ReviewSlider.module.css";
+import slider from "./Rail.module.css";
 import styles from "./WorkSlider.module.css";
 
 export type WorkCard = { id: string; device: string; text: string };

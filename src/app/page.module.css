@@ -453,25 +453,6 @@
   margin-bottom: clamp(32px, 4vw, 52px);
 }
 
-.reviewsProof {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 14px;
-  border-radius: var(--r-pill);
-  border: 1px solid rgb(var(--lime-rgb) / .28);
-  background: rgb(var(--lime-rgb) / .07);
-  color: var(--info-text);
-  font-size: 13.5px;
-  line-height: 1.4;
-  max-width: 42ch;
-}
-
-.reviewsProof svg {
-  flex: none;
-  color: var(--accent-text);
-}
-
 .reviewFormWrap {
   margin-top: clamp(28px, 4vw, 48px);
   display: grid;
