@@ -31,21 +31,21 @@ const steps: Step[] = [
     title: "Етап ремонту — без дзвінків",
     text: "У блоці «Зараз у роботі» видно, що відбувається з пристроєм просто зараз. Сторінка оновлюється сама, перезавантажувати не треба.",
     target: ['[data-guide="stage"] article', '[data-guide="stage"]'],
-    missing: "Блок зʼявиться, щойно ми приймемо ваш пристрій у роботу.",
+    missing: "Етапи зʼявляться, щойно ви замовите ремонт.",
   },
   {
     scene: "chat",
     title: "Питання — одразу майстру",
     text: "У картці ремонту натисніть «Написати майстру». Можна додати фото, а відповідь прийде сюди ж.",
     target: ['[data-guide="chat"] > button:first-child', '[data-guide="chat"] > :first-child'],
-    missing: "Чат зʼявиться в картці ремонту, коли пристрій буде в роботі.",
+    missing: "Чат із майстром зʼявиться після замовлення ремонту.",
   },
   {
     scene: "telegram",
     title: "Статус у Telegram",
     text: "Натисніть «Статус у Telegram», а в боті — «Start». Він сам напише про кожен етап і про погоджену ціну.",
     target: ['[data-guide="chat"] > a[target="_blank"]'],
-    missing: "Кнопка зʼявиться в картці ремонту, коли пристрій буде в роботі.",
+    missing: "Кнопка Telegram зʼявиться після замовлення ремонту.",
   },
   {
     scene: "delivery",
@@ -59,7 +59,7 @@ const steps: Step[] = [
     title: "Гарантія завжди під рукою",
     text: "Нижче видно, до якої дати діє гарантія на кожен пристрій, і всі ваші завершені ремонти.",
     target: ['[data-guide="warranty"] > :last-child', '[data-guide="history"] > :last-child'],
-    missing: "Гарантія зʼявиться тут після видачі першого ремонту.",
+    missing: "Гарантія зʼявиться після першого ремонту.",
   },
   {
     scene: "review",
@@ -69,6 +69,9 @@ const steps: Step[] = [
     missing: "Форма відгуку — внизу сторінки.",
   },
 ];
+
+/** Форма замовлення — є на сторінці, коли в клієнта нічого не в роботі */
+const ORDER = ['[data-guide="order"]'];
 
 /** Гортає до кнопки чи блоку й на мить підсвічує. Повертає false, якщо нічого немає. */
 function showOnPage(targets: string[]): boolean {
@@ -93,6 +96,8 @@ export default function Guide() {
   const [open, setOpen] = useState(true);
   const [step, setStep] = useState(0);
   const [note, setNote] = useState("");
+  // Блоку ще немає, бо немає ремонту, — ведемо до форми замовлення, а не лише пояснюємо
+  const [canOrder, setCanOrder] = useState(false);
   const panelId = useId();
   const touchX = useRef<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -119,7 +124,14 @@ export default function Guide() {
     opened.current = true;
   }, [open]);
 
-  const show = () => setNote(showOnPage(current.target) ? "" : current.missing);
+  const show = () => {
+    if (showOnPage(current.target)) {
+      setNote("");
+      return;
+    }
+    setNote(current.missing);
+    setCanOrder(Boolean(document.querySelector(ORDER[0])));
+  };
 
   if (!open) {
     return (
@@ -204,7 +216,19 @@ export default function Guide() {
             </svg>
             Показати на сторінці
           </button>
-          {note && <p className={styles.note}>{note}</p>}
+          {note &&
+            (canOrder ? (
+              <button type="button" className={styles.toOrder} onClick={() => showOnPage(ORDER)}>
+                <span>
+                  {note} <strong>Замовте ремонт нижче</strong>
+                </span>
+                <svg className={styles.toOrderArrow} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 4v15M5 12l7 7 7-7" />
+                </svg>
+              </button>
+            ) : (
+              <p className={styles.note}>{note}</p>
+            ))}
         </div>
       </div>
 

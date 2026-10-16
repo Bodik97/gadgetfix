@@ -278,6 +278,51 @@
   animation: copy-in .3s both;
 }
 
+/* Блоку ще немає — червоний заклик зі стрілкою вниз веде до форми замовлення */
+.toOrder {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 107 107 / .45);
+  border-radius: 14px;
+  background: rgb(255 107 107 / .08);
+  color: var(--danger);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  animation: copy-in .3s both;
+  transition: background .15s, border-color .15s;
+}
+
+.toOrder:hover {
+  border-color: rgb(255 107 107 / .8);
+  background: rgb(255 107 107 / .14);
+}
+
+.toOrder strong {
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.toOrderArrow {
+  flex: none;
+  animation: nudge 1.1s ease-in-out infinite;
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
 .nav {
   display: flex;
   justify-content: space-between;
@@ -695,6 +740,8 @@
   .panel,
   .copy,
   .note,
+  .toOrder,
+  .toOrderArrow,
   .art *,
   :global([data-guide-flash]) {
     animation-duration: .01ms !important;

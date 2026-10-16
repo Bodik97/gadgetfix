@@ -139,7 +139,7 @@ export default async function MyRepairsPage() {
           </div>
         </section>
       ) : (
-        <section className={styles.section} aria-labelledby="zamovyty">
+        <section className={styles.section} aria-labelledby="zamovyty" data-guide="order">
           <h2 id="zamovyty" className={styles.h2}>
             {leads.length > 0 ? "Зараз нічого не в роботі" : "Замовити ремонт"}
           </h2>
