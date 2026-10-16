@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import { owner } from "@/data/owner";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
 import styles from "./Footer.module.css";
@@ -96,6 +97,23 @@ export default function Footer() {
             <span aria-hidden="true">·</span>
             Гарантія {WARRANTY_MAX} на роботу
           </span>
+        </div>
+
+        {/* Хто надає послуги і що сервіс незалежний — обовʼязкове для офіційної роботи */}
+        <div className={styles.legal}>
+          {owner.legalName && (
+            <p>
+              Послуги надає {owner.legalName}
+              {owner.registry && <>, {owner.registry}</>}
+              {owner.address && <>, {owner.address}</>}.
+            </p>
+          )}
+          <p>
+            {site.name} — незалежний сервісний центр і не є авторизованим сервісом Apple Inc. чи
+            інших виробників. iPhone, iPad, Apple Watch і Apple — торговельні марки Apple Inc.,
+            зареєстровані в США та інших країнах. Назви й марки інших виробників належать їхнім
+            власникам і вказані лише для позначення пристроїв, які ми ремонтуємо.
+          </p>
         </div>
       </div>
     </footer>
