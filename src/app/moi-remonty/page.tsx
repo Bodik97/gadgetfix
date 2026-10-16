@@ -12,7 +12,7 @@ import SetPassword from "@/components/account/SetPassword";
 import SignOutButton from "@/components/account/SignOutButton";
 import { plural } from "@/components/account/plural";
 import ReviewForm from "@/components/ReviewForm";
-import { getReviewByUser } from "@/db/reviews";
+import { getReviewsByUser, reviewTarget } from "@/db/reviews";
 import type { Review } from "@/db/schema";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { getDevices, getEvents } from "@/db/events";
@@ -60,12 +60,17 @@ export default async function MyRepairsPage() {
   const active = leads.filter((l) => describeStatus(l.status).active);
   const finished = leads.filter((l) => !describeStatus(l.status).active);
 
-  const [eventsPerActive, userDevices, unread, review] = await Promise.all([
+  const [eventsPerActive, userDevices, unread, myReviews] = await Promise.all([
     Promise.all(active.map((l) => getEvents(l.id))),
     user ? getDevices(user.id) : Promise.resolve([]),
     unreadByLead(active.map((l) => l.id), "master"),
-    user ? getReviewByUser(user.id) : Promise.resolve(undefined),
+    user ? getReviewsByUser(user.id) : Promise.resolve([]),
   ]);
+
+  // Відгук пишуть про кожен виданий ремонт; угорі — невикористана знижка, якщо є
+  const target = reviewTarget(leads, myReviews);
+  const targetLead = leads.find((l) => l.id === target?.leadId);
+  const review = myReviews.find((r) => r.discountAt && !r.discountLeadId) ?? myReviews[0];
 
   const rows = finished.map((l) => {
     const s = describeStatus(l.status);
@@ -174,21 +179,22 @@ export default async function MyRepairsPage() {
 
       <section className={styles.section} aria-labelledby="vidhuk" data-guide="review">
         <h2 id="vidhuk" className={styles.h2}>
-          {review ? "Ваш відгук" : "Відгук і знижка 15%"}
+          {target ? "Відгук і знижка 15%" : "Ваш відгук"}
         </h2>
-        {review ? (
+        {review && (
           <p className={review.discountAt && !review.discountLeadId ? styles.bonus : styles.hint}>
             {reviewStatus(review)}
           </p>
-        ) : (
+        )}
+        {target && (
           <>
             <p className={styles.hint}>
-              Розкажіть, як пройшов ремонт, і додайте фото пристрою до і після. Після перевірки
+              Розкажіть, як пройшов ремонт{targetLead?.model ? ` ${targetLead.model}` : ""}, і додайте фото пристрою до і після. Після перевірки
               відгуку отримаєте знижку 15% на наступний ремонт гаджетів.
               {!finished.some((l) => l.status === "done") &&
                 " Знижка діє, коли у вас є виданий ремонт, замовлений через сайт."}
             </p>
-            <ReviewForm />
+            <ReviewForm leadId={target.leadId ?? undefined} />
           </>
         )}
       </section>

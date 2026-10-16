@@ -4,7 +4,7 @@ import { leadEvents, leads, reviews } from "@/db/schema";
 
 /**
  * Дії клієнта з кабінету. Головне — клієнт змінює лише своє: доставку тільки
- * своєї заявки, відгук тільки один і тільки з підтвердженою поштою.
+ * своєї заявки, відгук — по одному на виданий ремонт і тільки з підтвердженою поштою.
  */
 
 type User = {
@@ -212,6 +212,48 @@ describe("submitReview", () => {
     fake.onSelect(leads, () => [{ id: DONE_LEAD, status: "in_progress", createdAt: new Date() }]);
     expect(await submitReview(null, form({ ...GOOD, before: photo(), after: photo() }))).toEqual({ ok: true });
     expect(fake.writes()[0].params).not.toContain(DONE_LEAD);
+  });
+
+  const NEXT_LEAD = "44444444-4444-4444-4444-444444444444";
+  const written = (leadId: string | null) => ({ id: "r1", clerkUserId: "user_1", leadId, authorName: "Олег", rating: 5, text: "x", createdAt: new Date() });
+
+  it("новий виданий ремонт — можна ще один відгук, про нього", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [
+      { id: NEXT_LEAD, status: "done", createdAt: new Date() },
+      { id: DONE_LEAD, status: "done", createdAt: new Date() },
+    ]);
+    fake.onSelect(reviews, () => [written(DONE_LEAD)]);
+    expect(await submit(GOOD)).toEqual({ ok: true });
+    expect(fake.writes()[0].params).toContain(NEXT_LEAD);
+    expect(fake.writes()[0].params).not.toContain(DONE_LEAD);
+  });
+
+  it("про ремонт, на який уже є відгук, другого не приймаємо", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [{ id: DONE_LEAD, status: "done", createdAt: new Date() }]);
+    fake.onSelect(reviews, () => [written(DONE_LEAD)]);
+    expect(await submit({ ...GOOD, leadId: DONE_LEAD })).toEqual({ ok: false, error: "Ви вже лишали відгук. Дякуємо!" });
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("відгук прив'язується саме до того ремонту, з якого його лишили", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [
+      { id: NEXT_LEAD, status: "done", createdAt: new Date() },
+      { id: DONE_LEAD, status: "done", createdAt: new Date() },
+    ]);
+    expect(await submit({ ...GOOD, leadId: DONE_LEAD })).toEqual({ ok: true });
+    expect(fake.writes()[0].params).toContain(DONE_LEAD);
+    expect(fake.writes()[0].params).not.toContain(NEXT_LEAD);
+  });
+
+  it("чужа заявка в leadId не дає обійти правило", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => []);
+    fake.onSelect(reviews, () => [written(null)]);
+    expect(await submit({ ...GOOD, leadId: NEXT_LEAD })).toEqual({ ok: false, error: "Ви вже лишали відгук. Дякуємо!" });
+    expect(fake.writes()).toEqual([]);
   });
 
   it("не фото — помилка, у сховище й базу нічого не йде", async () => {

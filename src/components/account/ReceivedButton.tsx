@@ -85,7 +85,7 @@ export default function ReceivedButton({ id, received }: { id: string; received:
             </button>
           </div>
 
-          <ReviewForm />
+          <ReviewForm leadId={id} />
 
           <button type="button" className={styles.later} onClick={close}>
             Лишу відгук пізніше

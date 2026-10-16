@@ -8,7 +8,8 @@ import BeforeAfterPicker, { appendPair, type PhotoPair } from "./BeforeAfterPick
 import FormError from "./FormError";
 import styles from "./ReviewForm.module.css";
 
-export default function ReviewForm() {
+/** leadId — ремонт, про який відгук; без нього сервер візьме перший виданий без відгуку */
+export default function ReviewForm({ leadId }: { leadId?: string }) {
   const [state, action, pending] = useActionState<ReviewResult | null, FormData>(submitReview, null);
   const [rating, setRating] = useState(5);
   // Кожен вибір оцінки перезапускає «підскок» зірок: дві однакові анімації по черзі
@@ -20,6 +21,7 @@ export default function ReviewForm() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     appendPair(form, photos);
+    if (leadId) form.append("leadId", leadId);
     startTransition(() => action(form));
   };
 
@@ -32,7 +34,7 @@ export default function ReviewForm() {
   useEffect(() => {
     if (!isSignedIn) return;
     let stale = false;
-    hasLeftReview()
+    hasLeftReview(leadId)
       // Не вдалося спитати — показуємо форму: другий відгук сервер однаково не прийме
       .catch(() => false)
       .then((left) => {
@@ -41,7 +43,7 @@ export default function ReviewForm() {
     return () => {
       stale = true;
     };
-  }, [isSignedIn]);
+  }, [isSignedIn, leadId]);
 
   return (
     <div className={styles.box}>
