@@ -83,12 +83,43 @@
 }
 
 .starOn {
-  color: var(--accent-text);
+  color: var(--star);
+  filter: drop-shadow(0 0 6px var(--star-glow));
 }
 
 .star:hover,
 .starOn:hover {
-  transform: scale(1.12);
+  transform: scale(1.18) rotate(-8deg);
+  color: var(--star);
+}
+
+/* Вибрали оцінку — увімкнені зірки підстрибують хвилею */
+.starOn[data-bump="a"] {
+  animation: star-bump-a .5s cubic-bezier(.34, 1.7, .55, 1) calc(var(--i) * 60ms);
+}
+
+.starOn[data-bump="b"] {
+  animation: star-bump-b .5s cubic-bezier(.34, 1.7, .55, 1) calc(var(--i) * 60ms);
+}
+
+@keyframes star-bump-a {
+  40% {
+    transform: scale(1.35) rotate(-14deg);
+    filter: drop-shadow(0 0 12px var(--star-glow)) brightness(1.3);
+  }
+}
+
+@keyframes star-bump-b {
+  40% {
+    transform: scale(1.35) rotate(-14deg);
+    filter: drop-shadow(0 0 12px var(--star-glow)) brightness(1.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starOn[data-bump] {
+    animation: none;
+  }
 }
 
 

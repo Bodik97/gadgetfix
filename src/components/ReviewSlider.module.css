@@ -41,13 +41,72 @@
 }
 
 .stars {
-  color: var(--accent-text);
-  font-size: 17px;
-  letter-spacing: 2px;
+  display: flex;
+  gap: 3px;
+  font-size: 19px;
+  line-height: 1;
 }
 
-.starsOff {
+.star,
+.starOff {
+  display: inline-block;
+}
+
+.star {
+  color: var(--star);
+  text-shadow: 0 0 10px var(--star-glow);
+}
+
+.starOff {
   color: var(--rating-off);
+}
+
+/* Анімація лише з JS: без нього зірки просто стоять на місці */
+.track[data-anim] .card:not([data-seen]) .star {
+  opacity: 0;
+  transform: scale(.3) rotate(-90deg);
+}
+
+/* Поява по черзі з пружинкою, потім — рідкісний відблиск хвилею зліва направо */
+.track[data-anim] .card[data-seen] .star {
+  animation:
+    star-pop .55s cubic-bezier(.34, 1.7, .55, 1) calc(var(--i) * 90ms) both,
+    star-glint 5s ease-in-out calc(1.4s + var(--i) * 120ms) infinite;
+}
+
+@keyframes star-pop {
+  0% {
+    opacity: 0;
+    transform: scale(.3) rotate(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes star-glint {
+  0%,
+  86%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+    text-shadow: 0 0 10px var(--star-glow);
+  }
+  92% {
+    transform: scale(1.28) rotate(12deg);
+    filter: brightness(1.35);
+    text-shadow: 0 0 18px var(--star-glow), 0 0 4px #fff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track[data-anim] .card[data-seen] .star,
+  .track[data-anim] .card:not([data-seen]) .star {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .photo {

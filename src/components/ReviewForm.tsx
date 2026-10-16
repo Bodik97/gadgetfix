@@ -11,6 +11,8 @@ import styles from "./ReviewForm.module.css";
 export default function ReviewForm() {
   const [state, action, pending] = useActionState<ReviewResult | null, FormData>(submitReview, null);
   const [rating, setRating] = useState(5);
+  // Кожен вибір оцінки перезапускає «підскок» зірок: дві однакові анімації по черзі
+  const [bump, setBump] = useState(0);
   const [photos, setPhotos] = useState<PhotoPair>({ before: null, after: null });
 
   // Стиснені фото живуть у стані, а не в полях форми — докладаємо їх при відправці
@@ -83,7 +85,12 @@ export default function ReviewForm() {
                     aria-checked={rating === n}
                     aria-label={`${n} з 5`}
                     className={n <= rating ? styles.starOn : styles.star}
-                    onClick={() => setRating(n)}
+                    style={{ "--i": n - 1 } as React.CSSProperties}
+                    data-bump={bump === 0 ? undefined : bump % 2 ? "a" : "b"}
+                    onClick={() => {
+                      setRating(n);
+                      setBump((b) => b + 1);
+                    }}
                   >
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />

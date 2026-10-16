@@ -7,8 +7,8 @@ import { reviews } from "@/db/schema";
 import { getLeadById } from "@/db/events";
 import { describeStatus } from "@/db/leads";
 import { isAdmin } from "@/lib/admin";
-import { DiscountButton, discountNote } from "../../ReviewList";
-import { deleteReview, setReviewPublished } from "../../actions";
+import { discountNote, discountState } from "../../ReviewList";
+import ReviewActions from "../../ReviewActions";
 import styles from "../../page.module.css";
 
 export const metadata: Metadata = {
@@ -132,25 +132,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           </dd>
         </dl>
 
-        <div className={styles.reviewActions}>
-          <form action={setReviewPublished}>
-            <input type="hidden" name="id" value={r.id} />
-            <input type="hidden" name="publish" value={r.published ? "0" : "1"} />
-            <button type="submit" className={r.published ? "btn btn-ghost" : "btn btn-accent"}>
-              {r.published ? "Сховати з сайту" : "Опублікувати"}
-            </button>
-          </form>
-
-          <DiscountButton review={r} />
-
-          <form action={deleteReview}>
-            <input type="hidden" name="id" value={r.id} />
-            <input type="hidden" name="back" value="1" />
-            <button type="submit" className={styles.deleteBtn}>
-              Видалити
-            </button>
-          </form>
-        </div>
+        <ReviewActions id={r.id} published={r.published} discount={discountState(r)} showOpen={false} />
       </div>
     </section>
   );

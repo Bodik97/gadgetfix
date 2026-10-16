@@ -49,6 +49,26 @@ export default function ReviewSlider({ reviews }: { reviews: ReviewCard[] }) {
     setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 8);
   }, []);
 
+  // Зірки «спалахують», коли картка вперше зʼявляється на екрані
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    el.dataset.anim = "";
+    const seen = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          (e.target as HTMLElement).dataset.seen = "";
+          seen.unobserve(e.target);
+        }
+      },
+      { threshold: 0.4 },
+    );
+    el.querySelectorAll("figure").forEach((card) => seen.observe(card));
+    return () => seen.disconnect();
+  }, [reviews]);
+
   useEffect(() => {
     const el = trackRef.current;
     if (!el) return;
@@ -77,8 +97,16 @@ export default function ReviewSlider({ reviews }: { reviews: ReviewCard[] }) {
         {reviews.map((r) => (
           <figure key={r.id} className={styles.card}>
             <div className={styles.stars} role="img" aria-label={`${r.rating} з 5`}>
-              {"★".repeat(r.rating)}
-              <span className={styles.starsOff} aria-hidden="true">{"★".repeat(5 - r.rating)}</span>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span
+                  key={n}
+                  aria-hidden="true"
+                  className={n <= r.rating ? styles.star : styles.starOff}
+                  style={{ "--i": n - 1 } as React.CSSProperties}
+                >
+                  ★
+                </span>
+              ))}
             </div>
 
             {r.image && (

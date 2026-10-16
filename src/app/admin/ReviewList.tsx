@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Review } from "@/db/schema";
-import { deleteReview, setReviewDiscount, setReviewPublished } from "./actions";
+import ReviewActions, { type DiscountState } from "./ReviewActions";
 import styles from "./page.module.css";
 
 const dateFormat = new Intl.DateTimeFormat("uk-UA", {
@@ -20,20 +20,11 @@ export function discountNote(r: Review): string {
   return "Після схвалення клієнт отримає знижку 15% на наступний ремонт.";
 }
 
-/** Кнопка знижки: нарахувати після перевірки або скасувати, поки не використана */
-export function DiscountButton({ review: r }: { review: Review }) {
-  // Відгук майстра чи без акаунта — знижку нікуди записати; використану вже не чіпаємо
-  if (r.byMaster || !r.clerkUserId || r.discountLeadId) return null;
-
-  return (
-    <form action={setReviewDiscount}>
-      <input type="hidden" name="id" value={r.id} />
-      <input type="hidden" name="grant" value={r.discountAt ? "0" : "1"} />
-      <button type="submit" className={r.discountAt ? styles.deleteBtn : "btn btn-ghost"}>
-        {r.discountAt ? "Скасувати знижку" : "Нарахувати знижку −15%"}
-      </button>
-    </form>
-  );
+/** Що можна зробити зі знижкою: відгук майстра чи без акаунта — знижку нікуди записати */
+export function discountState(r: Review): DiscountState {
+  if (r.discountLeadId) return "used";
+  if (r.discountAt) return "granted";
+  return r.byMaster || !r.clerkUserId ? "none" : "available";
 }
 
 export default function ReviewList({ reviews }: { reviews: Review[] }) {
@@ -88,30 +79,10 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
             )}
 
             {!r.byMaster && <p className={styles.hint}>{discountNote(r)}</p>}
+
+            <ReviewActions id={r.id} published={r.published} discount={discountState(r)} />
           </div>
 
-          <div className={styles.cardSide}>
-            <Link href={`/admin/vidhuky/${r.id}`} className="btn btn-ghost">
-              Відкрити
-            </Link>
-
-            <form action={setReviewPublished}>
-              <input type="hidden" name="id" value={r.id} />
-              <input type="hidden" name="publish" value={r.published ? "0" : "1"} />
-              <button type="submit" className={r.published ? "btn btn-ghost" : "btn btn-accent"}>
-                {r.published ? "Сховати" : "Опублікувати"}
-              </button>
-            </form>
-
-            <DiscountButton review={r} />
-
-            <form action={deleteReview}>
-              <input type="hidden" name="id" value={r.id} />
-              <button type="submit" className={styles.deleteBtn}>
-                Видалити
-              </button>
-            </form>
-          </div>
         </article>
       ))}
     </div>

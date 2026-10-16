@@ -1421,15 +1421,6 @@
   gap: 4px;
 }
 
-.reviewActions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
 @media (max-width: 560px) {
   .reviewFacts {
     grid-template-columns: 1fr;
