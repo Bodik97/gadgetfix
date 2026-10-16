@@ -1329,3 +1329,12 @@
   color: #fff;
   font-size: 11px;
 }
+
+/* Текст відгуку — завжди повністю: картку відгуку не розгортають, як заявку */
+.reviewText {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgb(var(--text-rgb) / .7);
+  max-width: 60ch;
+  white-space: pre-line;
+}

@@ -47,7 +47,7 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
               )}
             </div>
 
-            <p className={styles.problem}>{r.text}</p>
+            <p className={styles.reviewText}>{r.text}</p>
 
             {(r.beforePath || r.afterPath) && (
               <div className={styles.reviewPhotos}>
