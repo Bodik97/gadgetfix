@@ -675,6 +675,12 @@ describe("deleteReview", () => {
     expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "reviews" where "reviews"."id" = $1']);
   });
 
+  it("видалення зі сторінки відгуку повертає до списку", async () => {
+    fake.onSelect(reviews, () => [{ imagePath: null }]);
+    await expect(actions.deleteReview(form({ id: "r1", back: "1" }))).rejects.toThrow("REDIRECT:/admin/vidhuky");
+    expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "reviews" where "reviews"."id" = $1']);
+  });
+
   it("відгук без фото й збій сховища не заважають видаленню", async () => {
     fake.onSelect(reviews, () => [{ imagePath: null }]);
     await actions.deleteReview(form({ id: "r1" }));

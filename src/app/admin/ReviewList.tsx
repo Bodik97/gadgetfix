@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Review } from "@/db/schema";
 import { deleteReview, setReviewPublished } from "./actions";
 import styles from "./page.module.css";
@@ -11,7 +12,7 @@ const dateFormat = new Intl.DateTimeFormat("uk-UA", {
 });
 
 /** Що зі знижкою 15% за цей відгук — щоб майстер знав, що дасть схвалення */
-function discountNote(r: Review): string {
+export function discountNote(r: Review): string {
   if (r.discountLeadId) return "Знижку 15% клієнт уже використав.";
   if (r.discountAt) return "Знижку 15% нараховано — чекає на наступний ремонт.";
   if (!r.leadId) return "Без знижки: у клієнта немає виданого ремонту через сайт.";
@@ -33,7 +34,9 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
         >
           <div className={styles.cardMain}>
             <div className={styles.cardTop}>
-              <span className={styles.name}>{r.authorName}</span>
+              <Link href={`/admin/vidhuky/${r.id}`} className={styles.name}>
+                {r.authorName}
+              </Link>
               {r.device && <span className={styles.source}>{r.device}</span>}
               <span className={styles.stars} role="img" aria-label={`${r.rating} з 5`}>
                 {"★".repeat(r.rating)}
@@ -72,6 +75,10 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
           </div>
 
           <div className={styles.cardSide}>
+            <Link href={`/admin/vidhuky/${r.id}`} className="btn btn-ghost">
+              Відкрити
+            </Link>
+
             <form action={setReviewPublished}>
               <input type="hidden" name="id" value={r.id} />
               <input type="hidden" name="publish" value={r.published ? "0" : "1"} />

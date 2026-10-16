@@ -404,6 +404,9 @@ export async function deleteReview(formData: FormData): Promise<void> {
 
   revalidatePath("/admin");
   revalidatePath("/");
+
+  // Видалили зі сторінки відгуку — її вже немає, повертаємо до списку
+  if (formData.get("back")) redirect("/admin/vidhuky");
 }
 
 /**
