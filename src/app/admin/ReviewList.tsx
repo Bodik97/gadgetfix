@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Review } from "@/db/schema";
-import { deleteReview, setReviewPublished } from "./actions";
+import { deleteReview, setReviewDiscount, setReviewPublished } from "./actions";
 import styles from "./page.module.css";
 
 const dateFormat = new Intl.DateTimeFormat("uk-UA", {
@@ -15,9 +15,25 @@ const dateFormat = new Intl.DateTimeFormat("uk-UA", {
 export function discountNote(r: Review): string {
   if (r.discountLeadId) return "Знижку 15% клієнт уже використав.";
   if (r.discountAt) return "Знижку 15% нараховано — чекає на наступний ремонт.";
-  if (!r.leadId) return "Без знижки: у клієнта немає виданого ремонту через сайт.";
-  if (!r.beforePath || !r.afterPath) return "Без знижки: немає обох фото до і після.";
+  if (!r.leadId) return "Автоматично знижки не буде: у клієнта немає виданого ремонту через сайт. Можна нарахувати вручну.";
+  if (!r.beforePath || !r.afterPath) return "Автоматично знижки не буде: немає обох фото до і після. Можна нарахувати вручну.";
   return "Після схвалення клієнт отримає знижку 15% на наступний ремонт.";
+}
+
+/** Кнопка знижки: нарахувати після перевірки або скасувати, поки не використана */
+export function DiscountButton({ review: r }: { review: Review }) {
+  // Відгук майстра чи без акаунта — знижку нікуди записати; використану вже не чіпаємо
+  if (r.byMaster || !r.clerkUserId || r.discountLeadId) return null;
+
+  return (
+    <form action={setReviewDiscount}>
+      <input type="hidden" name="id" value={r.id} />
+      <input type="hidden" name="grant" value={r.discountAt ? "0" : "1"} />
+      <button type="submit" className={r.discountAt ? styles.deleteBtn : "btn btn-ghost"}>
+        {r.discountAt ? "Скасувати знижку" : "Нарахувати знижку −15%"}
+      </button>
+    </form>
+  );
 }
 
 export default function ReviewList({ reviews }: { reviews: Review[] }) {
@@ -86,6 +102,8 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
                 {r.published ? "Сховати" : "Опублікувати"}
               </button>
             </form>
+
+            <DiscountButton review={r} />
 
             <form action={deleteReview}>
               <input type="hidden" name="id" value={r.id} />

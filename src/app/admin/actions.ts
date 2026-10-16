@@ -367,6 +367,30 @@ export async function setReviewPublished(formData: FormData): Promise<void> {
   revalidatePath("/moi-remonty");
 }
 
+/**
+ * Знижку 15% нараховує або скасовує сам майстер, перевіривши відгук. Потрібен акаунт
+ * клієнта — знижка живе в ньому. Скасувати можна, лише поки її не використали.
+ */
+export async function setReviewDiscount(formData: FormData): Promise<void> {
+  if (!(await isAdmin())) redirect("/admin/vhid");
+
+  const id = String(formData.get("id") ?? "");
+  const grant = String(formData.get("grant") ?? "") === "1";
+  if (!id) return;
+
+  await getDb()
+    .update(reviews)
+    .set({ discountAt: grant ? new Date() : null })
+    .where(
+      grant
+        ? and(eq(reviews.id, id), isNotNull(reviews.clerkUserId), isNull(reviews.discountAt))
+        : and(eq(reviews.id, id), isNull(reviews.discountLeadId)),
+    );
+
+  revalidatePath("/admin");
+  revalidatePath("/moi-remonty");
+}
+
 /** Майстер врахував знижку за відгук у ціні цієї заявки */
 export async function applyReviewDiscount(formData: FormData): Promise<void> {
   if (!(await isAdmin())) redirect("/admin/vhid");

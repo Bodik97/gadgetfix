@@ -7,7 +7,7 @@ import { reviews } from "@/db/schema";
 import { getLeadById } from "@/db/events";
 import { describeStatus } from "@/db/leads";
 import { isAdmin } from "@/lib/admin";
-import { discountNote } from "../../ReviewList";
+import { DiscountButton, discountNote } from "../../ReviewList";
 import { deleteReview, setReviewPublished } from "../../actions";
 import styles from "../../page.module.css";
 
@@ -140,6 +140,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               {r.published ? "Сховати з сайту" : "Опублікувати"}
             </button>
           </form>
+
+          <DiscountButton review={r} />
 
           <form action={deleteReview}>
             <input type="hidden" name="id" value={r.id} />

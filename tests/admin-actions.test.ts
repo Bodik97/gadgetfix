@@ -141,7 +141,7 @@ describe("без входу майстра жодна дія не змінює �
       [
         "addNote", "addReview", "addWork", "applyReviewDiscount", "createExpense", "createLead", "createPart",
         "deleteExpense", "deleteLead", "deletePart", "deleteReview", "deleteWork", "removePushSubscription", "savePushSubscription", "sendTestPush",
-        "setAssignee", "setMoney", "setReviewPublished", "setStatus", "setTtn", "setWarranty",
+        "setAssignee", "setMoney", "setReviewDiscount", "setReviewPublished", "setStatus", "setTtn", "setWarranty",
         "shiftPart",
       ].sort(),
     );
@@ -721,6 +721,17 @@ describe("знижка 15% за відгук", () => {
     fake.onSelect(reviews, () => [REVIEW]);
     await actions.setReviewPublished(form({ id: "r1", publish: "0" }));
     expect(updateOf().sql).not.toMatch(/discount_at/);
+  });
+
+  it("майстер нараховує знижку вручну — лише клієнту з акаунтом і лише раз", async () => {
+    await actions.setReviewDiscount(form({ id: "r1", grant: "1" }));
+    expect(updateOf().sql).toMatch(/"discount_at" = \$1 where \("reviews"\."id" = \$2 and "reviews"\."clerk_user_id" is not null and "reviews"\."discount_at" is null\)/);
+  });
+
+  it("скасувати можна лише невикористану знижку", async () => {
+    await actions.setReviewDiscount(form({ id: "r1", grant: "0" }));
+    expect(updateOf().sql).toMatch(/"discount_at" = \$1 where \("reviews"\."id" = \$2 and "reviews"\."discount_lead_id" is null\)/);
+    expect(updateOf().params[0]).toBeNull();
   });
 
   it("врахована знижка пишеться в хроніку заявки лише раз", async () => {
