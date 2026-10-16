@@ -283,8 +283,8 @@ export const devices = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
 
     clerkUserId: text("clerk_user_id").notNull(),
-    /** Заявка, після якої пристрій потрапив у список */
-    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
+    /** Заявка, після якої пристрій потрапив у список; без неї гарантії немає */
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "cascade" }),
 
     name: text("name").notNull(),
     /** Що саме робили — показуємо поруч із гарантією */
