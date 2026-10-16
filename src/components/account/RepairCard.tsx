@@ -168,18 +168,20 @@ export default function RepairCard({
 
       {/* Доставку пропонуємо, лише коли є що відправляти */}
       {s.finished && !lead.ttn && (
-        <DeliveryRequest
-          id={lead.id}
-          requested={lead.deliveryRequested}
-          address={lead.deliveryAddress}
-        />
+        <div data-guide="delivery">
+          <DeliveryRequest
+            id={lead.id}
+            requested={lead.deliveryRequested}
+            address={lead.deliveryAddress}
+          />
+        </div>
       )}
 
       <Timeline events={events} />
 
       {/* Чат — головна дія й завжди перший: розгорнувшись, він займає рядок,
           а дзвінок і Telegram лишаються разом під ним */}
-      <div className={styles.actions}>
+      <div className={styles.actions} data-guide="chat">
         <Chat leadId={lead.id} side="client" unread={unread} />
 
         <a href={phone.href} className={`btn btn-ghost ${styles.action}`}>

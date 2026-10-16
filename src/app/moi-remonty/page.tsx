@@ -112,7 +112,7 @@ export default async function MyRepairsPage() {
 
       {/* Найголовніше — вгорі: що зараз відбувається з пристроєм */}
       {active.length > 0 ? (
-        <section className={styles.section} aria-labelledby="aktyvni">
+        <section className={styles.section} aria-labelledby="aktyvni" data-guide="stage">
           <div className={styles.sectionHead}>
             <h2 id="aktyvni" className={styles.h2}>
               {active.length === 1 ? "Зараз у роботі" : `Зараз у роботі · ${active.length}`}
@@ -150,7 +150,7 @@ export default async function MyRepairsPage() {
       )}
 
       {userDevices.length > 0 && (
-        <section className={styles.section} aria-labelledby="garantiya">
+        <section className={styles.section} aria-labelledby="garantiya" data-guide="warranty">
           <h2 id="garantiya" className={styles.h2}>
             Гарантія на пристрої
           </h2>
@@ -163,7 +163,7 @@ export default async function MyRepairsPage() {
       )}
 
       {rows.length > 0 && (
-        <section className={styles.section} aria-labelledby="istoriya">
+        <section className={styles.section} aria-labelledby="istoriya" data-guide="history">
           <h2 id="istoriya" className={styles.h2}>
             Завершені ремонти
           </h2>
@@ -172,7 +172,7 @@ export default async function MyRepairsPage() {
         </section>
       )}
 
-      <section className={styles.section} aria-labelledby="vidhuk">
+      <section className={styles.section} aria-labelledby="vidhuk" data-guide="review">
         <h2 id="vidhuk" className={styles.h2}>
           {review ? "Ваш відгук" : "Відгук і знижка 15%"}
         </h2>
