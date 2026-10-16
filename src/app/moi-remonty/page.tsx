@@ -67,8 +67,11 @@ export default async function MyRepairsPage() {
     user ? getReviewsByUser(user.id) : Promise.resolve([]),
   ]);
 
-  // Відгук пишуть про кожен виданий ремонт; угорі — невикористана знижка, якщо є
-  const target = reviewTarget(leads, myReviews);
+  // Відгук пишуть про кожен виданий ремонт; угорі — невикористана знижка, якщо є.
+  // Загальний відгук без ремонту лишається на головній — у кабінеті форма зʼявляється
+  // лише після видачі, щоб новий клієнт бачив тільки інструкцію й замовлення
+  const found = reviewTarget(leads, myReviews);
+  const target = found?.leadId ? found : undefined;
   const targetLead = leads.find((l) => l.id === target?.leadId);
   const review = myReviews.find((r) => r.discountAt && !r.discountLeadId) ?? myReviews[0];
 
@@ -177,27 +180,27 @@ export default async function MyRepairsPage() {
         </section>
       )}
 
-      <section className={styles.section} aria-labelledby="vidhuk" data-guide="review">
-        <h2 id="vidhuk" className={styles.h2}>
-          {target ? "Відгук і знижка 15%" : "Ваш відгук"}
-        </h2>
-        {review && (
-          <p className={review.discountAt && !review.discountLeadId ? styles.bonus : styles.hint}>
-            {reviewStatus(review)}
-          </p>
-        )}
-        {target && (
-          <>
-            <p className={styles.hint}>
-              Розкажіть, як пройшов ремонт{targetLead?.model ? ` ${targetLead.model}` : ""}, і додайте фото пристрою до і після. Після перевірки
-              відгуку отримаєте знижку 15% на наступний ремонт гаджетів.
-              {!finished.some((l) => l.status === "done") &&
-                " Знижка діє, коли у вас є виданий ремонт, замовлений через сайт."}
+      {(target || review) && (
+        <section className={styles.section} aria-labelledby="vidhuk" data-guide="review">
+          <h2 id="vidhuk" className={styles.h2}>
+            {target ? "Відгук і знижка 15%" : "Ваш відгук"}
+          </h2>
+          {review && (
+            <p className={review.discountAt && !review.discountLeadId ? styles.bonus : styles.hint}>
+              {reviewStatus(review)}
             </p>
-            <ReviewForm leadId={target.leadId ?? undefined} />
-          </>
-        )}
-      </section>
+          )}
+          {target && (
+            <>
+              <p className={styles.hint}>
+                Розкажіть, як пройшов ремонт{targetLead?.model ? ` ${targetLead.model}` : ""}, і додайте фото пристрою до і після. Після перевірки
+                відгуку отримаєте знижку 15% на наступний ремонт гаджетів.
+              </p>
+              <ReviewForm leadId={target.leadId ?? undefined} />
+            </>
+          )}
+        </section>
+      )}
 
       {/* Коли щось уже в роботі, форма лишається внизу — як додаткова дія */}
       {active.length > 0 && (

@@ -3,7 +3,7 @@ import type { Lead, LeadEvent } from "@/db/schema";
 import Chat from "@/components/Chat";
 import TelegramConnect from "@/components/TelegramConnect";
 import { connectLink } from "@/lib/clientBot";
-import { site } from "@/data/site";
+import { masterPhone } from "@/lib/admin";
 import DeliveryRequest from "./DeliveryRequest";
 import Parcel from "./Parcel";
 import ReceivedButton from "./ReceivedButton";
@@ -82,7 +82,8 @@ export default function RepairCard({
 }) {
   const s = describeStatus(lead.status);
   const what = lead.model ?? lead.service ?? "Ремонт";
-  const phone = site.phones[0];
+  // Дзвінок — майстру, що взяв заявку; поки ніхто не взяв, лишається чат
+  const phone = masterPhone(lead.assignee);
 
   return (
     <article className={`${styles.card} ${styles[s.tone]}`}>
@@ -192,12 +193,14 @@ export default function RepairCard({
       <div className={styles.actions} data-guide="chat">
         <Chat leadId={lead.id} side="client" unread={unread} />
 
-        <a href={phone.href} className={`btn btn-ghost ${styles.action}`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z" />
-          </svg>
-          Подзвонити
-        </a>
+        {phone && (
+          <a href={phone.href} className={`btn btn-ghost ${styles.action}`}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z" />
+            </svg>
+            Подзвонити
+          </a>
+        )}
 
         <TelegramConnect href={connectLink(lead)} label="Статус у Telegram" quiet className={styles.action} />
       </div>

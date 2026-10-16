@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { site } from "@/data/site";
 
 const COOKIE = "gadgetfix_admin";
 const MAX_AGE = 60 * 60 * 12; // 12 годин
@@ -49,6 +50,18 @@ function accounts(): Account[] {
       // Без ADMIN_NAME беремо частину пошти до «@» — краще за порожнє місце
       name: a.name?.trim() || a.email.split("@")[0],
     }));
+}
+
+/** Телефон кожного майстра — у порядку ADMIN_EMAIL, ADMIN_EMAIL_2 */
+const PHONES = [site.phones[1], site.phones[0]];
+
+/** Номер майстра, що взяв заявку, — щоб клієнт дзвонив саме йому. null — ще ніхто не взяв. */
+export function masterPhone(assignee: string | null): (typeof site.phones)[number] | null {
+  if (!assignee) return null;
+  const i = [process.env.ADMIN_EMAIL, process.env.ADMIN_EMAIL_2].findIndex(
+    (e) => e?.trim().toLowerCase() === assignee,
+  );
+  return PHONES[i] ?? null;
 }
 
 /** Хто є в адмінці — пошта й імʼя без паролів: щоб показати, хто яку заявку взяв */

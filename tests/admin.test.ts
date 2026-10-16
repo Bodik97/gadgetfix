@@ -82,3 +82,17 @@ describe("вхід майстра", () => {
     expect(checkCredentials(ENV.ADMIN_EMAIL_2, ENV.ADMIN_PASSWORD_2)).toBeNull();
   });
 });
+
+describe("номер майстра для клієнта", () => {
+  it("клієнт дзвонить тому, хто взяв заявку: перший — 073, другий — 063", async () => {
+    const { masterPhone } = await admin();
+    expect(masterPhone(ENV.ADMIN_EMAIL)?.href).toBe("tel:+380733150238");
+    expect(masterPhone(ENV.ADMIN_EMAIL_2)?.href).toBe("tel:+380631164377");
+  });
+
+  it("заявку ще ніхто не взяв або майстра вже немає в адмінці — номера немає", async () => {
+    const { masterPhone } = await admin();
+    expect(masterPhone(null)).toBeNull();
+    expect(masterPhone("kolyshnij@example.com")).toBeNull();
+  });
+});
