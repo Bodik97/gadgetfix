@@ -634,20 +634,29 @@
   }
 }
 
-/* ---------- Підсвітка блоку, до якого веде «Показати на сторінці» ---------- */
+/* ---------- Підсвітка кнопки, до якої веде «Показати на сторінці» ----------
+   Мʼякий червоний — не плутається з лаймовими кнопками сайту й читається як
+   «ось тут». Форму елемента не міняємо: сяйво повторює його заокруглення. */
 :global([data-guide-flash]) {
-  border-radius: 22px;
-  animation: guide-flash 2.6s ease-out;
+  animation: guide-flash 3.2s ease-out;
 }
 
 @keyframes guide-flash {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(var(--lime-rgb) / 0);
+    box-shadow: 0 0 0 0 rgb(255 107 107 / 0);
   }
-  12%,
-  55% {
-    box-shadow: 0 0 0 4px rgb(var(--lime-rgb) / .9), 0 0 36px 6px rgb(var(--lime-rgb) / .45);
+  10%,
+  30%,
+  50% {
+    box-shadow: 0 0 0 3px rgb(255 107 107 / .85), 0 0 26px 4px rgb(255 107 107 / .35);
+  }
+  20%,
+  40% {
+    box-shadow: 0 0 0 6px rgb(255 107 107 / .45), 0 0 34px 8px rgb(255 107 107 / .25);
+  }
+  75% {
+    box-shadow: 0 0 0 3px rgb(255 107 107 / .6), 0 0 18px 2px rgb(255 107 107 / .2);
   }
 }
 
@@ -694,6 +703,6 @@
 
   :global([data-guide-flash]) {
     animation: none !important;
-    box-shadow: 0 0 0 4px rgb(var(--lime-rgb) / .9);
+    box-shadow: 0 0 0 3px rgb(255 107 107 / .85);
   }
 }

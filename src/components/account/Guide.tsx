@@ -4,8 +4,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import styles from "./Guide.module.css";
 
 /**
- * Інструкція до кабінету — згорнута плашка, що розгортається в покрокову
- * екскурсію. Кожен крок має живу міні-сцену і кнопку «Показати на сторінці»:
+ * Інструкція до кабінету — покрокова екскурсія, розгорнута з порога; згорнута
+ * лишається плашкою. Кожен крок має живу міні-сцену і кнопку «Показати на сторінці»:
  * вона гортає до потрібного блоку й на мить підсвічує його, тож людина бачить
  * не опис, а саме місце, де натискати.
  */
@@ -16,7 +16,10 @@ type Step = {
   scene: Scene;
   title: string;
   text: string;
-  /** Блок кабінету з data-guide=… — куди веде «Показати на сторінці» */
+  /**
+   * Куди веде «Показати на сторінці» — CSS-селектори від найточнішого (сама
+   * кнопка) до запасного (блок). Підсвічуємо перший, що є на сторінці.
+   */
   target: string[];
   /** Що сказати, коли такого блоку на сторінці ще немає */
   missing: string;
@@ -27,50 +30,50 @@ const steps: Step[] = [
     scene: "stage",
     title: "Етап ремонту — без дзвінків",
     text: "У блоці «Зараз у роботі» видно, що відбувається з пристроєм просто зараз. Сторінка оновлюється сама, перезавантажувати не треба.",
-    target: ["stage"],
+    target: ['[data-guide="stage"] article', '[data-guide="stage"]'],
     missing: "Блок зʼявиться, щойно ми приймемо ваш пристрій у роботу.",
   },
   {
     scene: "chat",
     title: "Питання — одразу майстру",
     text: "У картці ремонту натисніть «Написати майстру». Можна додати фото, а відповідь прийде сюди ж.",
-    target: ["chat"],
+    target: ['[data-guide="chat"] > button:first-child', '[data-guide="chat"] > :first-child'],
     missing: "Чат зʼявиться в картці ремонту, коли пристрій буде в роботі.",
   },
   {
     scene: "telegram",
     title: "Статус у Telegram",
     text: "Натисніть «Статус у Telegram», а в боті — «Start». Він сам напише про кожен етап і про погоджену ціну.",
-    target: ["chat"],
+    target: ['[data-guide="chat"] > a[target="_blank"]'],
     missing: "Кнопка зʼявиться в картці ремонту, коли пристрій буде в роботі.",
   },
   {
     scene: "delivery",
     title: "Готово — заберіть або отримайте поштою",
     text: "Коли ремонт завершено, в картці зʼявиться кнопка доставки Новою Поштою. Або просто заберіть пристрій у сервісі.",
-    target: ["delivery", "stage"],
+    target: ['[data-guide="delivery"] button', '[data-guide="delivery"]'],
     missing: "Кнопка доставки зʼявиться в картці, щойно пристрій буде готовий.",
   },
   {
     scene: "warranty",
     title: "Гарантія завжди під рукою",
     text: "Нижче видно, до якої дати діє гарантія на кожен пристрій, і всі ваші завершені ремонти.",
-    target: ["warranty", "history"],
+    target: ['[data-guide="warranty"] > :last-child', '[data-guide="history"] > :last-child'],
     missing: "Гарантія зʼявиться тут після видачі першого ремонту.",
   },
   {
     scene: "review",
     title: "Відгук — і мінус 15%",
     text: "Розкажіть, як усе пройшло, і додайте фото до і після. Після перевірки отримаєте знижку 15% на наступний ремонт.",
-    target: ["review"],
+    target: ['[data-guide="review"] form', '[data-guide="review"] a.btn', '[data-guide="review"]'],
     missing: "Форма відгуку — внизу сторінки.",
   },
 ];
 
-/** Гортає до блоку й на мить підсвічує його. Повертає false, якщо блоку немає. */
+/** Гортає до кнопки чи блоку й на мить підсвічує. Повертає false, якщо нічого немає. */
 function showOnPage(targets: string[]): boolean {
-  for (const name of targets) {
-    const el = document.querySelector<HTMLElement>(`[data-guide="${name}"]`);
+  for (const selector of targets) {
+    const el = document.querySelector<HTMLElement>(selector);
     if (!el) continue;
 
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -79,14 +82,15 @@ function showOnPage(targets: string[]): boolean {
     el.removeAttribute("data-guide-flash");
     void el.offsetWidth;
     el.setAttribute("data-guide-flash", "");
-    window.setTimeout(() => el.removeAttribute("data-guide-flash"), 2600);
+    window.setTimeout(() => el.removeAttribute("data-guide-flash"), 3200);
     return true;
   }
   return false;
 }
 
 export default function Guide() {
-  const [open, setOpen] = useState(false);
+  // Розгорнута з порога: людина одразу бачить, як тут усе влаштовано
+  const [open, setOpen] = useState(true);
   const [step, setStep] = useState(0);
   const [note, setNote] = useState("");
   const panelId = useId();
@@ -107,9 +111,12 @@ export default function Guide() {
     setNote("");
   };
 
-  // Розгорнули — фокус на панель, щоб стрілки клавіатури одразу гортали кроки
+  // Розгорнули самі — фокус на панель, щоб стрілки клавіатури одразу гортали кроки.
+  // Перший показ при відкритті сторінки фокус не забирає.
+  const opened = useRef(false);
   useEffect(() => {
-    if (open) panelRef.current?.focus({ preventScroll: true });
+    if (open && opened.current) panelRef.current?.focus({ preventScroll: true });
+    opened.current = true;
   }, [open]);
 
   const show = () => setNote(showOnPage(current.target) ? "" : current.missing);
