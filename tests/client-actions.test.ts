@@ -248,6 +248,14 @@ describe("submitReview", () => {
     expect(fake.writes()[0].params).not.toContain(NEXT_LEAD);
   });
 
+  it("відмова — відгуку про цей ремонт немає, навіть якщо клієнт натиснув «Я отримав гаджет»", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [{ id: DONE_LEAD, status: "rejected", receivedAt: new Date(), createdAt: new Date() }]);
+    fake.onSelect(reviews, () => [written(null)]);
+    expect(await submit({ ...GOOD, leadId: DONE_LEAD })).toEqual({ ok: false, error: "Ви вже лишали відгук. Дякуємо!" });
+    expect(fake.writes()).toEqual([]);
+  });
+
   it("чужа заявка в leadId не дає обійти правило", async () => {
     m.user = USER;
     fake.onSelect(leads, () => []);

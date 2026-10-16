@@ -37,7 +37,10 @@ export function reviewTarget(
   leadId?: string | null,
 ): { leadId: string | null } | undefined {
   const reviewed = new Set(written.map((r) => r.leadId));
-  const open = repairs.filter((l) => (l.status === "done" || l.receivedAt) && !reviewed.has(l.id));
+  // Відмова закриває відгук, навіть якщо клієнт раніше натиснув «Я отримав гаджет»
+  const open = repairs.filter(
+    (l) => l.status !== "rejected" && (l.status === "done" || l.receivedAt) && !reviewed.has(l.id),
+  );
   const lead = open.find((l) => l.id === leadId) ?? open[0];
   if (lead) return { leadId: lead.id };
   return written.length === 0 ? { leadId: null } : undefined;
