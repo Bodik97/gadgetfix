@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fake } from "./helpers/fakeDb";
-import { leads, reviews } from "@/db/schema";
+import { leadEvents, leads, reviews } from "@/db/schema";
 
 /**
  * Дії клієнта з кабінету. Головне — клієнт змінює лише своє: доставку тільки
@@ -23,9 +23,10 @@ const m = vi.hoisted(() => ({
   uploaded: [] as string[],
 }));
 
+// claimingDb — щоб умовний update … returning відповідав «рядок оновлено»
 vi.mock("@/db", async () => {
-  const { fake } = await import("./helpers/fakeDb");
-  return { getDb: () => fake.db };
+  const { claimingDb } = await import("./helpers/claimingDb");
+  return { getDb: () => claimingDb };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 vi.mock("@/lib/notify", () => ({
@@ -46,7 +47,8 @@ vi.mock("@clerk/nextjs/server", () => ({
   currentUser: async () => m.user,
 }));
 
-import { requestDelivery } from "@/app/moi-remonty/actions";
+import { confirmReceived, requestDelivery } from "@/app/moi-remonty/actions";
+import { claims } from "./helpers/claimingDb";
 import { submitReview } from "@/app/actions/reviews";
 
 const form = (fields: Record<string, string | File>) => {
@@ -70,6 +72,7 @@ beforeEach(() => {
   m.pushed = [];
   m.notified = [];
   m.uploaded = [];
+  claims.reset();
 });
 
 describe("requestDelivery", () => {
@@ -217,5 +220,67 @@ describe("submitReview", () => {
     expect(await submitReview(null, form({ ...GOOD, before: svg }))).toEqual({ ok: false, error: "Можна додавати лише фото." });
     expect(m.uploaded).toEqual([]);
     expect(fake.writes()).toEqual([]);
+  });
+});
+
+describe("confirmReceived", () => {
+  const LEAD = { id: "l1", orderNo: 1054, name: "Олег", status: "ready", clerkUserId: "user_1", email: null, receivedAt: null, createdAt: new Date() };
+  const eventWrites = () => fake.writes().filter((q) => q.sql.startsWith('insert into "lead_events"'));
+
+  it("без входу — нічого не пишемо", async () => {
+    expect((await confirmReceived("l1")).ok).toBe(false);
+    expect(fake.queries).toEqual([]);
+  });
+
+  it("чужа заявка — помилка", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [{ ...LEAD, id: "l2" }]);
+    expect(await confirmReceived("l1")).toEqual({ ok: false, error: expect.stringMatching(/Не знайшли/) });
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("пристрій ще в роботі або заявка закрита — підтвердити не можна", async () => {
+    m.user = USER;
+    for (const status of ["new", "in_progress", "done", "rejected"]) {
+      fake.reset();
+      fake.onSelect(leads, () => [{ ...LEAD, status }]);
+      expect((await confirmReceived("l1")).ok, status).toBe(false);
+      expect(fake.writes(), status).toEqual([]);
+    }
+  });
+
+  it("готовий пристрій: відмітка, запис у хроніці й сигнал майстрам — заявку не закриваємо", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [LEAD]);
+    fake.onSelect(leadEvents, () => []);
+    expect(await confirmReceived("l1")).toEqual({ ok: true });
+
+    const [update] = fake.writes();
+    expect(update.sql).toMatch(/^update "leads" set "received_at" = \$1, "updated_at" = \$2 where \("leads"\."id" = \$3 and "leads"\."received_at" is null\)/);
+    expect(update.sql).not.toMatch(/"status"/);
+    expect(eventWrites()).toHaveLength(1);
+    expect(m.pushed).toEqual([expect.objectContaining({ title: "№1054 · клієнт отримав пристрій" })]);
+  });
+
+  it("повторне натискання чи друга вкладка — без дублів у хроніці й сповіщеннях", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [{ ...LEAD, receivedAt: new Date() }]);
+    expect(await confirmReceived("l1")).toEqual({ ok: true });
+    expect(fake.writes()).toEqual([]);
+
+    fake.reset();
+    claims.rows = [];
+    fake.onSelect(leads, () => [LEAD]);
+    expect(await confirmReceived("l1")).toEqual({ ok: true });
+    expect(eventWrites()).toEqual([]);
+    expect(m.pushed).toEqual([]);
+  });
+
+  it("підтверджене отримання зараховується для знижки за відгук", async () => {
+    m.user = USER;
+    fake.onSelect(leads, () => [{ ...LEAD, id: "33333333-3333-3333-3333-333333333333", receivedAt: new Date() }]);
+    const f = form({ text: "Замінили екран за годину, все працює.", rating: "5" });
+    expect(await submitReview(null, f)).toEqual({ ok: true });
+    expect(fake.writes()[0].params).toContain("33333333-3333-3333-3333-333333333333");
   });
 });

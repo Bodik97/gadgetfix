@@ -6,6 +6,7 @@ import { connectLink } from "@/lib/clientBot";
 import { site } from "@/data/site";
 import DeliveryRequest from "./DeliveryRequest";
 import Parcel from "./Parcel";
+import ReceivedButton from "./ReceivedButton";
 import RepairSteps from "./RepairSteps";
 import Timeline from "./Timeline";
 import styles from "./RepairCard.module.css";
@@ -174,6 +175,13 @@ export default function RepairCard({
             requested={lead.deliveryRequested}
             address={lead.deliveryAddress}
           />
+        </div>
+      )}
+
+      {/* Готовий чи відправлений — клієнт сам підтверджує, що пристрій уже в нього */}
+      {s.active && s.finished && (
+        <div data-guide="received">
+          <ReceivedButton id={lead.id} received={Boolean(lead.receivedAt)} />
         </div>
       )}
 

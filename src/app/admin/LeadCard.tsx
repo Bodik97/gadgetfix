@@ -136,6 +136,11 @@ export default function LeadCard({
               ) : (
                 <span className={styles.tagAnon}>гарантія минула</span>
               ))}
+            {r.receivedAt && r.status !== "done" && (
+              <span className={styles.tagHot} title="Клієнт натиснув у кабінеті «Я отримав гаджет» — можна закривати заявку">
+                клієнт отримав
+              </span>
+            )}
             {discount && (
               <span className={styles.tagMine} title="Клієнт лишив відгук із фото до і після">
                 {discount.applied ? "знижку −15% враховано" : "знижка −15% за відгук"}

@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
 import { getDb } from "@/db";
+import { addEvent } from "@/db/events";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { leads } from "@/db/schema";
 import { leadLink } from "@/lib/adminLinks";
@@ -68,5 +69,62 @@ export async function requestDelivery(_prev: DeliveryResult | null, formData: Fo
   } catch (e) {
     console.error("[delivery] запит на відправку не збережено:", e);
     return { ok: false, error: "Не вдалося зберегти запит. Спробуйте ще раз або зателефонуйте нам." };
+  }
+}
+
+export type ReceivedResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Клієнт підтверджує, що пристрій уже в нього. Заявку не закриваємо — це
+ * робить майстер разом з оплатою й гарантією, — лише відмічаємо й кличемо
+ * майстра. Повторне натискання нічого не змінює.
+ */
+export async function confirmReceived(id: string): Promise<ReceivedResult> {
+  const user = await currentUser();
+  if (!user) {
+    return { ok: false, error: "Увійдіть у свій акаунт ще раз." };
+  }
+
+  try {
+    const mine = await getClientLeads(user.id, user.primaryEmailAddress?.emailAddress);
+    const lead = mine.find((l) => l.id === id);
+    if (!lead) {
+      return { ok: false, error: "Не знайшли цю заявку серед ваших. Оновіть сторінку." };
+    }
+    if (lead.receivedAt) return { ok: true };
+
+    // Отримати можна лише те, що вже готове чи відправлене
+    const s = describeStatus(lead.status);
+    if (!s.active || !s.finished) {
+      return { ok: false, error: "Пристрій ще в роботі — підтвердити отримання можна, коли він буде готовий." };
+    }
+
+    const marked = await getDb()
+      .update(leads)
+      .set({ receivedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(leads.id, lead.id), isNull(leads.receivedAt)))
+      .returning({ id: leads.id });
+
+    // Інша вкладка встигла раніше — хроніку й сигнал не дублюємо
+    if (marked.length > 0) {
+      await addEvent(lead.id, { text: "Клієнт підтвердив, що отримав пристрій." });
+
+      await alertMasters(
+        {
+          title: `№${lead.orderNo} · клієнт отримав пристрій`,
+          body: `${lead.name} — можна закривати заявку`.slice(0, 160),
+          url: leadLink(lead.orderNo, lead.id),
+          tag: `received-${lead.id}`,
+        },
+        `<b>Клієнт підтвердив отримання</b>\n№${lead.orderNo} · ${esc(lead.name)}\n\nМожна закривати заявку: оплата й гарантія.\n${siteUrl()}/admin/zayavky`,
+      );
+    }
+
+    revalidatePath("/moi-remonty");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    console.error("[received] підтвердження не збережено:", e);
+    return { ok: false, error: "Не вдалося зберегти. Спробуйте ще раз або зателефонуйте нам." };
   }
 }

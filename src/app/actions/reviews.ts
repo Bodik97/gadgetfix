@@ -57,9 +57,10 @@ export async function submitReview(_prev: ReviewResult | null, formData: FormDat
     return { ok: false, error: "Спершу підтвердіть пошту — це захищає відгуки від накруток." };
   }
 
-  // Знижка — лише тим, хто справді ремонтувався через сайт: є видана заявка в кабінеті
+  // Знижка — лише тим, хто справді ремонтувався через сайт: майстер видав пристрій
+  // або клієнт сам підтвердив у кабінеті, що отримав його
   const repairs = await getClientLeads(user.id, email?.emailAddress);
-  const repair = repairs.find((l) => l.status === "done");
+  const repair = repairs.find((l) => l.status === "done" || l.receivedAt);
 
   const [beforePath, afterPath] = await Promise.all([
     pair.before ? savePhoto("reviews", pair.before) : null,
