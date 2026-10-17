@@ -152,14 +152,12 @@ export default function ReviewShowcase({
           if (touchX.current === null) return;
           const dx = e.changedTouches[0].clientX - touchX.current;
           touchX.current = null;
-          // Свайп по повзунку порівняння — це рух повзунка, а не перехід
-          if ((e.target as HTMLElement).closest("[data-compare]")) return;
           if (Math.abs(dx) > 50) goTo(index + (dx < 0 ? 1 : -1));
         }}
       >
         <div className={styles.media}>
           {current.pair ? (
-            <Compare before={current.pair.before} after={current.pair.after} device={current.device} still={still} />
+            <Pair before={current.pair.before} after={current.pair.after} device={current.device} />
           ) : current.image ? (
             <a href={current.image} target="_blank" rel="noopener" className={styles.photo}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -261,78 +259,21 @@ function ReviewText({ text }: { text: string }) {
   );
 }
 
-/**
- * Повзунок «до/після»: фото «після» лежить зверху й відрізається по ручці.
- * Під капотом — звичайний range: працює пальцем, мишкою й стрілками клавіатури.
- * Уперше на екрані ручка сама «показує» рух, щоб було зрозуміло, що її тягнуть.
- */
-function Compare({ before, after, device, still }: { before: string; after: string; device: string | null; still: boolean }) {
-  const [pos, setPos] = useState(50);
-  const [hinted, setHinted] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (still || hinted) return;
-    const el = ref.current;
-    if (!el) return;
-
-    let frame = 0;
-    const seen = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        seen.disconnect();
-        setHinted(true);
-        // 50 → 72 → 28 → 50 за ~1,6 с — легке «погойдування»
-        const start = performance.now();
-        const tick = (now: number) => {
-          const t = Math.min(1, (now - start) / 1600);
-          setPos(50 + Math.sin(t * Math.PI * 2) * 22 * (1 - t * 0.2));
-          if (t < 1) frame = requestAnimationFrame(tick);
-          else setPos(50);
-        };
-        frame = requestAnimationFrame(tick);
-      },
-      { threshold: 0.6 },
-    );
-    seen.observe(el);
-    return () => {
-      seen.disconnect();
-      cancelAnimationFrame(frame);
-    };
-  }, [still, hinted]);
-
-  const label = device ? `${device}: до і після ремонту` : "До і після ремонту";
-
+/** Фото до і після від клієнта — два окремі кадри поруч, кожен відкривається повністю */
+function Pair({ before, after, device }: { before: string; after: string; device: string | null }) {
+  const label = device ? `${device} ` : "";
   return (
-    <div ref={ref} className={styles.compare} data-compare="" style={{ "--pos": `${pos}%` } as React.CSSProperties}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={before} alt={`${label} — до`} className={styles.compareImg} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={after} alt={`${label} — після`} className={`${styles.compareImg} ${styles.compareAfter}`} />
-
-      <span className={styles.tagBefore}>До</span>
-      <span className={styles.tagAfter}>Після</span>
-
-      <span className={styles.handle} aria-hidden="true">
-        <span className={styles.knob}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 7l-5 5 5 5M15 7l5 5-5 5" />
-          </svg>
-        </span>
-      </span>
-
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={Math.round(pos)}
-        onChange={(e) => {
-          setHinted(true);
-          setPos(Number(e.target.value));
-        }}
-        className={styles.range}
-        aria-label="Порівняти фото до і після: тягніть"
-      />
+    <div className={styles.pair}>
+      {[
+        { src: before, tag: "До", alt: `${label}до ремонту`, cls: styles.tagBefore },
+        { src: after, tag: "Після", alt: `${label}після ремонту`, cls: styles.tagAfter },
+      ].map((p) => (
+        <a key={p.tag} href={p.src} target="_blank" rel="noopener" className={styles.pairPhoto}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.src} alt={p.alt} />
+          <span className={p.cls}>{p.tag}</span>
+        </a>
+      ))}
     </div>
   );
 }

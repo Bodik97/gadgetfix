@@ -138,30 +138,33 @@
   color: rgb(255 255 255 / .75);
 }
 
-/* ---------- Повзунок до/після ---------- */
-.compare {
+/* ---------- Фото до і після: два окремі кадри поруч ---------- */
+.pair {
   position: absolute;
   inset: 0;
-  user-select: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: var(--bg-elevated);
 }
 
-.compareImg {
-  position: absolute;
-  inset: 0;
+.pairPhoto {
+  position: relative;
+  display: block;
+  overflow: hidden;
+}
+
+.pairPhoto img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  pointer-events: none;
-}
-
-.compareAfter {
-  clip-path: inset(0 0 0 var(--pos));
 }
 
 .tagBefore,
 .tagAfter {
   position: absolute;
   top: 12px;
+  left: 12px;
   padding: 4px 12px;
   border-radius: var(--r-pill);
   font-size: 12.5px;
@@ -170,65 +173,13 @@
 }
 
 .tagBefore {
-  left: 12px;
   background: rgb(0 0 0 / .62);
   color: #fff;
 }
 
 .tagAfter {
-  right: 12px;
   background: var(--accent);
   color: var(--on-accent);
-}
-
-.handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--pos);
-  width: 3px;
-  margin-left: -1.5px;
-  background: #fff;
-  box-shadow: 0 0 12px rgb(0 0 0 / .4);
-  pointer-events: none;
-}
-
-.knob {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: #fff;
-  color: #15180f;
-  box-shadow: 0 6px 20px rgb(0 0 0 / .35);
-  transform: translate(-50%, -50%);
-  transition: transform .15s;
-}
-
-.compare:active .knob {
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-/* Невидимий range на всю площу: тягнути можна будь-де, клавіатура теж працює */
-.range {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: ew-resize;
-  touch-action: pan-y;
-}
-
-.range:focus-visible + .handle,
-.compare:has(.range:focus-visible) .knob {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
 }
 
 /* ---------- Текст і автор ---------- */

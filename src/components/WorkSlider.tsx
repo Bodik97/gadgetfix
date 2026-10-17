@@ -4,15 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import slider from "./Rail.module.css";
 import styles from "./WorkSlider.module.css";
 
-export type WorkCard = { id: string; device: string; text: string };
-
-const photo = (id: string, v: "before" | "after") => `/api/works/${id}/image?v=${v}`;
+export type WorkCard = {
+  id: string;
+  device: string;
+  text: string;
+  before: string;
+  after: string;
+  /** Хто лишив — для фото з відгуків клієнтів: «★★★★★ · Оксана» */
+  author?: string;
+};
 
 /**
- * Результати робіт стрічкою — та сама механіка, що й у відгуків:
- * гортається пальцем, на компʼютері — стрілками.
+ * Пари фото до і після стрічкою: роботи майстра або фото з відгуків клієнтів.
+ * Гортається пальцем, на компʼютері — стрілками.
  */
-export default function WorkSlider({ works }: { works: WorkCard[] }) {
+export default function WorkSlider({ works, label = "Результати робіт" }: { works: WorkCard[]; label?: string }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
@@ -47,14 +53,14 @@ export default function WorkSlider({ works }: { works: WorkCard[] }) {
 
   return (
     <div className={slider.wrap}>
-      <div className={slider.track} ref={trackRef} tabIndex={0} aria-label="Результати робіт">
+      <div className={slider.track} ref={trackRef} tabIndex={0} aria-label={label}>
         {works.map((w) => (
           <figure key={w.id} className={styles.card}>
             <div className={styles.pair}>
               {(["before", "after"] as const).map((v) => (
-                <a key={v} href={photo(w.id, v)} target="_blank" rel="noopener" className={styles.photo}>
+                <a key={v} href={w[v]} target="_blank" rel="noopener" className={styles.photo}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo(w.id, v)} alt={`${w.device} ${v === "before" ? "до" : "після"} ремонту`} loading="lazy" />
+                  <img src={w[v]} alt={`${w.device} ${v === "before" ? "до" : "після"} ремонту`} loading="lazy" />
                   <span className={v === "after" ? styles.tagAfter : styles.tag}>{v === "before" ? "До" : "Після"}</span>
                 </a>
               ))}
@@ -62,6 +68,7 @@ export default function WorkSlider({ works }: { works: WorkCard[] }) {
 
             <figcaption className={styles.caption}>
               <span className={styles.device}>{w.device}</span>
+              {w.author && <span className={styles.author}>{w.author}</span>}
               <span className={styles.text}>{w.text}</span>
             </figcaption>
           </figure>

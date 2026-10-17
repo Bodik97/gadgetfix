@@ -8,7 +8,6 @@ import HeroStatus from "@/components/HeroStatus";
 import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
 import ReviewForm from "@/components/ReviewForm";
-import RepairReveal from "@/components/RepairReveal";
 import ReviewShowcase from "@/components/ReviewShowcase";
 import WorkSlider from "@/components/WorkSlider";
 import ParcelDecor from "@/components/ParcelDecor";
@@ -107,9 +106,11 @@ export default async function Home() {
 
   const hasRealReviews = published.length > 0;
   // «Ремонт на очах» — лише відгуки з обома фото від клієнта; немає таких — блоку немає
-  const revealPairs = shownReviews.flatMap((r) =>
-    r.pair ? [{ id: r.id, ...r.pair, device: r.device, name: r.name, rating: r.rating, text: r.text }] : [],
-  ).slice(0, 4);
+  const clientPairs = shownReviews.flatMap((r) =>
+    r.pair
+      ? [{ id: r.id, ...r.pair, device: r.device ?? "Ремонт", text: r.text, author: `${"★".repeat(r.rating)} · ${r.name}` }]
+      : [],
+  );
 
   return (
     <>
@@ -280,11 +281,27 @@ export default async function Home() {
               <div className={styles.reviewsHead}>
                 <h2 className={styles.h2}>Результати робіт</h2>
               </div>
-              <WorkSlider works={works.map((w) => ({ id: w.id, device: w.device, text: w.text }))} />
+              <WorkSlider
+                works={works.map((w) => ({
+                  id: w.id,
+                  device: w.device,
+                  text: w.text,
+                  before: `/api/works/${w.id}/image?v=before`,
+                  after: `/api/works/${w.id}/image?v=after`,
+                }))}
+              />
             </div>
           )}
 
-          {revealPairs.length > 0 && <RepairReveal pairs={revealPairs} />}
+          {clientPairs.length > 0 && (
+            <div className={styles.works}>
+              <div className={styles.reviewsHead}>
+                <h2 className={styles.h2}>Ремонт на очах</h2>
+              </div>
+              <WorkSlider works={clientPairs} label="Фото до і після від клієнтів" />
+            </div>
+          )}
+
 
           <div className={styles.reviewsHead}>
             <h2 className={styles.h2}>Що кажуть клієнти</h2>
