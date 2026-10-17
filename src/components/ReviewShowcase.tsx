@@ -22,17 +22,19 @@ export type ReviewCard = {
   pair: { before: string; after: string } | null;
 };
 
-/** Скільки показуємо один відгук, перш ніж перейти до наступного */
-const AUTO_MS = 7000;
-/** Довший текст ховаємо за «Читати повністю», щоб вітрина не стрибала у висоту */
+/** Довший текст ховаємо за «Читати повністю», щоб картки в колоді були однакові */
 const LONG_TEXT = 260;
+/** Скільки летить змахнута картка */
+const FLY_MS = 320;
+/** Наскільки відтягнути картку, щоб вона полетіла, — менше повертається назад */
+const THROW_PX = 100;
+/** Скільки карток видно в стосі під верхньою */
+const BEHIND = 2;
 
 /**
- * Відгуки вітриною: один великий відгук і стрічка решти під ним.
- *
- * Велика картка дає місце фото до і після й повному тексту, а стрічка
- * показує, скільки ще відгуків і де ми зараз. Сам перемикається раз на
- * кілька секунд, але щойно людина торкнулась блоку — керує вона.
+ * Відгуки колодою карток: верхню змахують пальцем чи мишкою — вона відлітає
+ * й лягає в кінець, а під нею вже наступна. Стрілки й крапки — для тих, хто
+ * не тягне. Уперше на екрані верхня картка злегка ворушиться: її можна тягнути.
  */
 export default function ReviewShowcase({
   reviews,
@@ -42,82 +44,94 @@ export default function ReviewShowcase({
   stats: { count: number; average: number };
 }) {
   const [index, setIndex] = useState(0);
-  const [dir, setDir] = useState<1 | -1>(1);
-  // Людина сама взялась гортати — автопрокрутку більше не вмикаємо
-  const [manual, setManual] = useState(false);
-  const [hover, setHover] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [still, setStill] = useState(false);
-  const rootRef = useRef<HTMLElement>(null);
-  const railRef = useRef<HTMLDivElement>(null);
-  const touchX = useRef<number | null>(null);
+  const [drag, setDrag] = useState(0);
+  const [fly, setFly] = useState<0 | 1 | -1>(0);
+  const [hint, setHint] = useState(false);
+  const deckRef = useRef<HTMLDivElement>(null);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  // Картку тягнули — клік, яким закінчився рух, не має відкривати фото
+  const dragged = useRef(false);
 
   const count = reviews.length;
-  const current = reviews[index];
-  const auto = count > 1 && !manual && !hover && visible && !still;
 
-  const goTo = useCallback(
-    (next: number, by: "user" | "auto" = "user") => {
-      if (by === "user") setManual(true);
-      setDir(next > index || (index === count - 1 && next === 0 && by === "auto") ? 1 : -1);
-      setIndex(((next % count) + count) % count);
+  const calm = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const throwCard = useCallback(
+    (dir: 1 | -1) => {
+      if (fly || count < 2) return;
+      setFly(dir);
+      window.setTimeout(
+        () => {
+          setIndex((i) => (i + 1) % count);
+          setFly(0);
+          setDrag(0);
+        },
+        calm() ? 0 : FLY_MS,
+      );
     },
-    [count, index],
+    [count, fly],
   );
 
-  // Повага до «менше руху» і пауза, коли блок поза екраном чи вкладка прихована
+  const back = () => {
+    if (fly || count < 2) return;
+    setDrag(0);
+    setIndex((i) => (i - 1 + count) % count);
+  };
+
+  // Підказка один раз, коли колода вперше на екрані
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setStill(media.matches);
-    sync();
-    media.addEventListener("change", sync);
+    const el = deckRef.current;
+    if (!el || count < 2 || calm()) return;
+    const seen = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        seen.disconnect();
+        setHint(true);
+      },
+      { threshold: 0.6 },
+    );
+    seen.observe(el);
+    return () => seen.disconnect();
+  }, [count]);
 
-    const el = rootRef.current;
-    const seen = el
-      ? new IntersectionObserver(([e]) => setVisible(e.isIntersecting && !document.hidden), { threshold: 0.35 })
-      : null;
-    if (el && seen) seen.observe(el);
+  if (count === 0) return null;
 
-    const onHidden = () => {
-      if (document.hidden) setVisible(false);
-    };
-    document.addEventListener("visibilitychange", onHidden);
+  const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0 || fly || count < 2) return;
+    start.current = { x: e.clientX, y: e.clientY };
+    dragged.current = false;
+    setHint(false);
+  };
 
-    return () => {
-      media.removeEventListener("change", sync);
-      seen?.disconnect();
-      document.removeEventListener("visibilitychange", onHidden);
-    };
-  }, []);
+  const onPointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    const s0 = start.current;
+    if (!s0) return;
+    const dx = e.clientX - s0.x;
+    const dy = e.clientY - s0.y;
+    if (!dragged.current) {
+      // Вертикальний рух — людина гортає сторінку, картку не чіпаємо
+      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) {
+        start.current = null;
+        return;
+      }
+      if (Math.abs(dx) < 8) return;
+      dragged.current = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    setDrag(dx);
+  };
 
-  useEffect(() => {
-    if (!auto) return;
-    const t = window.setTimeout(() => goTo(index + 1, "auto"), AUTO_MS);
-    return () => window.clearTimeout(t);
-  }, [auto, index, goTo]);
-
-  // Активна міні-картка завжди видна у стрічці — гортаємо лише саму стрічку
-  useEffect(() => {
-    const rail = railRef.current;
-    const item = rail?.children[index] as HTMLElement | undefined;
-    if (!rail || !item) return;
-    const left = item.offsetLeft - (rail.clientWidth - item.clientWidth) / 2;
-    rail.scrollTo({ left, behavior: still ? "auto" : "smooth" });
-  }, [index, still]);
-
-  if (!current) return null;
+  const onPointerUp = (e: React.PointerEvent<HTMLElement>) => {
+    const s0 = start.current;
+    start.current = null;
+    if (!s0 || !dragged.current) return;
+    const dx = e.clientX - s0.x;
+    if (Math.abs(dx) > THROW_PX) throwCard(dx > 0 ? 1 : -1);
+    else setDrag(0);
+  };
 
   return (
-    <section
-      ref={rootRef}
-      className={styles.root}
-      aria-roledescription="карусель"
-      aria-label="Відгуки клієнтів"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-      onBlur={() => setHover(false)}
-    >
+    <section className={styles.root} aria-roledescription="карусель" aria-label="Відгуки клієнтів">
       <div className={styles.summary}>
         <div className={styles.score}>
           <span className={styles.scoreNum}>{stats.average.toFixed(1).replace(".", ",")}</span>
@@ -138,104 +152,104 @@ export default function ReviewShowcase({
         </p>
       </div>
 
-      {/* Вітрина. key перезапускає анімацію появи на кожному відгуку */}
-      <article
-        key={current.id}
-        className={styles.stage}
-        data-dir={dir}
-        aria-roledescription="слайд"
-        aria-label={`Відгук ${index + 1} з ${count}`}
-        onTouchStart={(e) => {
-          touchX.current = e.touches[0].clientX;
-        }}
-        onTouchEnd={(e) => {
-          if (touchX.current === null) return;
-          const dx = e.changedTouches[0].clientX - touchX.current;
-          touchX.current = null;
-          if (Math.abs(dx) > 50) goTo(index + (dx < 0 ? 1 : -1));
-        }}
-      >
-        <div className={styles.media}>
-          {current.pair ? (
-            <Pair before={current.pair.before} after={current.pair.after} device={current.device} />
-          ) : current.image ? (
-            <a href={current.image} target="_blank" rel="noopener" className={styles.photo}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={current.image} alt="Фото виконаної роботи" />
-            </a>
-          ) : (
-            <div className={styles.quoteTile} aria-hidden="true">
-              <span className={styles.quoteMark}>“</span>
-              {current.device && <span className={styles.quoteDevice}>{current.device}</span>}
-            </div>
-          )}
-        </div>
+      <div ref={deckRef} className={styles.deck} data-hint={hint ? "" : undefined} onAnimationEnd={() => setHint(false)}>
+        {reviews.map((r, i) => {
+          // Місце в стосі: 0 — зверху, далі — глибше
+          const k = (i - index + count) % count;
+          const top = k === 0;
+          const depth = Math.min(k, BEHIND);
 
-        <div className={styles.body}>
-          <div className={styles.meta}>
-            <Stars rating={current.rating} />
-            {current.device && <span className={styles.chip}>{current.device}</span>}
-            <span className={styles.date}>{current.date}</span>
-          </div>
+          let transform = `translateY(${depth * 16}px) scale(${1 - depth * 0.045}) rotate(${depth === 0 ? 0 : depth % 2 ? 2.4 : -1.8}deg)`;
+          if (top && fly) transform = `translateX(${fly * 130}%) rotate(${fly * 22}deg)`;
+          else if (top && drag) transform = `translateX(${drag}px) rotate(${drag / 18}deg)`;
 
-          <ReviewText key={current.id} text={current.text} />
+          return (
+            <article
+              key={r.id}
+              className={styles.card}
+              data-top={top ? "" : undefined}
+              data-dragging={top && drag && !fly ? "" : undefined}
+              aria-roledescription="слайд"
+              aria-label={`Відгук ${k + 1} з ${count}`}
+              aria-hidden={!top}
+              inert={!top}
+              style={{
+                transform,
+                zIndex: count - k,
+                opacity: (top && fly) || k > BEHIND ? 0 : 1,
+              }}
+              onPointerDown={top ? onPointerDown : undefined}
+              onPointerMove={top ? onPointerMove : undefined}
+              onPointerUp={top ? onPointerUp : undefined}
+              onPointerCancel={top ? onPointerUp : undefined}
+              onClickCapture={(e) => {
+                if (!dragged.current) return;
+                dragged.current = false;
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <div className={styles.media}>
+                {r.pair ? (
+                  <Pair before={r.pair.before} after={r.pair.after} device={r.device} />
+                ) : r.image ? (
+                  <a href={r.image} target="_blank" rel="noopener" className={styles.photo} draggable={false}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={r.image} alt="Фото виконаної роботи" draggable={false} />
+                  </a>
+                ) : (
+                  <div className={styles.quoteTile} aria-hidden="true">
+                    <span className={styles.quoteMark}>“</span>
+                    {r.device && <span className={styles.quoteDevice}>{r.device}</span>}
+                  </div>
+                )}
+              </div>
 
-          <footer className={styles.author}>
-            <Avatar name={current.name} src={current.avatar} />
-            <span className={styles.who}>
-              <span className={styles.name}>{current.name}</span>
-              {current.city && <span className={styles.place}>{current.city}</span>}
-            </span>
-            {current.viaGoogle && <GoogleMark />}
-          </footer>
-        </div>
-      </article>
+              <div className={styles.body}>
+                <div className={styles.meta}>
+                  <Stars rating={r.rating} />
+                  {r.device && <span className={styles.chip}>{r.device}</span>}
+                  <span className={styles.date}>{r.date}</span>
+                </div>
+
+                <ReviewText text={r.text} />
+
+                <footer className={styles.author}>
+                  <Avatar name={r.name} src={r.avatar} />
+                  <span className={styles.who}>
+                    <span className={styles.name}>{r.name}</span>
+                    {r.city && <span className={styles.place}>{r.city}</span>}
+                  </span>
+                  {r.viaGoogle && <GoogleMark />}
+                </footer>
+              </div>
+            </article>
+          );
+        })}
+      </div>
 
       {count > 1 && (
-        <div className={styles.nav}>
-          <div className={styles.rail} ref={railRef} role="tablist" aria-label="Оберіть відгук">
-            {reviews.map((r, i) => (
-              <button
-                key={r.id}
-                type="button"
-                role="tab"
-                aria-selected={i === index}
-                className={i === index ? styles.thumbOn : styles.thumb}
-                onClick={() => goTo(i)}
-              >
-                <Avatar name={r.name} src={r.avatar} small />
-                <span className={styles.thumbText}>
-                  <span className={styles.thumbName}>
-                    {r.name}
-                    {r.pair && (
-                      <span className={styles.thumbBadge} title="Є фото до і після">
-                        до/після
-                      </span>
-                    )}
-                  </span>
-                  <span className={styles.thumbQuote}>{r.text}</span>
-                </span>
-                {/* Таймер автопрокрутки — видно, коли зміниться відгук */}
-                {i === index && auto && <span className={styles.timer} style={{ animationDuration: `${AUTO_MS}ms` }} />}
-              </button>
-            ))}
-          </div>
+        <div className={styles.controls}>
+          <button type="button" className={styles.arrow} onClick={back} aria-label="Попередній відгук">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
 
-          <div className={styles.controls}>
-            <button type="button" className={styles.arrow} onClick={() => goTo(index - 1)} aria-label="Попередній відгук">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M15 5l-7 7 7 7" />
-              </svg>
-            </button>
-            <span className={styles.counter} aria-live="polite">
-              <strong>{index + 1}</strong> / {count}
+          <span className={styles.dots} aria-live="polite">
+            <span className="visually-hidden">
+              Відгук {index + 1} з {count}
             </span>
-            <button type="button" className={styles.arrow} onClick={() => goTo(index + 1)} aria-label="Наступний відгук">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+            {reviews.map((r, i) => (
+              <span key={r.id} className={i === index ? styles.dotOn : styles.dot} aria-hidden="true" />
+            ))}
+          </span>
+
+          <button type="button" className={styles.arrow} onClick={() => throwCard(-1)} aria-label="Наступний відгук">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       )}
     </section>
@@ -268,9 +282,9 @@ function Pair({ before, after, device }: { before: string; after: string; device
         { src: before, tag: "До", alt: `${label}до ремонту`, cls: styles.tagBefore },
         { src: after, tag: "Після", alt: `${label}після ремонту`, cls: styles.tagAfter },
       ].map((p) => (
-        <a key={p.tag} href={p.src} target="_blank" rel="noopener" className={styles.pairPhoto}>
+        <a key={p.tag} href={p.src} target="_blank" rel="noopener" className={styles.pairPhoto} draggable={false}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.src} alt={p.alt} />
+          <img src={p.src} alt={p.alt} draggable={false} />
           <span className={p.cls}>{p.tag}</span>
         </a>
       ))}
@@ -295,10 +309,10 @@ function Stars({ rating, size }: { rating: number; size?: "lg" }) {
   );
 }
 
-function Avatar({ name, src, small }: { name: string; src: string | null; small?: boolean }) {
+function Avatar({ name, src }: { name: string; src: string | null }) {
   // Адреса аватара живе в акаунті клієнта й може протухнути — тоді літера
   const [broken, setBroken] = useState(false);
-  const cls = small ? styles.avatarSm : styles.avatar;
+  const cls = styles.avatar;
 
   if (src && !broken) {
     // eslint-disable-next-line @next/next/no-img-element
