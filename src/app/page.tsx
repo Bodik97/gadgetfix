@@ -105,12 +105,6 @@ export default async function Home() {
   }));
 
   const hasRealReviews = published.length > 0;
-  // «Ремонт на очах» — лише відгуки з обома фото від клієнта; немає таких — блоку немає
-  const clientPairs = shownReviews.flatMap((r) =>
-    r.pair
-      ? [{ id: r.id, ...r.pair, device: r.device ?? "Ремонт", text: r.text, author: `${"★".repeat(r.rating)} · ${r.name}` }]
-      : [],
-  );
 
   return (
     <>
@@ -281,27 +275,9 @@ export default async function Home() {
               <div className={styles.reviewsHead}>
                 <h2 className={styles.h2}>Результати робіт</h2>
               </div>
-              <WorkSlider
-                works={works.map((w) => ({
-                  id: w.id,
-                  device: w.device,
-                  text: w.text,
-                  before: `/api/works/${w.id}/image?v=before`,
-                  after: `/api/works/${w.id}/image?v=after`,
-                }))}
-              />
+              <WorkSlider works={works.map((w) => ({ id: w.id, device: w.device, text: w.text }))} />
             </div>
           )}
-
-          {clientPairs.length > 0 && (
-            <div className={styles.works}>
-              <div className={styles.reviewsHead}>
-                <h2 className={styles.h2}>Ремонт на очах</h2>
-              </div>
-              <WorkSlider works={clientPairs} label="Фото до і після від клієнтів" />
-            </div>
-          )}
-
 
           <div className={styles.reviewsHead}>
             <h2 className={styles.h2}>Що кажуть клієнти</h2>

@@ -65,23 +65,10 @@
   font-weight: 600;
 }
 
-.author {
-  font-size: 13.5px;
-  color: var(--text-3);
-}
-
 .text {
   font-size: 15px;
   line-height: 1.55;
   color: var(--text-2);
-}
-
-/* Відгук клієнта буває довгим — у стрічці початок, повністю він у вітрині нижче */
-.author ~ .text {
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 @media (max-width: 860px) {
