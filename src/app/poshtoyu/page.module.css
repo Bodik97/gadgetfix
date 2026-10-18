@@ -1,3 +1,63 @@
+/* Червоний Нової Пошти (#DA291C) — для всього, що про доставку.
+   display: contents — обгортка лише передає змінні, у розкладці її немає */
+.np {
+  display: contents;
+  --np-red: #DA291C;
+  --np-red-rgb: 218 41 28;
+  /* Позначки в пам'ятці пакування */
+  --mark: var(--np-red);
+  --mark-rgb: var(--np-red-rgb);
+  --on-mark: #fff;
+}
+
+/* Плашка з логотипом: біла — логотип у своїх кольорах читається на темному героєві */
+.npBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 9px 16px 9px 14px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  color: #1A1A1A;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px -12px rgb(var(--np-red-rgb) / .6);
+}
+
+.npBadge img {
+  display: block;
+  width: auto;
+  height: 22px;
+}
+
+.npLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 26px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid rgb(var(--np-red-rgb) / .35);
+  background: #fff;
+  color: #1A1A1A;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.npLine img {
+  display: block;
+  width: auto;
+  height: 20px;
+}
+
+.npDisclaimer {
+  padding-bottom: 28px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
 /* ---------- Герой ---------- */
 .hero {
   position: relative;
@@ -107,7 +167,7 @@
 .tracker {
   overflow: hidden;
   border-radius: 28px;
-  border: 1px solid rgb(var(--fg-rgb) / .14);
+  border: 1px solid rgb(var(--np-red-rgb) / .35);
   background: rgb(var(--bg-rgb) / .9);
   backdrop-filter: blur(12px);
   padding: 22px;
@@ -142,8 +202,116 @@
 .trackerFill {
   height: 100%;
   width: 62%;
-  background: var(--accent);
+  background: linear-gradient(90deg, rgb(var(--np-red-rgb) / .7), var(--np-red));
   transform-origin: left;
+}
+
+/* ---------- Доставка Новою Поштою: плитки з іконками ---------- */
+.delivery {
+  padding-bottom: clamp(48px, 7vw, 100px);
+}
+
+/* Логотип над заголовком — так «Нова Пошта» не повторюється поруч двічі */
+.deliveryHead {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  margin-bottom: clamp(22px, 3vw, 34px);
+}
+
+.deliveryLogo {
+  display: block;
+  width: auto;
+  height: 26px;
+}
+
+.deliveryTitle {
+  font-size: clamp(26px, 3.4vw, 44px);
+  text-wrap: balance;
+}
+
+/* Шість плиток: 3 × 2 на комп'ютері, 2 × 3 на планшеті — без обрізаного останнього ряду */
+.deliveryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deliveryCard {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--card-shadow);
+  transition: border-color .25s, transform .25s;
+}
+
+@media (hover: hover) {
+  .deliveryCard:hover {
+    border-color: rgb(var(--np-red-rgb) / .45);
+    transform: translateY(-3px);
+  }
+}
+
+.deliveryIcon {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  margin-bottom: 6px;
+  border-radius: 15px;
+  background: rgb(var(--np-red-rgb) / .1);
+  color: var(--np-red);
+}
+
+.deliveryCardTitle {
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 17px;
+  letter-spacing: -.02em;
+}
+
+.deliveryText {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+
+@media (max-width: 900px) {
+  .deliveryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Телефон: іконка ліворуч від тексту — плитки нижчі, список читається швидше */
+@media (max-width: 560px) {
+  .deliveryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .deliveryCard {
+    grid-template-columns: auto 1fr;
+    column-gap: 14px;
+    padding: 18px;
+  }
+
+  .deliveryIcon {
+    grid-row: span 2;
+    margin-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deliveryCard {
+    transition: none;
+  }
 }
 
 /* ---------- Кроки ---------- */

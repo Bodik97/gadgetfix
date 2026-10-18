@@ -22,9 +22,10 @@
   color: rgb(var(--text-rgb) / .78);
 }
 
+/* --mark-rgb / --mark / --on-mark задає сторінка (на «Поштою» — червоний Нової Пошти) */
 .itemOn {
-  border: 1px solid rgb(var(--lime-rgb) / .45);
-  background: rgb(var(--lime-rgb) / .08);
+  border: 1px solid rgb(var(--mark-rgb, var(--lime-rgb)) / .45);
+  background: rgb(var(--mark-rgb, var(--lime-rgb)) / .08);
   color: var(--text);
 }
 
@@ -48,11 +49,13 @@
 .box {
   border: 1px solid rgb(var(--fg-rgb) / .22);
   background: transparent;
+  color: transparent;
 }
 
 .boxOn {
-  border: 1px solid var(--accent);
-  background: var(--accent);
+  border: 1px solid var(--mark, var(--accent));
+  background: var(--mark, var(--accent));
+  color: var(--on-mark, #0B0C0E);
 }
 
 .box svg,

@@ -20,7 +20,7 @@ export default function PackingList() {
             className={on ? styles.itemOn : styles.item}
           >
             <span className={on ? styles.boxOn : styles.box}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0B0C0E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: on ? 1 : 0 }} aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: on ? 1 : 0 }} aria-hidden="true">
                 <path d="M5 12.5l4.5 4.5L19 7" />
               </svg>
             </span>
