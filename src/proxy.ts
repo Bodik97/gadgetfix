@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isProtected = createRouteMatcher(["/kabinet(.*)", "/moi-remonty(.*)", "/moi-znyzhky(.*)"]);
@@ -20,14 +20,38 @@ export function toOwnDomain(req: Request): NextResponse | null {
   return NextResponse.redirect(new URL(url.pathname + url.search, own), 308);
 }
 
-export default clerkMiddleware(async (auth, req) => {
-  const moved = toOwnDomain(req);
-  if (moved) return moved;
-
+const clerk = clerkMiddleware(async (auth, req) => {
   if (isProtected(req)) {
     await auth.protect({ unauthenticatedUrl: new URL("/vhid", req.url).toString() });
   }
 });
+
+/** Де сервер сам питає Clerk, хто це: адмінка, кабінет, вхід, API */
+const needsClerk = createRouteMatcher([
+  "/admin(.*)",
+  "/api(.*)",
+  "/trpc(.*)",
+  "/vhid(.*)",
+  "/kabinet(.*)",
+  "/moi-remonty(.*)",
+  "/moi-znyzhky(.*)",
+]);
+
+/**
+ * Clerk на сервері — лише там, де він потрібен. На тестових ключах він при
+ * першому відкритті будь-якої сторінки ганяв браузер на clerk.accounts.dev і
+ * назад («handshake», 3 переадресації й +0,6 с ще до першого байта). Публічним
+ * сторінкам це ні до чого: кнопку «Вхід» показує браузерна частина Clerk.
+ * Відправка форм (server actions) — POST на адресу сторінки, їй Clerk потрібен.
+ */
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  const moved = toOwnDomain(req);
+  if (moved) return moved;
+
+  const reading = req.method === "GET" || req.method === "HEAD";
+  if (!reading || needsClerk(req)) return clerk(req, event);
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
