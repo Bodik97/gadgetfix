@@ -118,8 +118,9 @@ export default async function Home() {
           {/* Великий логотип над заголовком. Кольори логотипа не змінюються,
               а герой темний в обох темах — плашка не потрібна. */}
           <div className={`${styles.heroLogo} nUp`}>
+            {/* Найбільше на першому екрані телефона — вантажимо першим */}
             {/* eslint-disable-next-line @next/next/no-img-element -- векторний SVG, оптимізатор картинок тут нічого не дасть */}
-            <img src="/brand/gadgetfix-logo-dark.svg" alt={site.name} width={739} height={136} />
+            <img src="/brand/gadgetfix-logo-dark.svg" alt={site.name} width={739} height={136} fetchPriority="high" />
           </div>
 
           <HeroStatus />
@@ -141,8 +142,9 @@ export default async function Home() {
           </div>
 
           <div aria-hidden="true" className={`${styles.heroShot} nUp nUp-3`}>
-            {/* Найбільше на першому екрані — вантажимо першим, телефону віддаємо менший розмір */}
-            <Image src="/assets/hero-exploded.webp" alt="" fill preload sizes="(max-width: 1100px) 100vw, 1040px" className={styles.heroShotImg} />
+            {/* Телефону віддаємо менший розмір; першим не вантажимо — на телефоні він нижче
+                першого екрана й забирав би канал у логотипа, який PageSpeed вважає головним */}
+            <Image src="/assets/hero-exploded.webp" alt="" fill sizes="(max-width: 1100px) 100vw, 1040px" className={styles.heroShotImg} />
           </div>
 
           <dl className={styles.stats}>
