@@ -10,6 +10,7 @@ import styles from "./SignInForm.module.css";
 type Step = "credentials" | "code" | "codeLogin";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
+const NEED_CONSENT = "Позначте згоду на обробку персональних даних — без неї не можемо створити кабінет.";
 const MIN_PASSWORD = 8;
 
 /** Код помилки Clerk лежить у різних місцях залежно від методу — дістаємо звідусіль */
@@ -41,6 +42,8 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  // Згода на обробку персональних даних — обовʼязкова для будь-якого способу входу
+  const [agree, setAgree] = useState(false);
   // Код просили після правильного пароля (новий пристрій): тоді signIn скидати не можна
   const [afterPassword, setAfterPassword] = useState(false);
 
@@ -62,6 +65,10 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
     }
     if (password.length < MIN_PASSWORD) {
       setError(`Пароль має бути щонайменше ${MIN_PASSWORD} символів.`);
+      return;
+    }
+    if (!agree) {
+      setError(NEED_CONSENT);
       return;
     }
 
@@ -127,6 +134,8 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
         emailAddress: mail,
         password,
         ...(name.trim() ? { firstName: name.trim() } : {}),
+        // Галочка згоди обовʼязкова — Clerk збереже дату згоди в акаунті (legalAcceptedAt)
+        legalAccepted: true,
       });
 
       if (created?.error) {
@@ -158,6 +167,10 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
     const mail = email.trim();
     if (!EMAIL_RE.test(mail)) {
       setError("Спершу впишіть пошту — надішлемо на неї код.");
+      return;
+    }
+    if (!agree) {
+      setError(NEED_CONSENT);
       return;
     }
 
@@ -199,6 +212,25 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
     } catch {
       setError("Не вдалося надіслати код. Спробуйте ще раз за хвилину або зателефонуйте нам.");
     } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Вхід через Google: Clerk веде на Google і повертає на /sso-callback, звідти — у кабінет */
+  const signInWithGoogle = async () => {
+    if (!agree) {
+      setError(NEED_CONSENT);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const { error: ssoError } = await signIn.sso({
+      strategy: "oauth_google",
+      redirectUrl: "/kabinet",
+      redirectCallbackUrl: "/sso-callback",
+    });
+    if (ssoError) {
+      setError("Не вдалося відкрити вхід через Google. Спробуйте ще раз або увійдіть поштою.");
       setBusy(false);
     }
   };
@@ -337,6 +369,23 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
           />
         </div>
 
+        <label className={styles.consent}>
+          <input
+            type="checkbox"
+            checked={agree}
+            onChange={(e) => {
+              setAgree(e.target.checked);
+              setError("");
+            }}
+          />
+          <span>
+            Погоджуюсь з{" "}
+            <a href="/personalni-dani" target="_blank" rel="noopener">
+              обробкою персональних даних
+            </a>
+          </span>
+        </label>
+
         <FormError>{error}</FormError>
 
         {/* Сюди Clerk монтує Smart CAPTCHA — без цього елемента він падає на invisible-варіант */}
@@ -344,6 +393,20 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
 
         <button type="submit" className="btn btn-accent btn-lg" disabled={busy}>
           {busy ? "Заходимо…" : "Увійти"}
+        </button>
+
+        <div className={styles.or} aria-hidden="true">
+          <span>або</span>
+        </div>
+
+        <button type="button" className={`btn btn-ghost btn-lg ${styles.google}`} onClick={signInWithGoogle} disabled={busy}>
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7c2.2-2 3.4-5 3.4-8.6z" />
+            <path fill="#34A853" d="M12 23.5c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.7H1.8v3A11.5 11.5 0 0 0 12 23.5z" />
+            <path fill="#FBBC05" d="M5.6 14.2a6.9 6.9 0 0 1 0-4.4v-3H1.8a11.5 11.5 0 0 0 0 10.4l3.8-3z" />
+            <path fill="#EA4335" d="M12 5.1c1.7 0 3.2.6 4.4 1.7l3.3-3.3A11.5 11.5 0 0 0 1.8 6.8l3.8 3c.9-2.7 3.4-4.7 6.4-4.7z" />
+          </svg>
+          Увійти через Google
         </button>
 
         <div className={styles.actions}>

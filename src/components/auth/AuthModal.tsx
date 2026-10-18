@@ -2,14 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import AuthShell from "./AuthShell";
 import SignInForm from "./SignInForm";
 import styles from "./AuthModal.module.css";
-
-const perks = [
-  "Статус ремонту в реальному часі — без дзвінків",
-  "Номер посилки Нової Пошти одразу на сторінці",
-  "Гарантія на кожен пристрій — видно, доки діє",
-];
 
 export default function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -56,37 +51,19 @@ export default function AuthModal({ open, onClose }: { open: boolean; onClose: (
           </svg>
         </button>
 
-        <div className={styles.head}>
-          <span className={styles.icon} aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="8.5" r="3.75" />
-              <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
-            </svg>
-          </span>
-
-          <h2 id="auth-title" className={styles.title}>
-            Вхід або реєстрація
-          </h2>
-          <p className={styles.lead}>
-            Пошта й пароль — це все. Заходите вперше: акаунт створимо автоматично, окремої
-            реєстрації не треба.
-          </p>
-        </div>
-
-        <ul className={styles.perks}>
-          {perks.map((p) => (
-            <li key={p}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 12.5l4.5 4.5L19 7.5" />
-              </svg>
-              {p}
-            </li>
-          ))}
-        </ul>
-
         {/* Лише коли відкрите: закрите вікно інакше тримало б у DOM другу форму
-            з тими самими id (v-email, clerk-captcha), що й сторінка /vhid */}
-        {open && <SignInForm onDone={onClose} bare />}
+            з тими самими id (v-email, clerk-captcha), що й сторінка /vhid,
+            а 3D-логотип вантажив би Three.js без потреби */}
+        {open && (
+          <AuthShell
+            compact
+            titleId="auth-title"
+            title="Вхід або реєстрація"
+            lead="Пошта й пароль — або Google. Заходите вперше: акаунт створимо автоматично."
+          >
+            <SignInForm onDone={onClose} bare />
+          </AuthShell>
+        )}
       </div>
     </dialog>,
     document.body,

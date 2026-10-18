@@ -1,74 +1,9 @@
+/* Невеликі відступи — щоб уся форма вміщалась на екрані без прокрутки */
 .wrap {
-  position: relative;
-  overflow: hidden;
-  min-height: 72vh;
-  display: flex;
-  align-items: center;
-  padding: clamp(40px, 6vw, 90px) var(--gutter);
-}
-
-.bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.glow {
-  position: absolute;
-  width: 560px;
-  height: 560px;
-  right: -160px;
-  top: -240px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(var(--lime-rgb) / .16), transparent 65%);
+  padding: clamp(14px, 2vw, 28px) var(--gutter) clamp(32px, 5vw, 64px);
 }
 
 .inner {
-  position: relative;
   max-width: var(--container);
   margin: 0 auto;
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
-  gap: clamp(28px, 4vw, 64px);
-  align-items: center;
 }
-
-.copy {
-  min-width: 0;
-}
-
-.copy .kicker {
-  margin-bottom: 12px;
-}
-
-.title {
-  font-size: clamp(28px, 3.6vw, 46px);
-  margin-bottom: 16px;
-}
-
-.lead {
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--text-2);
-  max-width: 40ch;
-  margin-bottom: 28px;
-}
-
-.perks {
-  display: grid;
-  gap: 14px;
-  font-size: 15px;
-  color: rgb(var(--text-rgb) / .82);
-}
-
-.perk {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.perk svg {
-  flex: none;
-}
-
