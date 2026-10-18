@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import AuthModal from "./auth/AuthModal";
+import { openSignIn, prepareSignIn, useAuthState } from "./auth/authStore";
 import styles from "./AccountButton.module.css";
 
 function UserIcon() {
@@ -68,12 +67,12 @@ function useUnread(enabled: boolean) {
 }
 
 export default function AccountButton() {
-  const { isSignedIn, isLoaded } = useUser();
-  const [open, setOpen] = useState(false);
+  const { isSignedIn, isLoaded } = useAuthState();
   const pathname = usePathname();
   const { unread, fresh, dismiss } = useUnread(Boolean(isSignedIn));
 
-  // Поки Clerk вантажиться, тримаємо місце тієї ж ширини — інакше шапка
+  // Поки стан невідомий (сервер, або Clerk ще вантажиться для того, хто увійшов),
+  // тримаємо місце тієї ж ширини — інакше шапка
   // смикнеться, коли стан приїде
   if (!isLoaded) {
     return <span className={styles.placeholder} aria-hidden="true" />;
@@ -115,13 +114,18 @@ export default function AccountButton() {
   }
 
   return (
-    <>
-      <button type="button" className={styles.button} onClick={() => setOpen(true)} aria-label="Вхід" data-track="login">
-        <UserIcon />
-        <span className={styles.label}>Вхід</span>
-      </button>
-
-      <AuthModal open={open} onClose={() => setOpen(false)} />
-    </>
+    // Clerk починає вантажитись, щойно курсор чи фокус на кнопці, — до натискання
+    <button
+      type="button"
+      className={styles.button}
+      onClick={openSignIn}
+      onPointerEnter={prepareSignIn}
+      onFocus={prepareSignIn}
+      aria-label="Вхід"
+      data-track="login"
+    >
+      <UserIcon />
+      <span className={styles.label}>Вхід</span>
+    </button>
   );
 }

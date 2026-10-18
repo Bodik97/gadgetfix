@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useAuthState } from "./auth/authStore";
 import { useBooking } from "./BookingModal";
 import styles from "./BottomNav.module.css";
 
@@ -73,7 +73,7 @@ const CABINET_PATHS = ["/kabinet", "/moi-remonty", "/moi-znyzhky"];
 export default function BottomNav() {
   const pathname = usePathname();
   const openBooking = useBooking();
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useAuthState();
   const shown = isSignedIn ? items.map((item) => (item.href === "/poshtoyu" ? cabinet : item)) : items;
 
   // В адмінці своя навігація — ця тільки заважала б

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Unbounded, Manrope } from "next/font/google";
 import Header from "@/components/Header";
+import AuthRoot from "@/components/auth/AuthRoot";
 import BookingProviderWrap from "@/components/BookingModal";
 import BottomNav from "@/components/BottomNav";
 import HideOnAdmin from "@/components/HideOnAdmin";
@@ -93,7 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       {/* Знак ₴ — з крихітного файла (public/fonts/unbounded-hryvnia.woff2, вирізаний з того ж
           Unbounded). Інакше заради одного символа браузер тягнув набір latin-ext на 117 КБ */}
       <body style={{ "--font-unbounded": `"GF Hryvnia", ${unbounded.style.fontFamily}` } as React.CSSProperties}>
-        <ClerkProvider>
+        <AuthRoot>
           <BookingProviderWrap>
           <Header />
           <main>{children}</main>
@@ -108,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScrollReveal />
           <TouchSparks />
           </BookingProviderWrap>
-        </ClerkProvider>
+        </AuthRoot>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusiness) }}

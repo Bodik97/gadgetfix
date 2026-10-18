@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
+import { useAuthState } from "./auth/authStore";
 import { hasLeftReview, submitReview, type ReviewResult } from "@/app/actions/reviews";
 import BeforeAfterPicker, { appendPair, type PhotoPair } from "./BeforeAfterPicker";
 import FormError from "./FormError";
@@ -27,7 +27,7 @@ export default function ReviewForm({ leadId }: { leadId?: string }) {
 
   // Сторінка статична, тож про вхід і про вже залишений відгук дізнаємось тут.
   // Поки відповіді немає, лишається запрошення увійти — без миготіння форми.
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useAuthState();
   const [alreadyLeft, setAlreadyLeft] = useState<boolean | null>(null);
   const signedIn = Boolean(isSignedIn) && alreadyLeft !== null;
 
