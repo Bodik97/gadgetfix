@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Unbounded, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import Header from "@/components/Header";
 import AuthRoot from "@/components/auth/AuthRoot";
 import BookingProviderWrap from "@/components/BookingModal";
@@ -17,16 +17,20 @@ import { BUSINESS_ID, site } from "@/data/site";
 import { siteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
-const unbounded = Unbounded({
-  subsets: ["latin", "cyrillic"],
-  weight: ["300", "400", "600"],
+// Шрифти лежать на сайті, а не тягнуться з Google: по одному файлу на шрифт замість
+// пʼяти, лише потрібні символи й товщини — 84 КБ замість 124 КБ (scripts/subset-fonts.py).
+// У Unbounded — лише символи, що є в коді сайту (заголовки пишемо ми); у Manrope —
+// повна кирилиця й латиниця з наголосами: ним показуємо тексти клієнтів
+const unbounded = localFont({
+  src: "./fonts/unbounded.woff2",
+  weight: "300 700",
   variable: "--font-unbounded",
   display: "swap",
 });
 
-const manrope = Manrope({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600"],
+const manrope = localFont({
+  src: "./fonts/manrope.woff2",
+  weight: "400 700",
   variable: "--font-manrope",
   display: "swap",
 });
@@ -90,9 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      {/* Знак ₴ — з крихітного файла (public/fonts/unbounded-hryvnia.woff2, вирізаний з того ж
-          Unbounded). Інакше заради одного символа браузер тягнув набір latin-ext на 117 КБ */}
-      <body style={{ "--font-unbounded": `"GF Hryvnia", ${unbounded.style.fontFamily}` } as React.CSSProperties}>
+      <body>
         <AuthRoot>
           <BookingProviderWrap>
           <Header />
