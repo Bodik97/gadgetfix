@@ -29,7 +29,8 @@ function contentSecurityPolicy(): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""} ${clerk} https://challenges.cloudflare.com https://*.protect.clerk.com`,
-    `connect-src 'self' ${clerk} https://*.protect.clerk.com`,
+    // :* — захист Clerk від ботів ходить на порти, відмінні від 443 (за документацією Clerk про CSP)
+    `connect-src 'self' ${clerk} https://*.protect.clerk.com:*`,
     "img-src 'self' blob: data: https://img.clerk.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
