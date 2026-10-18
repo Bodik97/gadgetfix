@@ -8,6 +8,8 @@ import styles from "./SignInForm.module.css";
 
 /** credentials — пошта+пароль; code — підтвердження пошти при реєстрації; codeLogin — вхід без пароля */
 type Step = "credentials" | "code" | "codeLogin";
+/** Вкладка: вхід у наявний акаунт чи створення нового */
+type Mode = "signin" | "signup";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 const NEED_CONSENT = "Позначте згоду на обробку персональних даних — без неї не можемо створити кабінет.";
@@ -34,6 +36,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("credentials");
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -67,8 +70,8 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
       setError(`Пароль має бути щонайменше ${MIN_PASSWORD} символів.`);
       return;
     }
-    if (!agree) {
-      setError(NEED_CONSENT);
+    if (mode === "signup") {
+      await register(mail);
       return;
     }
 
@@ -129,7 +132,25 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
         return;
       }
 
-      // Такого клієнта немає — створюємо разом із паролем
+      // Такого клієнта немає — пропонуємо вкладку «Реєстрація», пошту й пароль не губимо
+      setError("Акаунта з такою поштою ще немає. Перейдіть на «Реєстрація» — дані вже вписані.");
+    } catch {
+      setError("Не вдалося увійти. Спробуйте ще раз або зателефонуйте нам.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Новий акаунт: пошта, пароль, імʼя й обовʼязкова згода; далі — код на пошту */
+  const register = async (mail: string) => {
+    if (!agree) {
+      setError(NEED_CONSENT);
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    try {
       const created = await signUp.create({
         emailAddress: mail,
         password,
@@ -141,11 +162,13 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
       if (created?.error) {
         const createCode = errorCode(created.error);
         setError(
-          createCode === "form_password_pwned"
-            ? "Цей пароль засвітився у витоках даних. Придумайте інший."
-            : createCode === "form_password_length_too_short"
-              ? `Пароль має бути щонайменше ${MIN_PASSWORD} символів.`
-              : "Не вдалося створити акаунт. Спробуйте увійти кодом на пошту.",
+          createCode === "form_identifier_exists"
+            ? "Акаунт із цією поштою вже є. Перейдіть на «Вхід»."
+            : createCode === "form_password_pwned"
+              ? "Цей пароль засвітився у витоках даних. Придумайте інший."
+              : createCode === "form_password_length_too_short"
+                ? `Пароль має бути щонайменше ${MIN_PASSWORD} символів.`
+                : "Не вдалося створити акаунт. Спробуйте ще раз або зателефонуйте нам.",
         );
         return;
       }
@@ -156,7 +179,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
       setIsNew(true);
       setStep("code");
     } catch {
-      setError("Не вдалося увійти. Спробуйте ще раз або зателефонуйте нам.");
+      setError("Не вдалося створити акаунт. Спробуйте ще раз або зателефонуйте нам.");
     } finally {
       setBusy(false);
     }
@@ -169,10 +192,6 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
       setError("Спершу впишіть пошту — надішлемо на неї код.");
       return;
     }
-    if (!agree) {
-      setError(NEED_CONSENT);
-      return;
-    }
 
     setBusy(true);
     setError("");
@@ -181,7 +200,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
       signIn.reset();
       const { error: sendError } = await signIn.emailCode.sendCode({ emailAddress: mail });
       if (sendError) {
-        setError("Такої пошти в нас немає. Впишіть пароль — і створимо вам акаунт.");
+        setError("Такої пошти в нас немає. Перейдіть на «Реєстрація».");
         return;
       }
       setIsNew(false);
@@ -218,7 +237,8 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
 
   /** Вхід через Google: Clerk веде на Google і повертає на /sso-callback, звідти — у кабінет */
   const signInWithGoogle = async () => {
-    if (!agree) {
+    // На вкладці «Вхід» згода — рядком під кнопкою; на «Реєстрації» — галочкою
+    if (mode === "signup" && !agree) {
       setError(NEED_CONSENT);
       return;
     }
@@ -318,9 +338,39 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
     );
   }
 
+  const switchTo = (next: Mode) => {
+    setMode(next);
+    setError("");
+    setNotice("");
+  };
+
   return (
     <div className={bare ? styles.cardBare : styles.card}>
+      <div className={styles.tabs} role="tablist" aria-label="Вхід чи реєстрація">
+        <button type="button" role="tab" aria-selected={mode === "signin"} className={mode === "signin" ? styles.tabOn : styles.tab} onClick={() => switchTo("signin")}>
+          Вхід
+        </button>
+        <button type="button" role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? styles.tabOn : styles.tab} onClick={() => switchTo("signup")}>
+          Реєстрація
+        </button>
+      </div>
+
       <form onSubmit={submitCredentials} className={styles.form} noValidate>
+        {mode === "signup" && (
+          <div className={styles.row}>
+            <label htmlFor="v-name">Імʼя</label>
+            <input
+              id="v-name"
+              className="field"
+              type="text"
+              autoComplete="given-name"
+              placeholder="Як до вас звертатись"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+        )}
+
         <div className={styles.row}>
           <label htmlFor="v-email">Пошта</label>
           <input
@@ -343,7 +393,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
             id="v-password"
             className="field"
             type="password"
-            autoComplete="current-password"
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
             placeholder="Щонайменше 8 символів"
             value={password}
             onChange={(e) => {
@@ -351,40 +401,26 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
               setError("");
             }}
           />
-          <span className={styles.hint}>
-            Заходите вперше? Впишіть пароль, який хочете — створимо акаунт.
-          </span>
         </div>
 
-        <div className={styles.row}>
-          <label htmlFor="v-name">Ім&apos;я — якщо заходите вперше</label>
-          <input
-            id="v-name"
-            className="field"
-            type="text"
-            autoComplete="given-name"
-            placeholder="Як до вас звертатись"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-
-        <label className={styles.consent}>
-          <input
-            type="checkbox"
-            checked={agree}
-            onChange={(e) => {
-              setAgree(e.target.checked);
-              setError("");
-            }}
-          />
-          <span>
-            Погоджуюсь з{" "}
-            <a href="/personalni-dani" target="_blank" rel="noopener">
-              обробкою персональних даних
-            </a>
-          </span>
-        </label>
+        {mode === "signup" && (
+          <label className={styles.consent}>
+            <input
+              type="checkbox"
+              checked={agree}
+              onChange={(e) => {
+                setAgree(e.target.checked);
+                setError("");
+              }}
+            />
+            <span>
+              Погоджуюсь з{" "}
+              <a href="/personalni-dani" target="_blank" rel="noopener">
+                обробкою персональних даних
+              </a>
+            </span>
+          </label>
+        )}
 
         <FormError>{error}</FormError>
 
@@ -392,7 +428,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
         <div id="clerk-captcha" />
 
         <button type="submit" className="btn btn-accent btn-lg" disabled={busy}>
-          {busy ? "Заходимо…" : "Увійти"}
+          {busy ? (mode === "signup" ? "Створюємо…" : "Заходимо…") : mode === "signup" ? "Створити акаунт" : "Увійти"}
         </button>
 
         <div className={styles.or} aria-hidden="true">
@@ -406,16 +442,24 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
             <path fill="#FBBC05" d="M5.6 14.2a6.9 6.9 0 0 1 0-4.4v-3H1.8a11.5 11.5 0 0 0 0 10.4l3.8-3z" />
             <path fill="#EA4335" d="M12 5.1c1.7 0 3.2.6 4.4 1.7l3.3-3.3A11.5 11.5 0 0 0 1.8 6.8l3.8 3c.9-2.7 3.4-4.7 6.4-4.7z" />
           </svg>
-          Увійти через Google
+          {mode === "signup" ? "Через Google" : "Увійти через Google"}
         </button>
 
-        <div className={styles.actions}>
-          <button type="button" className={styles.linkBtn} onClick={sendLoginCode} disabled={busy}>
-            Забули пароль? Увійти кодом на пошту
-          </button>
-        </div>
-
-        <p className={styles.note}>Адресу використовуємо лише для входу й сповіщень про ремонт.</p>
+        {mode === "signin" ? (
+          <>
+            <button type="button" className={styles.linkBtn} onClick={sendLoginCode} disabled={busy}>
+              Забули пароль? Увійти кодом на пошту
+            </button>
+            {/* Google може створити акаунт і з цієї вкладки — тому згода й тут */}
+            <p className={styles.note}>
+              Продовжуючи, ви погоджуєтесь з{" "}
+              <a href="/personalni-dani" target="_blank" rel="noopener">
+                обробкою персональних даних
+              </a>
+              .
+            </p>
+          </>
+        ) : null}
       </form>
     </div>
   );

@@ -104,6 +104,54 @@
   text-underline-offset: 3px;
 }
 
+/* Вкладки «Вхід / Реєстрація» — як перемикач, на всю ширину */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--fg-rgb) / .06);
+}
+
+.tab,
+.tabOn {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+
+.tab {
+  background: transparent;
+  color: var(--text-2);
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tabOn {
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgb(0 0 0 / .12);
+}
+
+.tab:focus-visible,
+.tabOn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.note a {
+  color: var(--accent-text);
+}
+
 /* «або» між входом поштою й через Google */
 .or {
   display: flex;

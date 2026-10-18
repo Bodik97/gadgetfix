@@ -58,8 +58,8 @@ export default function AuthModal({ open, onClose }: { open: boolean; onClose: (
           <AuthShell
             compact
             titleId="auth-title"
-            title="Вхід або реєстрація"
-            lead="Пошта й пароль — або Google. Заходите вперше: акаунт створимо автоматично."
+            title="Кабінет клієнта"
+            lead="Статус ремонту, посилка й гарантія — в одному місці."
           >
             <SignInForm onDone={onClose} bare />
           </AuthShell>

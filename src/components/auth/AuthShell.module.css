@@ -173,17 +173,38 @@
     min-height: 0;
   }
 
+  /* Вітрина — вузька смуга: знак і назва в один рядок */
   .showcase {
-    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr);
     grid-template-rows: auto;
     align-items: center;
-    gap: 14px;
-    padding: 22px 22px 52px;
+    gap: 12px;
+    padding: 14px 18px 40px;
   }
 
   .scene {
     min-height: 0;
-    height: 92px;
+    height: 56px;
+  }
+
+  /* Заголовок дублює вкладки «Вхід / Реєстрація» — на телефоні економимо місце */
+  .head {
+    display: none;
+  }
+
+  .formSide {
+    gap: 0;
+    padding: 18px 18px 20px;
+  }
+
+  /* Ще щільніше — реєстрація (імʼя + згода) теж має вміститись між шапкою й нижнім меню */
+  .formSide :global(.field) {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .formSide form {
+    gap: 10px;
   }
 
   .perks {
@@ -192,11 +213,11 @@
 
   /* Назва має вміститися поруч зі знаком навіть на 320 px */
   .wordmark {
-    font-size: clamp(20px, 6.4vw, 28px);
+    font-size: clamp(20px, 6vw, 24px);
   }
 
   .tagline {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .tearV {

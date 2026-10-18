@@ -21,8 +21,8 @@ export default async function SignInPage() {
       <div className={styles.inner}>
         <AuthShell
           titleAs="h1"
-          title="Вхід або реєстрація"
-          lead="Пошта й пароль — або Google. Заходите вперше: акаунт створимо автоматично."
+          title="Кабінет клієнта"
+          lead="Статус ремонту, посилка й гарантія — в одному місці."
         >
           <SignInForm bare />
         </AuthShell>
