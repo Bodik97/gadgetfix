@@ -11,6 +11,7 @@ import ChatBot from "@/components/ChatBot";
 import Footer from "@/components/Footer";
 import Analytics from "@/components/Analytics";
 import ScrollReveal from "@/components/ScrollReveal";
+import ScrollTop from "@/components/ScrollTop";
 import { jobRange, PRICED_JOBS, PRICES_PUBLISHED, uah } from "@/data/prices";
 import { BUSINESS_ID, site } from "@/data/site";
 import { siteUrl } from "@/lib/siteUrl";
@@ -100,6 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </HideOnAdmin>
           <BottomNav />
           <ChatBot />
+          <ScrollTop />
           <Analytics />
           <ScrollReveal />
           <TouchSparks />

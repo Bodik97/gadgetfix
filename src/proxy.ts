@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtected = createRouteMatcher(["/moi-remonty(.*)"]);
+const isProtected = createRouteMatcher(["/kabinet(.*)", "/moi-remonty(.*)", "/moi-znyzhky(.*)"]);
 
 /**
  * Сайт живе лише на власному домені (NEXT_PUBLIC_SITE_URL). Технічна адреса

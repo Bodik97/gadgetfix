@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import styles from "./Guide.module.css";
 
 /**
@@ -66,7 +66,7 @@ const steps: Step[] = [
     title: "Відгук — і мінус 15%",
     text: "Розкажіть, як усе пройшло, і додайте фото до і після. Після перевірки отримаєте знижку 15% на наступний ремонт.",
     target: ['[data-guide="review"] form', '[data-guide="review"] a.btn', '[data-guide="review"]'],
-    missing: "Форма відгуку — внизу сторінки.",
+    missing: "Форма відгуку — у кабінеті, на сторінці «Мої знижки».",
   },
 ];
 
@@ -91,9 +91,28 @@ function showOnPage(targets: string[]): boolean {
   return false;
 }
 
+/** Людина вже бачила інструкцію й згорнула її — далі не розгортаємо самі */
+const SEEN_KEY = "gf-guide-seen";
+
+function readSeen(): boolean {
+  try {
+    return Boolean(localStorage.getItem(SEEN_KEY));
+  } catch {
+    // Сховище недоступне (приватний режим) — показуємо, як новому
+    return false;
+  }
+}
+
+// Значення змінюємо лише самі, у цій же вкладці, — підписуватись нема на що
+const noSubscribe = () => () => {};
+
 export default function Guide() {
-  // Розгорнута з порога: людина одразу бачить, як тут усе влаштовано
-  const [open, setOpen] = useState(true);
+  // Новому клієнтові розгортаємо з порога; хто вже згортав — бачить лише плашку.
+  // На сервері вважаємо «бачив»: так у постійного клієнта велика панель не блимає
+  const seen = useSyncExternalStore(noSubscribe, readSeen, () => true);
+  // Вибір людини на цій сторінці; null — ще нічого не натискала
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const open = choice ?? !seen;
   const [step, setStep] = useState(0);
   const [note, setNote] = useState("");
   // Блоку ще немає, бо немає ремонту, — ведемо до форми замовлення, а не лише пояснюємо
@@ -118,11 +137,18 @@ export default function Guide() {
 
   // Розгорнули самі — фокус на панель, щоб стрілки клавіатури одразу гортали кроки.
   // Перший показ при відкритті сторінки фокус не забирає.
-  const opened = useRef(false);
   useEffect(() => {
-    if (open && opened.current) panelRef.current?.focus({ preventScroll: true });
-    opened.current = true;
-  }, [open]);
+    if (choice) panelRef.current?.focus({ preventScroll: true });
+  }, [choice]);
+
+  const close = () => {
+    setChoice(false);
+    try {
+      localStorage.setItem(SEEN_KEY, "1");
+    } catch {
+      // Не запамʼятали — наступного разу просто покажемо ще раз
+    }
+  };
 
   const show = () => {
     if (showOnPage(current.target)) {
@@ -135,7 +161,7 @@ export default function Guide() {
 
   if (!open) {
     return (
-      <button type="button" className={styles.bar} aria-expanded={false} aria-controls={panelId} onClick={() => setOpen(true)}>
+      <button type="button" className={styles.bar} aria-expanded={false} aria-controls={panelId} onClick={() => setChoice(true)}>
         <span className={styles.badge} aria-hidden="true">?</span>
         <span className={styles.barText}>
           <span className={styles.barTitle}>Інструкція до кабінету</span>
@@ -161,7 +187,7 @@ export default function Guide() {
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") shift(1);
         if (e.key === "ArrowLeft") shift(-1);
-        if (e.key === "Escape") setOpen(false);
+        if (e.key === "Escape") close();
       }}
       onTouchStart={(e) => {
         touchX.current = e.touches[0].clientX;
@@ -192,7 +218,7 @@ export default function Guide() {
           ))}
         </div>
 
-        <button type="button" className={styles.close} onClick={() => setOpen(false)} aria-label="Згорнути інструкцію" title="Згорнути">
+        <button type="button" className={styles.close} onClick={close} aria-label="Згорнути інструкцію" title="Згорнути">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M6 15l6-6 6 6" />
           </svg>
@@ -241,7 +267,7 @@ export default function Guide() {
         </button>
 
         {last ? (
-          <button type="button" className={styles.next} onClick={() => { setOpen(false); go(0); }}>
+          <button type="button" className={styles.next} onClick={() => { close(); go(0); }}>
             Зрозуміло
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M5 12.5l4.5 4.5L19 7.5" />

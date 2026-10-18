@@ -71,9 +71,9 @@ export default function BookingProvider({ children }: { children: React.ReactNod
           <div className={styles.head}>
             <Logo as="text" />
             <h2 id="booking-title" className={styles.title}>
-              Залиште номер — передзвонимо
+              Залиште номер&nbsp;— передзвонимо
             </h2>
-            <p className={styles.lead}>Підкажемо ціну й термін. Діагностика безкоштовна.</p>
+            <p className={styles.lead}>Підкажемо ціну й&nbsp;термін. Діагностика безкоштовна.</p>
           </div>
 
           {open && (

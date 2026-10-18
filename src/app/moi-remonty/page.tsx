@@ -1,22 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { currentUser } from "@clerk/nextjs/server";
-import BackButton from "@/components/BackButton";
 import LiveRefresh from "@/components/LiveRefresh";
 import Devices from "@/components/account/Devices";
 import Guide from "@/components/account/Guide";
 import History from "@/components/account/History";
 import QuickOrder from "@/components/account/QuickOrder";
 import RepairCard from "@/components/account/RepairCard";
-import SetPassword from "@/components/account/SetPassword";
 import SignOutButton from "@/components/account/SignOutButton";
+import CabinetBack from "@/components/account/CabinetBack";
 import { plural } from "@/components/account/plural";
-import ReviewForm from "@/components/ReviewForm";
-import { getReviewsByUser, reviewTarget } from "@/db/reviews";
-import type { Review } from "@/db/schema";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { getDevices, getEvents } from "@/db/events";
 import { unreadByLead } from "@/db/messages";
+import { getCabinetUser } from "@/lib/cabinetUser";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -35,24 +31,11 @@ const dateShort = new Intl.DateTimeFormat("uk-UA", {
   timeZone: "Europe/Kyiv",
 });
 
-/** Що з відгуком і знижкою за нього — одним реченням */
-function reviewStatus(r: Review): string {
-  if (r.discountLeadId) return "Дякуємо за відгук! Знижку 15% ви вже використали.";
-  if (r.discountAt) {
-    return "Дякуємо за відгук! У вас знижка 15% на наступний ремонт — майстер врахує її в ціні.";
-  }
-  if (r.published) return "Дякуємо — ваш відгук уже на сайті.";
-  if (r.leadId && r.beforePath && r.afterPath) {
-    return "Відгук на перевірці. Щойно опублікуємо — нарахуємо знижку 15% на наступний ремонт.";
-  }
-  return "Відгук на перевірці — зазвичай публікуємо того ж дня.";
-}
-
 export default async function MyRepairsPage() {
   // Маршрут закритий у middleware — сюди потрапляє лише авторизований клієнт
-  const user = await currentUser();
-  const name = user?.firstName?.trim();
-  const email = user?.primaryEmailAddress?.emailAddress;
+  const user = await getCabinetUser();
+  const name = user?.name;
+  const email = user?.email;
 
   const leads = user ? await getClientLeads(user.id, email) : [];
 
@@ -60,20 +43,11 @@ export default async function MyRepairsPage() {
   const active = leads.filter((l) => describeStatus(l.status).active);
   const finished = leads.filter((l) => !describeStatus(l.status).active);
 
-  const [eventsPerActive, userDevices, unread, myReviews] = await Promise.all([
+  const [eventsPerActive, userDevices, unread] = await Promise.all([
     Promise.all(active.map((l) => getEvents(l.id))),
     user ? getDevices(user.id) : Promise.resolve([]),
     unreadByLead(active.map((l) => l.id), "master"),
-    user ? getReviewsByUser(user.id) : Promise.resolve([]),
   ]);
-
-  // Відгук пишуть про кожен виданий ремонт; угорі — невикористана знижка, якщо є.
-  // Загальний відгук без ремонту лишається на головній — у кабінеті форма зʼявляється
-  // лише після видачі, щоб новий клієнт бачив тільки інструкцію й замовлення
-  const found = reviewTarget(leads, myReviews);
-  const target = found?.leadId ? found : undefined;
-  const targetLead = leads.find((l) => l.id === target?.leadId);
-  const review = myReviews.find((r) => r.discountAt && !r.discountLeadId) ?? myReviews[0];
 
   const rows = finished.map((l) => {
     const s = describeStatus(l.status);
@@ -99,7 +73,7 @@ export default async function MyRepairsPage() {
     <div className={styles.page}>
       <header className={styles.head}>
         <div className={styles.headTop}>
-          <BackButton fallback="/" />
+          <CabinetBack href="/kabinet" label="Кабінет" />
           <SignOutButton />
         </div>
 
@@ -113,8 +87,6 @@ export default async function MyRepairsPage() {
           {email}
         </p>
       </header>
-
-      <SetPassword />
 
       <Guide />
 
@@ -177,28 +149,6 @@ export default async function MyRepairsPage() {
           </h2>
           <p className={styles.hint}>Усе, що ми для вас ремонтували: що зроблено, коли й за скільки.</p>
           <History rows={rows} />
-        </section>
-      )}
-
-      {(target || review) && (
-        <section className={styles.section} aria-labelledby="vidhuk" data-guide="review">
-          <h2 id="vidhuk" className={styles.h2}>
-            {target ? "Відгук і знижка 15%" : "Ваш відгук"}
-          </h2>
-          {review && (
-            <p className={review.discountAt && !review.discountLeadId ? styles.bonus : styles.hint}>
-              {reviewStatus(review)}
-            </p>
-          )}
-          {target && (
-            <>
-              <p className={styles.hint}>
-                Розкажіть, як пройшов ремонт{targetLead?.model ? ` ${targetLead.model}` : ""}, і додайте фото пристрою до і після. Після перевірки
-                відгуку отримаєте знижку 15% на наступний ремонт гаджетів.
-              </p>
-              <ReviewForm leadId={target.leadId ?? undefined} />
-            </>
-          )}
         </section>
       )}
 

@@ -83,12 +83,12 @@ export default function AccountButton() {
     return (
       <>
         <Link
-          href="/moi-remonty"
+          href="/kabinet"
           className={styles.button}
-          aria-label={unread > 0 ? `Мої ремонти, непрочитаних повідомлень: ${unread}` : "Мої ремонти"}
+          aria-label={unread > 0 ? `Кабінет, непрочитаних повідомлень: ${unread}` : "Кабінет"}
         >
           <UserIcon />
-          <span className={styles.label}>Мої ремонти</span>
+          <span className={styles.label}>Кабінет</span>
           {unread > 0 && <span className={styles.badge}>{unread > 9 ? "9+" : unread}</span>}
         </Link>
 

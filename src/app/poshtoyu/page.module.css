@@ -257,6 +257,15 @@
   background-repeat: no-repeat;
 }
 
+/* Заглушка, поки фото моделі сховане */
+.popularNoPhoto {
+  position: absolute;
+  inset: 18px 18px 44px;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--text-rgb) / .25);
+}
+
 /* Легке затемнення знизу, щоб назва читалась поверх знімка */
 .popularVeil {
   position: absolute;

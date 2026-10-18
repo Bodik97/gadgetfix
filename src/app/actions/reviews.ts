@@ -91,6 +91,8 @@ export async function submitReview(_prev: ReviewResult | null, formData: FormDat
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/moi-remonty");
+  revalidatePath("/moi-znyzhky");
+  revalidatePath("/kabinet");
 
   // Новий відгук чекає модерації — без сигналу він пролежав би непоміченим
   const author = user.firstName?.trim() || "Клієнт";

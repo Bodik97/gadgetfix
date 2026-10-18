@@ -6,7 +6,7 @@ import { createSparkLayer } from "./lightning";
 import styles from "./TouchSparks.module.css";
 
 /** Де спалахів немає: робочі сторінки, на яких натискають багато й по ділу */
-const QUIET = ["/admin", "/moi-remonty", "/vhid"];
+const QUIET = ["/admin", "/kabinet", "/moi-remonty", "/moi-znyzhky", "/vhid"];
 
 /** Довший або «з'їхавший» дотик — це прокрутка чи затискання, а не натискання */
 const TAP_MS = 400;

@@ -46,7 +46,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
 
   const goToAccount = () => {
     onDone?.();
-    router.push("/moi-remonty");
+    router.push("/kabinet");
     // Сторінка «Мої ремонти» рендериться на сервері й має побачити нову сесію
     router.refresh();
   };

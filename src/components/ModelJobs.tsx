@@ -11,7 +11,7 @@ const partNote = {
     faceId: "Оригінальні дисплеї: рідна кольоропередача, True Tone і Face ID працюють без застережень. Дорожче, але поводиться як заводський.",
     plain: "Оригінальні дисплеї: рідна кольоропередача. Дорожче, але поводиться як заводський.",
   },
-  analog: `Якісні аналоги дисплеїв: перевірені постачальники, гарантія 2 місяці (на оригінал — 4). Дешевше, кольори трохи інші при максимальній яскравості.`,
+  analog: `Якісні аналоги дисплеїв: перевірені постачальники, гарантія 2\u00A0місяці (на\u00A0оригінал\u00A0—\u00A04). Дешевше, кольори трохи інші при максимальній яскравості.`,
 };
 
 const screenBody = {
@@ -109,7 +109,16 @@ export default function ModelJobs({
         )}
       </div>
 
-      {tiered && <p className={styles.note}>{part === "original" ? partNote.original[kind] : partNote.analog}</p>}
+      {tiered && (
+        <p className={styles.note}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5" />
+            <path d="M12 7.5h.01" />
+          </svg>
+          <span>{part === "original" ? partNote.original[kind] : partNote.analog}</span>
+        </p>
+      )}
 
       <div className={styles.list}>
         {jobs.map((j) => {
@@ -119,7 +128,8 @@ export default function ModelJobs({
             <div key={j.slug} className={styles.job}>
               <h3 className={styles.jobTitle}>
                 <Link href={`/poslugy/${j.slug}`}>
-                  {j.title(name)}
+                  {/* Назва моделі не рветься: «Pro» не лишається сам на рядку */}
+                  {j.title(name.replace(/ /g, "\u00A0"))}
                 </Link>
               </h3>
               <div className={styles.jobBody}>{j.body}</div>

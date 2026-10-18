@@ -76,7 +76,7 @@ export default function ChatBot() {
   }, [open]);
 
   // В адмінці й на сторінці клієнта помічник зайвий: там є справжній чат
-  if (pathname.startsWith("/admin") || pathname.startsWith("/moi-remonty")) return null;
+  if (["/admin", "/kabinet", "/moi-remonty", "/moi-znyzhky"].some((p) => pathname.startsWith(p))) return null;
 
   /** Таймер, який скасовує «Почати спочатку» — щоб стара репліка не з'явилась у новій розмові */
   const later = (fn: () => void, ms: number) => {

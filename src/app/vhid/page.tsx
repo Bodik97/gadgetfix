@@ -40,7 +40,7 @@ const icons = {
 export default async function SignInPage() {
   // Уже увійшли — форма тут ні до чого
   const { userId } = await auth();
-  if (userId) redirect("/moi-remonty");
+  if (userId) redirect("/kabinet");
 
   return (
     <section className={styles.wrap}>

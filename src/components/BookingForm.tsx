@@ -123,14 +123,19 @@ function BookingFormInner({
     return (
       <div className={bare ? styles.boxBare : styles.box}>
         {brand}
-        <div className={styles.done}>
-          <svg className={styles.doneMark} width="42" height="42" viewBox="0 0 24 24" fill="none" style={{ stroke: "var(--accent-text)" }} strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+        {/* data-sent — вікно запису ховає за ним свій заголовок «Залиште номер» */}
+        <div className={styles.done} data-sent="">
+          <svg className={styles.doneMark} width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ stroke: "var(--accent-text)" }} strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
             <circle cx="12" cy="12" r="9" pathLength="1" />
             <path d="M8 12.5l2.5 2.5L16 9.5" pathLength="1" />
           </svg>
           <h3>Заявку прийнято</h3>
           <p className={styles.doneText}>
-            Передзвонимо протягом 25 хвилин у робочі години. Якщо терміново — {site.phones[0].label}.
+            Передзвонимо протягом 25&nbsp;хвилин у&nbsp;робочі години. Якщо терміново&nbsp;—{" "}
+            <a href={site.phones[0].href} className={styles.donePhone}>
+              {site.phones[0].label}
+            </a>
+            .
           </p>
           <TelegramConnect href={telegram} />
           <button type="button" onClick={reset} className="btn btn-ghost">
@@ -148,7 +153,7 @@ function BookingFormInner({
       <form onSubmit={submit} className={styles.form} noValidate>
         {!bare && <p className={styles.sub}>{subtitle}</p>}
 
-        <FormField id={`${uid}-name`} label="Ім'я" hint="Лише літери — так, як до вас звертатись." error={errors.name}>
+        <FormField id={`${uid}-name`} label="Ім'я" hint="Лише літери&nbsp;— так, як до вас звертатись." error={errors.name}>
           <input
             {...fieldState(`${uid}-name`, errors.name)}
             type="text"
@@ -176,7 +181,7 @@ function BookingFormInner({
         <FormField
           id={`${uid}-phone`}
           label="Телефон"
-          hint="Після +38 починайте з нуля: 073 123 45 67."
+          hint="Після +38 починайте з&nbsp;нуля: 073&nbsp;123&nbsp;45&nbsp;67."
           error={errors.phone}
         >
           <PhoneInput
@@ -251,7 +256,7 @@ function BookingFormInner({
         </button>
 
         <p className={styles.note}>
-          Передзвонимо до 25 хвилин у робочий час. Діагностика безкоштовна.{" "}
+          Передзвонимо до 25&nbsp;хвилин у&nbsp;робочий час. Діагностика безкоштовна.{" "}
           <a href="/personalni-dani" target="_blank" rel="noopener">
             Як ми зберігаємо дані
           </a>

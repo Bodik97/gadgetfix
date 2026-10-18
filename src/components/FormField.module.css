@@ -21,6 +21,7 @@
 
 .hint {
   color: var(--text-3);
+  text-wrap: pretty;
 }
 
 .error {

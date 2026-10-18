@@ -57,12 +57,23 @@
   padding-right: 46px;
 }
 
+/* Заявку надіслано — «Залиште номер» уже ні до чого; логотип лишаємо, по центру над галочкою */
+.body:has([data-sent]) .head {
+  justify-items: center;
+  padding-inline: 46px;
+}
+
+.body:has([data-sent]) :is(.title, .lead) {
+  display: none;
+}
+
 .title {
   margin: 0;
   font-family: var(--font-unbounded), sans-serif;
-  font-size: clamp(21px, 4vw, 26px);
+  font-size: clamp(20px, 5.4vw, 26px);
   letter-spacing: -.02em;
   line-height: 1.15;
+  text-wrap: balance;
 }
 
 .lead {
@@ -70,6 +81,7 @@
   font-size: 14.5px;
   line-height: 1.55;
   color: var(--text-2);
+  text-wrap: balance;
 }
 
 @media (prefers-reduced-motion: no-preference) {

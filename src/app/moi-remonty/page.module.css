@@ -125,13 +125,3 @@
   color: var(--text-2);
 }
 
-/* Нарахована знижка за відгук — помітно, це гроші клієнта */
-.bonus {
-  margin: 0;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgb(var(--lime-rgb) / .12);
-  border: 1px solid rgb(var(--lime-rgb) / .4);
-  font-size: 15px;
-  line-height: 1.5;
-}

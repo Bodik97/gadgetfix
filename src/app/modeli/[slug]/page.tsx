@@ -177,19 +177,27 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
                 <BookLink model={model.name} className="btn btn-accent btn-lg btn-hero">
                   Записатись
                 </BookLink>
-                <a href={site.phones[0].href} className="btn btn-ghost btn-lg">
-                  Спитати про модель
-                </a>
               </div>
             </div>
 
             <div className={styles.heroShot}>
-              {model.image ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={model.image} alt={`${model.name} — ремонт ${site.citiesIn}`} className={styles.shotPhoto} />
-              ) : (
-                <span className={styles.shotCaption}>{model.name}</span>
-              )}
+              {/* Той самий великий логотип, що й на головній: герой темний в обох темах */}
+              <div className={`${styles.shotLogo} nUp`}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- векторний SVG, оптимізатор картинок тут нічого не дасть */}
+                <img src="/brand/gadgetfix-logo-dark.svg" alt={site.name} width={739} height={136} />
+              </div>
+
+              <div className={styles.shotStage}>
+                {model.image ? (
+                  <>
+                    <span className={styles.shotShadow} aria-hidden="true" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={model.image} alt={`${model.name} — ремонт ${site.citiesIn}`} className={styles.shotPhoto} />
+                  </>
+                ) : (
+                  <span className={styles.shotCaption}>{model.name}</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

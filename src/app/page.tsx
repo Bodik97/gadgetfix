@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import Accordion from "@/components/Accordion";
 import BookingForm from "@/components/BookingForm";
@@ -18,6 +19,7 @@ import { services } from "@/data/services";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
 import { getModel } from "@/data/catalog";
+import { iphoneImage } from "@/data/deviceImage";
 import {
   bookingModels,
   faq,
@@ -46,7 +48,8 @@ const stripModels = [
   "iphone-8",
 ].flatMap((slug) => {
   const m = getModel(slug);
-  return m ? [{ name: m.name, slug: m.slug, img: m.image, year: m.year }] : [];
+  // Без фото в стрічці нічого показати — модель пропускаємо
+  return m?.image ? [{ name: m.name, slug: m.slug, img: m.image, year: m.year }] : [];
 });
 
 export const metadata: Metadata = {
@@ -91,6 +94,7 @@ export default async function Home() {
     name: r.authorName,
     city: r.city,
     device: r.device,
+    deviceImage: iphoneImage(r.device),
     date: reviewDate.format(r.createdAt),
     viaGoogle: r.viaGoogle,
     avatar: r.avatarUrl,
@@ -137,7 +141,8 @@ export default async function Home() {
           </div>
 
           <div aria-hidden="true" className={`${styles.heroShot} nUp nUp-3`}>
-            <span className={styles.heroShotImg} />
+            {/* Найбільше на першому екрані — вантажимо першим, телефону віддаємо менший розмір */}
+            <Image src="/assets/hero-exploded.webp" alt="" fill preload sizes="(max-width: 1100px) 100vw, 1040px" className={styles.heroShotImg} />
           </div>
 
           <dl className={styles.stats}>

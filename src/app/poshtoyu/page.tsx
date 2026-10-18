@@ -135,7 +135,16 @@ export default function MailInPage() {
         <div className={styles.popularGrid}>
           {popular.map((p) => (
             <Link key={p.name} href={`/modeli/${p.slug}`} className={styles.popularCard}>
-              <span className={styles.popularPhoto} style={{ backgroundImage: `url("${p.img}")` }} />
+              {p.img ? (
+                <span className={styles.popularPhoto} style={{ backgroundImage: `url("${p.img}")` }} />
+              ) : (
+                <span className={styles.popularNoPhoto} aria-hidden="true">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="6" y="2.5" width="12" height="19" rx="2.6" />
+                    <path d="M10.5 5h3" />
+                  </svg>
+                </span>
+              )}
               <span className={styles.popularVeil} />
               <span className={styles.popularName}>{p.name}</span>
             </Link>

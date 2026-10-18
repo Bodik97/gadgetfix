@@ -52,9 +52,15 @@ const nextConfig: NextConfig = {
 
   poweredByHeader: false,
 
-  // Стара адреса кабінету лишилась у закладках і в листах
-  async redirects() {
-    return [{ source: "/kabinet", destination: "/moi-remonty", permanent: true }];
+  // Оптимізатор картинок стискає й зменшує лише ці шляхи. Фото відгуків —
+  // з приватного сховища через свій маршрут: ?v= лише before/after.
+  images: {
+    localPatterns: [
+      { pathname: "/assets/**", search: "" },
+      { pathname: "/api/reviews/*/image", search: "" },
+      { pathname: "/api/reviews/*/image", search: "?v=before" },
+      { pathname: "/api/reviews/*/image", search: "?v=after" },
+    ],
   },
 
   async headers() {

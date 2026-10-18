@@ -1,0 +1,151 @@
+/* «Зараз» — одна найважливіша дія над розділами */
+.now,
+.nowHot {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 20px 22px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.nowHot {
+  border-color: rgb(var(--lime-rgb) / .5);
+  background: rgb(var(--lime-rgb) / .12);
+}
+
+.nowLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.nowTitle {
+  margin: 0;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: clamp(19px, 3vw, 24px);
+  letter-spacing: -.02em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.nowNote {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+
+.nowButton {
+  margin-top: 8px;
+}
+
+@media (max-width: 520px) {
+  .nowButton {
+    justify-self: stretch;
+  }
+}
+
+/* Дві великі кнопки розділів: на телефоні одна під одною, ширше — поруч */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 14px;
+}
+
+.tile,
+.tileHot {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-height: 170px;
+  padding: 22px 22px 24px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--card-shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .2s, transform .2s;
+}
+
+/* Є невикористана знижка — плитка салатова: це гроші клієнта */
+.tileHot {
+  border-color: rgb(var(--lime-rgb) / .5);
+  background: rgb(var(--lime-rgb) / .12);
+}
+
+.tile:hover,
+.tileHot:hover {
+  color: var(--text);
+  border-color: var(--border-active);
+  transform: translateY(-2px);
+}
+
+.tile:focus-visible,
+.tileHot:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  background: rgb(var(--lime-rgb) / .16);
+  color: var(--accent-text);
+}
+
+.tileTitle {
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: clamp(19px, 2.6vw, 22px);
+  letter-spacing: -.02em;
+}
+
+.tileNote {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-2);
+  text-wrap: balance;
+}
+
+.badge {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.arrow {
+  position: absolute;
+  top: 24px;
+  right: 22px;
+  color: var(--text-3);
+  transition: translate .2s;
+}
+
+.tile:hover .arrow,
+.tileHot:hover .arrow {
+  translate: 4px 0;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tileHot,
+  .arrow {
+    transition: none;
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { plural } from "./account/plural";
 import styles from "./ReviewShowcase.module.css";
@@ -10,6 +11,8 @@ export type ReviewCard = {
   name: string;
   city: string | null;
   device: string | null;
+  /** Фото моделі з каталогу, якщо впізнали її в `device`, — коли клієнт не доклав свого */
+  deviceImage: string | null;
   /** «15 жовтня 2026» — форматуємо на сервері, щоб не розійшлось при гідрації */
   date: string;
   rating: number;
@@ -152,90 +155,105 @@ export default function ReviewShowcase({
         </p>
       </div>
 
-      <div ref={deckRef} className={styles.deck} data-hint={hint ? "" : undefined} onAnimationEnd={() => setHint(false)}>
-        {reviews.map((r, i) => {
-          // Місце в стосі: 0 — зверху, далі — глибше
-          const k = (i - index + count) % count;
-          const top = k === 0;
-          const depth = Math.min(k, BEHIND);
+      <div className={styles.stage}>
+        <div ref={deckRef} className={styles.deck} data-hint={hint ? "" : undefined} onAnimationEnd={() => setHint(false)}>
+          {reviews.map((r, i) => {
+            // Місце в стосі: 0 — зверху, далі — глибше
+            const k = (i - index + count) % count;
+            const top = k === 0;
+            const depth = Math.min(k, BEHIND);
 
-          let transform = `translateY(${depth * 16}px) scale(${1 - depth * 0.045}) rotate(${depth === 0 ? 0 : depth % 2 ? 2.4 : -1.8}deg)`;
-          if (top && fly) transform = `translateX(${fly * 130}%) rotate(${fly * 22}deg)`;
-          else if (top && drag) transform = `translateX(${drag}px) rotate(${drag / 18}deg)`;
+            let transform = `translateY(${depth * 16}px) scale(${1 - depth * 0.045}) rotate(${depth === 0 ? 0 : depth % 2 ? 2.4 : -1.8}deg)`;
+            if (top && fly) transform = `translateX(${fly * 130}%) rotate(${fly * 22}deg)`;
+            else if (top && drag) transform = `translateX(${drag}px) rotate(${drag / 18}deg)`;
 
-          return (
-            <article
-              key={r.id}
-              className={styles.card}
-              data-top={top ? "" : undefined}
-              data-dragging={top && drag && !fly ? "" : undefined}
-              aria-roledescription="слайд"
-              aria-label={`Відгук ${k + 1} з ${count}`}
-              aria-hidden={!top}
-              inert={!top}
-              style={{
-                transform,
-                zIndex: count - k,
-                opacity: (top && fly) || k > BEHIND ? 0 : 1,
-              }}
-              onPointerDown={top ? onPointerDown : undefined}
-              onPointerMove={top ? onPointerMove : undefined}
-              onPointerUp={top ? onPointerUp : undefined}
-              onPointerCancel={top ? onPointerUp : undefined}
-              onClickCapture={(e) => {
-                if (!dragged.current) return;
-                dragged.current = false;
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <div className={styles.media}>
-                {r.pair ? (
-                  <Pair before={r.pair.before} after={r.pair.after} device={r.device} />
-                ) : r.image ? (
-                  <a href={r.image} target="_blank" rel="noopener" className={styles.photo} draggable={false}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={r.image} alt="Фото виконаної роботи" draggable={false} />
-                  </a>
-                ) : (
-                  <div className={styles.quoteTile} aria-hidden="true">
-                    <span className={styles.quoteMark}>“</span>
-                    {r.device && <span className={styles.quoteDevice}>{r.device}</span>}
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.body}>
-                <div className={styles.meta}>
-                  <Stars rating={r.rating} />
-                  {r.device && <span className={styles.chip}>{r.device}</span>}
-                  <span className={styles.date}>{r.date}</span>
+            return (
+              <article
+                key={r.id}
+                className={styles.card}
+                data-top={top ? "" : undefined}
+                data-dragging={top && drag && !fly ? "" : undefined}
+                aria-roledescription="слайд"
+                aria-label={`Відгук ${k + 1} з ${count}`}
+                aria-hidden={!top}
+                inert={!top}
+                style={{
+                  transform,
+                  zIndex: count - k,
+                  opacity: (top && fly) || k > BEHIND ? 0 : 1,
+                }}
+                onPointerDown={top ? onPointerDown : undefined}
+                onPointerMove={top ? onPointerMove : undefined}
+                onPointerUp={top ? onPointerUp : undefined}
+                onPointerCancel={top ? onPointerUp : undefined}
+                onClickCapture={(e) => {
+                  if (!dragged.current) return;
+                  dragged.current = false;
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <div className={styles.media}>
+                  {r.pair ? (
+                    <Pair before={r.pair.before} after={r.pair.after} device={r.device} />
+                  ) : r.image ? (
+                    <a href={r.image} target="_blank" rel="noopener" className={styles.photo} draggable={false}>
+                      <Image src={r.image} alt="Фото виконаної роботи" fill sizes="(max-width: 820px) 90vw, 460px" draggable={false} />
+                    </a>
+                  ) : r.deviceImage ? (
+                    <div className={styles.modelTile}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={r.deviceImage} alt={r.device ?? ""} loading="lazy" draggable={false} />
+                    </div>
+                  ) : (
+                    <div className={styles.quoteTile} aria-hidden="true">
+                      <span className={styles.quoteMark}>“</span>
+                      {r.device && <span className={styles.quoteDevice}>{r.device}</span>}
+                    </div>
+                  )}
                 </div>
 
-                <ReviewText text={r.text} />
+                <div className={styles.body}>
+                  <div className={styles.meta}>
+                    <Stars rating={r.rating} />
+                    {r.device && <span className={styles.chip}>{r.device}</span>}
+                    <span className={styles.date}>{r.date}</span>
+                  </div>
 
-                <footer className={styles.author}>
-                  <Avatar name={r.name} src={r.avatar} />
-                  <span className={styles.who}>
-                    <span className={styles.name}>{r.name}</span>
-                    {r.city && <span className={styles.place}>{r.city}</span>}
-                  </span>
-                  {r.viaGoogle && <GoogleMark />}
-                </footer>
-              </div>
-            </article>
-          );
-        })}
+                  <ReviewText text={r.text} />
+
+                  <footer className={styles.author}>
+                    <Avatar name={r.name} src={r.avatar} />
+                    <span className={styles.who}>
+                      <span className={styles.name}>{r.name}</span>
+                      {r.city && <span className={styles.place}>{r.city}</span>}
+                    </span>
+                    {r.viaGoogle && <GoogleMark />}
+                  </footer>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        {count > 1 && (
+          <>
+            <button type="button" className={styles.arrowPrev} onClick={back} aria-label="Попередній відгук">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
+            </button>
+            <button type="button" className={styles.arrowNext} onClick={() => throwCard(-1)} aria-label="Наступний відгук">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
       {count > 1 && (
         <div className={styles.controls}>
-          <button type="button" className={styles.arrow} onClick={back} aria-label="Попередній відгук">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M15 5l-7 7 7 7" />
-            </svg>
-          </button>
-
           <span className={styles.dots} aria-live="polite">
             <span className="visually-hidden">
               Відгук {index + 1} з {count}
@@ -244,12 +262,6 @@ export default function ReviewShowcase({
               <span key={r.id} className={i === index ? styles.dotOn : styles.dot} aria-hidden="true" />
             ))}
           </span>
-
-          <button type="button" className={styles.arrow} onClick={() => throwCard(-1)} aria-label="Наступний відгук">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
         </div>
       )}
     </section>
@@ -283,8 +295,7 @@ function Pair({ before, after, device }: { before: string; after: string; device
         { src: after, tag: "Після", alt: `${label}після ремонту`, cls: styles.tagAfter },
       ].map((p) => (
         <a key={p.tag} href={p.src} target="_blank" rel="noopener" className={styles.pairPhoto} draggable={false}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.src} alt={p.alt} draggable={false} />
+          <Image src={p.src} alt={p.alt} fill sizes="(max-width: 820px) 45vw, 230px" draggable={false} />
           <span className={p.cls}>{p.tag}</span>
         </a>
       ))}

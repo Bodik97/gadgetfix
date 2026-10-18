@@ -12,7 +12,8 @@
 }
 
 .title {
-  font-size: clamp(27px, 3.4vw, 44px);
+  font-size: clamp(26px, 3.4vw, 44px);
+  text-wrap: balance;
 }
 
 .toggle {
@@ -49,11 +50,27 @@
   font-weight: 600;
 }
 
+/* Що означає обраний тип запчастини — плашкою з іконкою, а не загубленим сірим абзацом */
 .note {
-  margin-bottom: 26px;
-  font-size: 15px;
-  color: rgb(var(--text-rgb) / .62);
-  max-width: 60ch;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 68ch;
+  margin-bottom: 22px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid rgb(var(--lime-rgb) / .3);
+  background: rgb(var(--lime-rgb) / .08);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+  text-wrap: balance;
+}
+
+.note svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent-text);
 }
 
 .list {
@@ -83,7 +100,9 @@
 .jobTitle {
   font-family: var(--font-unbounded), sans-serif;
   font-size: 19px;
+  line-height: 1.25;
   letter-spacing: -.02em;
+  text-wrap: balance;
 }
 
 /* Назва роботи веде на сторінку послуги, але виглядає як заголовок картки */
@@ -99,6 +118,7 @@
   font-size: 14.5px;
   line-height: 1.55;
   color: rgb(var(--text-rgb) / .66);
+  text-wrap: pretty;
 }
 
 /* Третя колонка: термін зверху, ціна під ним і крупніше — її шукають очима */
@@ -133,14 +153,48 @@
 .priceNote {
   margin-top: 20px;
   font-size: 14px;
+  line-height: 1.6;
   color: var(--text-3);
   max-width: 64ch;
+  text-wrap: pretty;
 }
 
 @media (max-width: 720px) {
+  .head {
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+
+  /* Перемикач на всю ширину, половинки рівні — легко влучити пальцем */
+  .toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .note {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
   .job {
     grid-template-columns: 1fr;
     gap: 10px;
+    padding: 18px 20px;
+    border-radius: 22px;
+  }
+
+  /* На дотик зсув картки вбік лише смикає її */
+  .job:hover {
+    transform: none;
+  }
+
+  .jobTitle {
+    font-size: 17px;
+  }
+
+  .jobBody {
+    font-size: 14px;
   }
 
   .jobFoot {
@@ -150,11 +204,16 @@
     justify-content: space-between;
     align-items: baseline;
     width: 100%;
-    padding-top: 4px;
+    margin-top: 4px;
+    padding-top: 12px;
     border-top: 1px solid var(--border);
   }
 
   .jobTime {
     white-space: normal;
+  }
+
+  .price {
+    font-size: 20px;
   }
 }

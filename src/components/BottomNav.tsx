@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { useBooking } from "./BookingModal";
 import styles from "./BottomNav.module.css";
 
@@ -49,11 +50,31 @@ const items = [
       </>
     ),
   },
-] as const;
+];
+
+/**
+ * Клієнт, що увійшов, замість «Поштою» бачить «Кабінет»: він уже наш клієнт,
+ * а «Ремонт поштою» лишається в підвалі сайту й на головній.
+ */
+const cabinet = {
+  href: "/kabinet",
+  label: "Кабінет",
+  icon: (
+    <>
+      <circle cx="12" cy="8.5" r="3.6" />
+      <path d="M4.8 20a7.2 7.2 0 0 1 14.4 0" />
+    </>
+  ),
+};
+
+/** Усі сторінки кабінету підсвічують одну вкладку */
+const CABINET_PATHS = ["/kabinet", "/moi-remonty", "/moi-znyzhky"];
 
 export default function BottomNav() {
   const pathname = usePathname();
   const openBooking = useBooking();
+  const { isSignedIn } = useUser();
+  const shown = isSignedIn ? items.map((item) => (item.href === "/poshtoyu" ? cabinet : item)) : items;
 
   // В адмінці своя навігація — ця тільки заважала б
   if (pathname.startsWith("/admin")) return null;
@@ -61,11 +82,13 @@ export default function BottomNav() {
   return (
     <nav className={styles.bar} aria-label="Основна навігація">
       <ul className={styles.list}>
-        {items.map((item) => {
+        {shown.map((item) => {
           const active =
             item.href === "/"
               ? pathname === "/"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              : item === cabinet
+                ? CABINET_PATHS.some((p) => pathname.startsWith(p))
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <li key={item.href}>
