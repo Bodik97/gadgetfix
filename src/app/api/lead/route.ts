@@ -12,6 +12,7 @@ import { siteUrl } from "@/lib/siteUrl";
 import { connectLink } from "@/lib/clientBot";
 import { normalizeUaPhone } from "@/lib/phone";
 import { LIMITS, plainText, validName } from "@/lib/validate";
+import { verifiedEmail } from "@/lib/verifiedEmail";
 
 const SOURCES = ["landing", "model", "services", "mail-in"] as const;
 type Source = (typeof SOURCES)[number];
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
   // щоб вона з'явилась у кабінеті. Пошту в такому разі беремо з профілю.
   const { userId } = await auth();
   const profile = userId ? await currentUser() : null;
-  const profileEmail = profile?.primaryEmailAddress?.emailAddress ?? null;
+  const profileEmail = verifiedEmail(profile);
 
   // Потрібне ім'я і хоча б один спосіб зв'язку. З кабінету при email-вході
   // телефону може не бути взагалі — тоді вистачає пошти.

@@ -86,11 +86,25 @@ export function webhookSecret(): string | null {
   return cfg ? createHmac("sha256", cfg.token).update("webhook").digest("hex").slice(0, 32) : null;
 }
 
-export async function linkChat(subject: string, chatId: string): Promise<void> {
-  await getDb()
-    .insert(telegramChats)
-    .values({ subject, chatId })
-    .onConflictDoUpdate({ target: telegramChats.subject, set: { chatId } });
+/**
+ * Закріплює чат за заявкою, акаунтом чи телефоном. overwrite: false — уже
+ * підключений інший чат не замінюємо (посилання могло потрапити до чужої людини);
+ * true — лише коли Telegram сам підтвердив власника (поділились своїм номером).
+ * Повертає false, якщо заявка вже підключена до іншого чату.
+ */
+export async function linkChat(subject: string, chatId: string, overwrite = false): Promise<boolean> {
+  const db = getDb();
+  if (overwrite) {
+    await db
+      .insert(telegramChats)
+      .values({ subject, chatId })
+      .onConflictDoUpdate({ target: telegramChats.subject, set: { chatId } });
+    return true;
+  }
+
+  await db.insert(telegramChats).values({ subject, chatId }).onConflictDoNothing({ target: telegramChats.subject });
+  const [row] = await db.select({ chatId: telegramChats.chatId }).from(telegramChats).where(eq(telegramChats.subject, subject)).limit(1);
+  return row?.chatId === chatId;
 }
 
 /** У кого з цих заявок бот уже підключений — для позначки в адмінці */

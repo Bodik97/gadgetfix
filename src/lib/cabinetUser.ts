@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { verifiedEmail } from "@/lib/verifiedEmail";
 
 export type CabinetUser = { id: string; email: string | null; name: string };
 
@@ -28,7 +29,7 @@ export const getCabinetUser = cache(async (): Promise<CabinetUser | null> => {
   const user = await currentUser();
   return {
     id: userId,
-    email: user?.primaryEmailAddress?.emailAddress ?? null,
+    email: verifiedEmail(user),
     name: user?.firstName?.trim() ?? "",
   };
 });

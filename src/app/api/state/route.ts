@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { getDb } from "@/db";
 import { leadMessages, leads, reviews } from "@/db/schema";
 import { isAdmin } from "@/lib/admin";
+import { verifiedEmail } from "@/lib/verifiedEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ version: null });
 
-  const email = user.primaryEmailAddress?.emailAddress;
+  const email = verifiedEmail(user);
   const mine = email
     ? or(eq(leads.clerkUserId, user.id), eq(leads.email, email))
     : eq(leads.clerkUserId, user.id);

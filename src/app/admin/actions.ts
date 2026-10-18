@@ -41,6 +41,14 @@ const LOGIN_WINDOW = 15 * 60_000;
 const BY_EMAIL = 5;
 const BY_IP = 15;
 
+/**
+ * Стеля на пошту з усіх адрес разом: без неї перебір з багатьох IP не мав межі.
+ * Висока й на годину — щоб чужий не зачинив майстра кількома хибними паролями,
+ * а розподілений перебір упирався в 60 спроб на годину.
+ */
+const EMAIL_WINDOW = 60 * 60_000;
+const BY_EMAIL_TOTAL = 60;
+
 /** 900 → «15 хв», 90 → «2 хв»: точні секунди тут нікому не потрібні */
 function waitLabel(sec: number): string {
   const min = Math.ceil(sec / 60);
@@ -59,6 +67,9 @@ export async function signIn(_prev: string | null, formData: FormData): Promise<
 
   const byIp = await rateLimit(`login:ip:${ip}`, BY_IP, LOGIN_WINDOW);
   if (!byIp.ok) return `Забагато спроб входу. Спробуйте за ${waitLabel(byIp.retryAfter)}.`;
+
+  const byEmailTotal = await rateLimit(`login:email:${email}`, BY_EMAIL_TOTAL, EMAIL_WINDOW);
+  if (!byEmailTotal.ok) return `Забагато спроб входу. Спробуйте за ${waitLabel(byEmailTotal.retryAfter)}.`;
 
   let master: number | null = null;
   try {

@@ -11,6 +11,7 @@ import { leadLink } from "@/lib/adminLinks";
 import { alertMasters } from "@/lib/notify";
 import { siteUrl } from "@/lib/siteUrl";
 import { esc } from "@/lib/telegram";
+import { verifiedEmail } from "@/lib/verifiedEmail";
 
 export type DeliveryResult = { ok: true } | { ok: false; error: string };
 
@@ -32,7 +33,7 @@ export async function requestDelivery(_prev: DeliveryResult | null, formData: Fo
   }
 
   try {
-    const mine = await getClientLeads(user.id, user.primaryEmailAddress?.emailAddress);
+    const mine = await getClientLeads(user.id, verifiedEmail(user));
     const lead = mine.find((l) => l.id === id);
     if (!lead) {
       return { ok: false, error: "Не знайшли цю заявку серед ваших. Оновіть сторінку або зателефонуйте нам." };
@@ -86,7 +87,7 @@ export async function confirmReceived(id: string): Promise<ReceivedResult> {
   }
 
   try {
-    const mine = await getClientLeads(user.id, user.primaryEmailAddress?.emailAddress);
+    const mine = await getClientLeads(user.id, verifiedEmail(user));
     const lead = mine.find((l) => l.id === id);
     if (!lead) {
       return { ok: false, error: "Не знайшли цю заявку серед ваших. Оновіть сторінку." };

@@ -96,10 +96,20 @@ export function checkCredentials(email: string, password: string): number | null
   return matched;
 }
 
+/**
+ * Відбиток акаунта в сесії: пошта й пароль майстра під нашим підписом (сам пароль у
+ * cookie не потрапляє). Змінили пароль чи прибрали акаунт — старі сесії одразу недійсні.
+ */
+function fingerprint(a: Account): string {
+  return sign(`account:${a.email}:${a.password}`).slice(0, 24);
+}
+
 export async function createSession(index: number): Promise<void> {
   const expires = Date.now() + MAX_AGE * 1000;
-  // Індекс всередині підпису — щоб його не можна було підмінити на чужий
-  const payload = `${expires}.${index}`;
+  // Індекс і відбиток всередині підпису — щоб їх не можна було підмінити на чужі
+  const account = accounts()[index];
+  if (!account) throw new Error("Немає такого акаунта майстра");
+  const payload = `${expires}.${index}.${fingerprint(account)}`;
   const value = `${payload}.${sign(payload)}`;
 
   (await cookies()).set(COOKIE, value, {
@@ -120,12 +130,15 @@ async function session(): Promise<number | null> {
   const raw = (await cookies()).get(COOKIE)?.value;
   if (!raw) return null;
 
-  const [expires, index, signature] = raw.split(".");
-  if (!expires || !index || !signature) return null;
+  const [expires, index, print, signature] = raw.split(".");
+  if (!expires || !index || !print || !signature) return null;
   if (Number(expires) < Date.now()) return null;
 
   try {
-    if (!safeEqual(signature, sign(`${expires}.${index}`))) return null;
+    if (!safeEqual(signature, sign(`${expires}.${index}.${print}`))) return null;
+    // Акаунт досі є й пароль той самий, з яким входили
+    const account = accounts()[Number(index)];
+    if (!account || !safeEqual(print, fingerprint(account))) return null;
   } catch {
     // Секрет не заданий — вважаємо, що доступу немає
     return null;

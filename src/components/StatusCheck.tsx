@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { Order } from "@/app/api/orders/[no]/route";
 import FormError from "./FormError";
-import TelegramConnect from "./TelegramConnect";
 import styles from "./StatusCheck.module.css";
 
 export default function StatusCheck({
@@ -144,7 +143,6 @@ export default function StatusCheck({
                 </ul>
               )}
 
-              <TelegramConnect href={order.telegram} className={styles.telegram} />
             </div>
           )}
         </div>

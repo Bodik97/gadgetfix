@@ -50,6 +50,8 @@ next-env.d.ts
 # playwright
 /test-results/
 /playwright-report/
+# знімки й журнали браузерних перевірок (Playwright MCP)
+/.playwright-mcp/
 /.swc
 
 # workflow: маршрути генеруються під час збірки

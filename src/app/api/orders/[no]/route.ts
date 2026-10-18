@@ -6,7 +6,6 @@ import { describeStatus, STAGES } from "@/db/leads";
 import { leads } from "@/db/schema";
 import { clientIp, rateLimit, release } from "@/lib/rateLimit";
 import { digits, lastFour } from "@/lib/phone";
-import { connectLink } from "@/lib/clientBot";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +17,9 @@ export type Order = {
   stages: string[];
   eta: string;
   log: { time: string; text: string }[];
-  /** Посилання на бота зі статусами; null — бот не налаштований */
-  telegram: string | null;
+  // Посилання на Telegram-бота тут навмисно немає: номер замовлення йде підряд, а
+  // 4 цифри телефону вгадуються, і посилання дало б чужому підключити собі чат заявки.
+  // Клієнт отримує його після заявки, у квитанції й у кабінеті
 };
 
 /** Одна відповідь на «не знайшли» і на «не той телефон» — щоб номери не можна було перебрати */
@@ -101,6 +101,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ no: 
     stages: [...STAGES],
     eta: info.hint,
     log: events.map((e) => ({ time: formatTime(e.createdAt), text: e.text })),
-    telegram: connectLink(lead),
   } satisfies Order);
 }

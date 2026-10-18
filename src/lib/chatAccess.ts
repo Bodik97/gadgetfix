@@ -2,6 +2,7 @@ import "server-only";
 import { currentUser } from "@clerk/nextjs/server";
 import { ownsLead } from "@/db/messages";
 import { isAdmin } from "./admin";
+import { verifiedEmail } from "@/lib/verifiedEmail";
 
 export type ChatSide = "client" | "master";
 
@@ -18,5 +19,5 @@ export async function canUseChat(leadId: string, side: ChatSide): Promise<boolea
   const user = await currentUser();
   if (!user) return false;
 
-  return ownsLead(leadId, user.id, user.primaryEmailAddress?.emailAddress);
+  return ownsLead(leadId, user.id, verifiedEmail(user));
 }

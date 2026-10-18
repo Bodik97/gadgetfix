@@ -9,6 +9,7 @@ import { getClientLeads } from "@/db/leads";
 import { readPair, savePhoto } from "@/lib/photoPair";
 import { alertMasters } from "@/lib/notify";
 import { esc } from "@/lib/telegram";
+import { verifiedEmail } from "@/lib/verifiedEmail";
 
 export type ReviewResult = { ok: true } | { ok: false; error: string };
 
@@ -20,7 +21,7 @@ export async function hasLeftReview(leadId?: string): Promise<boolean> {
   const user = await currentUser();
   if (!user) return false;
   const [repairs, written] = await Promise.all([
-    getClientLeads(user.id, user.primaryEmailAddress?.emailAddress),
+    getClientLeads(user.id, verifiedEmail(user)),
     getReviewsByUser(user.id),
   ]);
   return !reviewTarget(repairs, written, leadId);

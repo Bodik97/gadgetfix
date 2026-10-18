@@ -208,7 +208,8 @@ export async function POST(request: Request): Promise<Response> {
       return new Response("ok");
     }
 
-    await linkChat(subject, chatId);
+    // Номер підтвердив сам Telegram — можна замінити попередній чат
+    await linkChat(subject, chatId, true);
     await sendToChat(
       chatId,
       `<b>Готово — статуси підключено.</b>\nСюди прийде повідомлення щоразу, коли зміниться етап вашого ремонту в ${site.name}.\n\n${(await report()) ?? ""}`,
@@ -224,7 +225,15 @@ export async function POST(request: Request): Promise<Response> {
   // вписати будь-хто, і таке посилання перехопило б сповіщення справжнього
   // власника. Далі бот попросить поділитися номером — це єдиний шлях до телефону
   if (subject && subject[0] !== "t") {
-    await linkChat(subject, chatId);
+    // Посилання могло потрапити до чужої людини — уже підключений чат не відбираємо
+    if (!(await linkChat(subject, chatId))) {
+      await sendToChat(
+        chatId,
+        `Ця заявка вже підключена до іншого Telegram. Якщо це ваш новий акаунт — напишіть майстру або натисніть «${SHARE_BUTTON}».`,
+        "share",
+      );
+      return new Response("ok");
+    }
     await sendToChat(
       chatId,
       `<b>Готово — статуси підключено.</b>\nСюди прийде повідомлення щоразу, коли зміниться етап вашого ремонту в ${site.name}. Поточний стан — кнопкою «${CHECK_BUTTON}».`,
