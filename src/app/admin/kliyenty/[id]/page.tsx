@@ -69,7 +69,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             const s = describeStatus(l.status);
             return (
               <li key={l.id}>
-                <Link href={`/admin/zayavky/${l.id}`} className={styles.row}>
+                {/* Окремої сторінки заявки немає — відкриваємо її в «Заявках» пошуком за номером
+                    (пошук бачить і активні, і архівні) */}
+                <Link href={`/admin/zayavky?q=${l.orderNo}`} className={styles.row}>
                   <span className={styles.main}>
                     <span className={styles.what}>
                       №{l.orderNo} · {l.model ?? l.service ?? "Ремонт"}
