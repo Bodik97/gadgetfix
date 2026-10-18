@@ -90,7 +90,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body>
+      {/* Знак ₴ — з крихітного файла (public/fonts/unbounded-hryvnia.woff2, вирізаний з того ж
+          Unbounded). Інакше заради одного символа браузер тягнув набір latin-ext на 117 КБ */}
+      <body style={{ "--font-unbounded": `"GF Hryvnia", ${unbounded.style.fontFamily}` } as React.CSSProperties}>
         <ClerkProvider>
           <BookingProviderWrap>
           <Header />

@@ -1,3 +1,14 @@
+/* Знак гривні шрифтом Unbounded — окремим файлом на 1 КБ: у самому Unbounded він лежить
+   у наборі latin-ext на 117 КБ, і заради ₴ у цінах той набір вантажив кожен відвідувач.
+   Файл вирізано з того ж змінного шрифту (pyftsubset --unicodes=U+20B4), товщини ті самі */
+@font-face {
+  font-family: "GF Hryvnia";
+  src: url("/fonts/unbounded-hryvnia.woff2") format("woff2");
+  font-weight: 200 900;
+  font-display: swap;
+  unicode-range: U+20B4;
+}
+
 :root,
 [data-theme="dark"] {
   /* Кольори. Дві теми: темна (типова) і світла — перемикач у шапці.
