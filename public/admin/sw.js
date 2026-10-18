@@ -14,17 +14,23 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "GadgetFix", {
-      body: data.body || "",
-      tag: data.tag,
-      // Нагадування з тим самим tag має знову привернути увагу, а не тихо замінити
-      renotify: Boolean(data.tag),
-      // На Android сповіщення не зникає саме, доки майстер його не торкнеться
-      requireInteraction: true,
-      icon: "/admin-icons/icon-192.png",
-      badge: "/admin-icons/icon-192.png",
-      data: { url: data.url || "/admin" },
-    }),
+    (async () => {
+      await self.registration.showNotification(data.title || "GadgetFix", {
+        body: data.body || "",
+        tag: data.tag,
+        // Нагадування з тим самим tag має знову привернути увагу, а не тихо замінити
+        renotify: Boolean(data.tag),
+        // На Android сповіщення не зникає саме, доки майстер його не торкнеться
+        requireInteraction: true,
+        icon: "/admin-icons/icon-192.png",
+        badge: "/admin-icons/icon-192.png",
+        data: { url: data.url || "/admin" },
+      });
+      // Кажемо відкритій адмінці, що push дійшов саме сюди: якщо банера не видно,
+      // справа в налаштуваннях сповіщень системи, а не в сайті
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) client.postMessage({ type: "push-shown", tag: data.tag || null });
+    })(),
   );
 });
 

@@ -103,9 +103,33 @@ export default function PushToggle() {
 
   const test = async () => {
     setBusy(true);
+    setNote("");
+    // Service worker повідомить, коли покаже сповіщення на цьому пристрої
+    const arrived = new Promise<boolean>((resolve) => {
+      const onMessage = (e: MessageEvent) => {
+        if (e.data?.type !== "push-shown" || e.data.tag !== "test") return;
+        navigator.serviceWorker.removeEventListener("message", onMessage);
+        resolve(true);
+      };
+      navigator.serviceWorker.addEventListener("message", onMessage);
+      setTimeout(() => {
+        navigator.serviceWorker.removeEventListener("message", onMessage);
+        resolve(false);
+      }, 10_000);
+    });
+
     try {
       const n = await sendTestPush();
-      setNote(n > 0 ? "Надіслали — сповіщення має зʼявитись за кілька секунд." : "Не дійшло. Вимкніть і увімкніть сповіщення знову.");
+      if (n === 0) {
+        setNote("Не дійшло. Вимкніть і увімкніть сповіщення знову.");
+        return;
+      }
+      setNote("Надіслали — чекаємо підтвердження від цього пристрою…");
+      setNote(
+        (await arrived)
+          ? "Дійшло на цей пристрій. Не бачите банера? Увімкніть сповіщення для браузера в налаштуваннях системи (Mac: Системні параметри → Сповіщення → Google Chrome) і вимкніть «Не турбувати»."
+          : "Сервер надіслав, але цей пристрій не підтвердив. Вимкніть і увімкніть сповіщення тут знову.",
+      );
     } finally {
       setBusy(false);
     }
