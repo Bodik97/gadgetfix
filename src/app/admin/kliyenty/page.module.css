@@ -1,3 +1,41 @@
+/* Вкладки — як вибір періоду в «Касі» */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.tab,
+.tabOn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--text-2);
+  font-size: 14px;
+  text-decoration: none;
+  transition: border-color .15s, color .15s, background .15s;
+}
+
+.tab:hover {
+  border-color: var(--border-active);
+  color: var(--text);
+}
+
+.tabOn {
+  border-color: var(--accent-text);
+  background: rgb(var(--lime-rgb) / .12);
+  color: var(--accent-text);
+}
+
+/* Спосіб входу — дрібно під поштою */
+.via {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
 .list {
   display: grid;
   gap: 2px;

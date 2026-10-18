@@ -1,0 +1,150 @@
+.back {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: var(--text-2);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+/* Дані акаунта — плитками */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  gap: 10px;
+  margin: 0 0 clamp(28px, 4vw, 44px);
+}
+
+.fact,
+.factHot {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.factHot {
+  border-color: rgb(var(--lime-rgb) / .5);
+  background: rgb(var(--lime-rgb) / .12);
+}
+
+.fact dt,
+.factHot dt {
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.fact dd,
+.factHot dd {
+  margin: 0;
+  font-size: 15.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.h2 {
+  margin: clamp(26px, 3.4vw, 40px) 0 12px;
+  font-size: clamp(20px, 2.4vw, 26px);
+}
+
+/* Рядки історії — як список клієнтів */
+.rows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 130px 110px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: background .15s;
+}
+
+a.row:hover {
+  background: var(--surface-hover);
+}
+
+.main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.what {
+  font-size: 15px;
+}
+
+.sub {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.num {
+  display: grid;
+  justify-items: end;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Мітка стану: колір — як у картці заявки */
+.status {
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--fg-rgb) / .07);
+  color: var(--text-2);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.status[data-tone="progress"] {
+  background: rgb(var(--lime-rgb) / .14);
+  color: var(--accent-text);
+}
+
+.status[data-tone="ready"],
+.status[data-tone="shipped"] {
+  background: rgb(var(--lime-rgb) / .3);
+  color: var(--text);
+}
+
+.stars {
+  color: var(--accent-text);
+  letter-spacing: 1px;
+}
+
+.starsOff {
+  color: var(--rating-off);
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 6px;
+  }
+
+  .num {
+    justify-items: start;
+  }
+}
