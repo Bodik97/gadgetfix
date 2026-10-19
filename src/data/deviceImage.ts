@@ -57,3 +57,24 @@ export function iphoneImage(device: string | null): string | null {
   // Неіснуюча комбінація («14 mini») — хоча б базова модель
   return byName(`iphone ${base}${suffix}`) ?? byName(`iphone ${base}`);
 }
+
+/**
+ * iPhone, який клієнт згадав у самому тексті відгуку: «міняли батарею на айфон
+ * 15 про, зробили швидко» → «айфон 15 про». Беремо слово «iPhone» і до трьох
+ * слів після нього — до коми чи крапки. Не згадав — null.
+ */
+function mentionedIphone(text: string): string | null {
+  // «айфону», «айфона» — будь-який відмінок зводимо до «iphone»
+  const tail = text.match(/(?:iphone|iphon|айфон)[а-яіїє]*((?:[ \t]*[^\s,.!?;:()]+){1,3})/i)?.[1];
+  return tail ? `iphone ${tail}` : null;
+}
+
+/**
+ * Модель для відгуку: що клієнт вписав у поле «Модель», а якщо порожньо —
+ * що згадав у тексті. name — назва з каталогу, коли модель упізнали за текстом.
+ */
+export function reviewDevice(device: string | null, text: string): { name: string | null; image: string | null } {
+  if (device) return { name: device, image: iphoneImage(device) };
+  const image = iphoneImage(mentionedIphone(text));
+  return { name: image ? (iphones.find((m) => m.image === image)?.name ?? null) : null, image };
+}

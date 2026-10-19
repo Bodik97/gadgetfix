@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Review } from "@/db/schema";
+import { reviewDevice } from "@/data/deviceImage";
 import ReviewActions, { type DiscountState } from "./ReviewActions";
 import styles from "./page.module.css";
 
@@ -34,57 +35,67 @@ export default function ReviewList({ reviews }: { reviews: Review[] }) {
 
   return (
     <div className={styles.cards}>
-      {reviews.map((r) => (
-        <article
-          key={r.id}
-          className={`${styles.card} ${r.published ? "" : styles.cardNew}`}
-        >
-          <div className={styles.cardMain}>
-            <div className={styles.cardTop}>
-              <Link href={`/admin/vidhuky/${r.id}`} className={styles.name}>
-                {r.authorName}
-              </Link>
-              {r.device && <span className={styles.source}>{r.device}</span>}
-              <span className={styles.stars} role="img" aria-label={`${r.rating} з 5`}>
-                {"★".repeat(r.rating)}
-                <span className={styles.starsOff} aria-hidden="true">{"★".repeat(5 - r.rating)}</span>
-              </span>
-              <span className={styles.when}>{dateFormat.format(r.createdAt)}</span>
-              {r.published ? (
-                <span className={styles.tagAccount}>на сайті</span>
-              ) : (
-                <span className={styles.tagAnon}>чекає</span>
-              )}
-            </div>
-
-            <p className={styles.reviewText}>{r.text}</p>
-
-            {(r.beforePath || r.afterPath) && (
-              <div className={styles.reviewPhotos}>
-                {r.beforePath && (
-                  <a href={`/api/reviews/${r.id}/image?v=before`} target="_blank" rel="noopener">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/reviews/${r.id}/image?v=before`} alt="До ремонту" loading="lazy" />
-                    <span>до</span>
-                  </a>
-                )}
-                {r.afterPath && (
-                  <a href={`/api/reviews/${r.id}/image?v=after`} target="_blank" rel="noopener">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/reviews/${r.id}/image?v=after`} alt="Після ремонту" loading="lazy" />
-                    <span>після</span>
-                  </a>
+      {reviews.map((r) => {
+        // Модель не вписали — беремо ту, що названа в тексті відгуку
+        const device = reviewDevice(r.device, r.text);
+        return (
+          <article
+            key={r.id}
+            className={`${styles.card} ${r.published ? "" : styles.cardNew}`}
+          >
+            <div className={styles.cardMain}>
+              <div className={styles.cardTop}>
+                <Link href={`/admin/vidhuky/${r.id}`} className={styles.name}>
+                  {r.authorName}
+                </Link>
+                {device.name && <span className={styles.source}>{device.name}</span>}
+                <span className={styles.stars} role="img" aria-label={`${r.rating} з 5`}>
+                  {"★".repeat(r.rating)}
+                  <span className={styles.starsOff} aria-hidden="true">{"★".repeat(5 - r.rating)}</span>
+                </span>
+                <span className={styles.when}>{dateFormat.format(r.createdAt)}</span>
+                {r.published ? (
+                  <span className={styles.tagAccount}>на сайті</span>
+                ) : (
+                  <span className={styles.tagAnon}>чекає</span>
                 )}
               </div>
-            )}
 
-            {!r.byMaster && <p className={styles.hint}>{discountNote(r)}</p>}
+              <div className={styles.reviewBody}>
+                {device.image && (
+                  // eslint-disable-next-line @next/next/no-img-element -- маленька мініатюра з каталогу
+                  <img src={device.image} alt={device.name ?? ""} className={styles.reviewModel} loading="lazy" />
+                )}
+                <p className={styles.reviewText}>{r.text}</p>
+              </div>
 
-            <ReviewActions id={r.id} published={r.published} discount={discountState(r)} />
-          </div>
+              {(r.beforePath || r.afterPath) && (
+                <div className={styles.reviewPhotos}>
+                  {r.beforePath && (
+                    <a href={`/api/reviews/${r.id}/image?v=before`} target="_blank" rel="noopener">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/api/reviews/${r.id}/image?v=before`} alt="До ремонту" loading="lazy" />
+                      <span>до</span>
+                    </a>
+                  )}
+                  {r.afterPath && (
+                    <a href={`/api/reviews/${r.id}/image?v=after`} target="_blank" rel="noopener">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/api/reviews/${r.id}/image?v=after`} alt="Після ремонту" loading="lazy" />
+                      <span>після</span>
+                    </a>
+                  )}
+                </div>
+              )}
 
-        </article>
-      ))}
+              {!r.byMaster && <p className={styles.hint}>{discountNote(r)}</p>}
+
+              <ReviewActions id={r.id} published={r.published} discount={discountState(r)} />
+            </div>
+
+          </article>
+        );
+      })}
     </div>
   );
 }

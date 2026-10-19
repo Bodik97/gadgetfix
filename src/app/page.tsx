@@ -19,7 +19,7 @@ import { services } from "@/data/services";
 import { site } from "@/data/site";
 import { WARRANTY_MAX } from "@/data/warranty";
 import { getModel } from "@/data/catalog";
-import { iphoneImage } from "@/data/deviceImage";
+import { reviewDevice } from "@/data/deviceImage";
 import {
   bookingModels,
   faq,
@@ -88,25 +88,29 @@ export default async function Home() {
     getWorks(12),
     getReviewStats(),
   ]);
-  const shownReviews = published.map((r) => ({
-    id: r.id,
-    text: r.text,
-    name: r.authorName,
-    city: r.city,
-    device: r.device,
-    deviceImage: iphoneImage(r.device),
-    date: reviewDate.format(r.createdAt),
-    viaGoogle: r.viaGoogle,
-    avatar: r.avatarUrl,
-    rating: r.rating,
-    // Фото роботи лежить у приватному сховищі — віддаємо своїм маршрутом
-    image: r.imagePath ? `/api/reviews/${r.id}/image` : null,
-    // Пара від клієнта: показуємо лише обидва фото разом, інакше порівнювати нічого
-    pair:
-      r.beforePath && r.afterPath
-        ? { before: `/api/reviews/${r.id}/image?v=before`, after: `/api/reviews/${r.id}/image?v=after` }
-        : null,
-  }));
+  const shownReviews = published.map((r) => {
+    // Модель не вписали — беремо ту, що названа в тексті відгуку
+    const device = reviewDevice(r.device, r.text);
+    return {
+      id: r.id,
+      text: r.text,
+      name: r.authorName,
+      city: r.city,
+      device: device.name,
+      deviceImage: device.image,
+      date: reviewDate.format(r.createdAt),
+      viaGoogle: r.viaGoogle,
+      avatar: r.avatarUrl,
+      rating: r.rating,
+      // Фото роботи лежить у приватному сховищі — віддаємо своїм маршрутом
+      image: r.imagePath ? `/api/reviews/${r.id}/image` : null,
+      // Пара від клієнта: показуємо лише обидва фото разом, інакше порівнювати нічого
+      pair:
+        r.beforePath && r.afterPath
+          ? { before: `/api/reviews/${r.id}/image?v=before`, after: `/api/reviews/${r.id}/image?v=after` }
+          : null,
+    };
+  });
 
   const hasRealReviews = published.length > 0;
 
