@@ -6,6 +6,7 @@ import ReviewForm from "@/components/ReviewForm";
 import { getReviewsByUser, reviewTarget } from "@/db/reviews";
 import { getClientLeads } from "@/db/leads";
 import { discountOffer } from "@/db/discounts";
+import { getProfileExtras } from "@/lib/profile";
 import { DISCOUNT_PERCENT, DISCOUNT_REASON } from "@/data/discounts";
 import { getCabinetUser } from "@/lib/cabinetUser";
 import base from "../moi-remonty/page.module.css";
@@ -37,16 +38,19 @@ export default async function MyDiscountsPage() {
   const user = await getCabinetUser();
   const email = user?.email;
 
-  const [leads, myReviews] = await Promise.all([
+  const [leads, myReviews, extras] = await Promise.all([
     user ? getClientLeads(user.id, email) : Promise.resolve([]),
     user ? getReviewsByUser(user.id) : Promise.resolve([]),
+    getProfileExtras(),
   ]);
 
   const ready = myReviews.filter((r) => r.discountAt && !r.discountLeadId);
   // Використана знижка — та, що закріплена за заявкою (відхилена заявка її повертає)
   const used = leads.filter((l) => l.discount && l.status !== "rejected");
   const pending = myReviews.filter((r) => !r.published && r.leadId && r.beforePath && r.afterPath);
-  const welcome = discountOffer(leads, myReviews)?.kind === "signup";
+  const offer = discountOffer(leads, myReviews, extras.birthday);
+  const welcome = offer?.kind === "signup";
+  const birthdayNow = offer?.kind === "birthday";
 
   // Відгук пишуть про виданий ремонт — лише такий дає знижку
   const found = reviewTarget(leads, myReviews);
@@ -67,6 +71,18 @@ export default async function MyDiscountsPage() {
         <h2 id="aktyvni" className={base.h2}>
           Активні
         </h2>
+        {birthdayNow && (
+          <div className={styles.discount}>
+            <span className={styles.percent}>−10%</span>
+            <span className={styles.discountText}>
+              <strong>З днем народження! 🎂</strong>
+              <span>Цього тижня знижка діє сама — застосуємо її до замовлення автоматично.</span>
+              <Link href="/moi-remonty" className={`btn btn-accent ${styles.use}`}>
+                Замовити ремонт зі знижкою
+              </Link>
+            </span>
+          </div>
+        )}
         {welcome && (
           <div className={styles.discount}>
             <span className={styles.percent}>−5%</span>
@@ -98,9 +114,23 @@ export default async function MyDiscountsPage() {
         ) : pending.length > 0 ? (
           <p className={base.hint}>Ваш відгук на перевірці. Щойно опублікуємо — тут з’явиться знижка 10%.</p>
         ) : (
-          !welcome && <p className={base.hint}>Зараз активних знижок немає.</p>
+          !welcome && !birthdayNow && <p className={base.hint}>Зараз активних знижок немає.</p>
         )}
       </section>
+
+      {!extras.birthday && (
+        <section className={base.section} aria-labelledby="den-narodzhennia">
+          <h2 id="den-narodzhennia" className={base.h2}>
+            −10% у ваш день народження
+          </h2>
+          <p className={base.hint}>
+            Вкажіть дату в профілі — і тиждень до та після свята знижка діятиме на будь-який ремонт сама.
+          </p>
+          <Link href="/profil" className={`btn btn-ghost ${styles.use}`}>
+            Вказати день народження
+          </Link>
+        </section>
+      )}
 
       <section className={base.section} aria-labelledby="yak">
         <h2 id="yak" className={base.h2}>

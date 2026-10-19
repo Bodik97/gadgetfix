@@ -2,15 +2,34 @@ import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "./index";
 import { leads, reviews, type Lead, type Review } from "./schema";
 import { addEvent } from "./events";
-import { DISCOUNT_PERCENT, DISCOUNT_REASON, type DiscountKind } from "@/data/discounts";
+import { DISCOUNT_PERCENT, DISCOUNT_REASON, inBirthdayWindow, type DiscountKind } from "@/data/discounts";
 
 /**
- * Яка знижка чекає клієнта на нове замовлення. 10% за відгук застосовується
- * сама; 5% за реєстрацію — коли клієнт натисне «Скористатись». null — немає.
+ * Яка знижка чекає клієнта на нове замовлення. 10% біля дня народження й 10% за
+ * відгук застосовуються самі; 5% за реєстрацію — коли клієнт натисне
+ * «Скористатись». null — немає.
  */
-export type DiscountOffer = { kind: "review"; reviewId: string } | { kind: "signup" } | null;
+export type DiscountOffer =
+  | { kind: "birthday" }
+  | { kind: "review"; reviewId: string }
+  | { kind: "signup" }
+  | null;
 
-export function discountOffer(repairs: Lead[], written: Review[]): DiscountOffer {
+/** Знижку до дня народження вже взяли цього разу — вікно 15 днів, беремо з запасом */
+const BIRTHDAY_USED_MS = 60 * 86_400_000;
+
+export function discountOffer(
+  repairs: Lead[],
+  written: Review[],
+  birthday: string | null = null,
+  now = new Date(),
+): DiscountOffer {
+  // День народження — першим: він минає, а знижка за відгук почекає наступного замовлення
+  const birthdayUsed = repairs.some(
+    (l) => l.discount === "birthday" && l.status !== "rejected" && now.getTime() - l.createdAt.getTime() < BIRTHDAY_USED_MS,
+  );
+  if (inBirthdayWindow(birthday, now) && !birthdayUsed) return { kind: "birthday" };
+
   const review = written.find((r) => r.discountAt && !r.discountLeadId);
   if (review) return { kind: "review", reviewId: review.id };
   // Перший ремонт — поки не було жодної заявки, крім відхилених
@@ -36,6 +55,8 @@ export async function claimDiscount(
       .where(and(eq(reviews.id, offer.reviewId), isNull(reviews.discountLeadId)))
       .returning({ id: reviews.id });
     if (taken.length > 0) kind = "review";
+  } else if (offer?.kind === "birthday") {
+    kind = "birthday";
   } else if (offer?.kind === "signup" && wantSignup) {
     kind = "signup";
   }

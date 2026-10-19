@@ -5,7 +5,7 @@ import styles from "./DiscountTicket.module.css";
 
 /**
  * «Квиток» знижки у формі замовлення. 5% за реєстрацію клієнт забирає сам —
- * кнопкою «Скористатись»; 10% за відгук уже діє, кнопки не треба.
+ * кнопкою «Скористатись»; 10% за відгук і до дня народження вже діють, кнопки не треба.
  * celebrate — щойно зареєструвався: квиток «вистрибує» з конфеті.
  */
 export default function DiscountTicket({
@@ -22,7 +22,7 @@ export default function DiscountTicket({
   celebrate?: boolean;
 }) {
   const pct = DISCOUNT_PERCENT[kind];
-  const on = kind === "review" || applied;
+  const on = kind !== "signup" || applied;
 
   return (
     <div className={`${on ? styles.ticketOn : styles.ticket} ${celebrate ? styles.celebrate : ""}`} aria-live="polite">
@@ -37,7 +37,14 @@ export default function DiscountTicket({
       <span className={styles.percent}>−{pct}%</span>
 
       <div className={styles.body}>
-        {kind === "review" ? (
+        {kind === "birthday" ? (
+          <>
+            <p className={styles.title}>
+              <Check /> З днем народження! Знижка {pct}% уже діє 🎂
+            </p>
+            <p className={styles.text}>Застосуємо її до цього замовлення автоматично.</p>
+          </>
+        ) : kind === "review" ? (
           <>
             <p className={styles.title}>
               <Check /> Знижка {pct}% за ваш відгук — уже діє

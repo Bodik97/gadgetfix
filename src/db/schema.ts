@@ -29,9 +29,10 @@ export const leadStatus = pgEnum("lead_status", [
 
 /**
  * Знижка, закріплена за заявкою в момент замовлення: signup — 5% на перший
- * ремонт за реєстрацію, review — 10% за схвалений відгук. Одна на заявку.
+ * ремонт за реєстрацію, review — 10% за схвалений відгук, birthday — 10% біля
+ * дня народження. Одна на заявку.
  */
-export const leadDiscount = pgEnum("lead_discount", ["signup", "review"]);
+export const leadDiscount = pgEnum("lead_discount", ["signup", "review", "birthday"]);
 
 export const leads = pgTable(
   "leads",
@@ -115,6 +116,10 @@ export const leads = pgTable(
 
     /** Яку знижку майстер має врахувати в ціні. NULL — без знижки. */
     discount: leadDiscount("discount"),
+
+    /** Коли клієнт і майстер востаннє друкували в чаті — для «друкує…» */
+    clientTypingAt: timestamp("client_typing_at", { withTimezone: true }),
+    masterTypingAt: timestamp("master_typing_at", { withTimezone: true }),
 
     source: leadSource("source").notNull(),
     status: leadStatus("status").notNull().default("new"),

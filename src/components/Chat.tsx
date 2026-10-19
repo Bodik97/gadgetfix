@@ -15,7 +15,20 @@ const stamp = new Intl.DateTimeFormat("uk-UA", {
 });
 
 /** Поки чат відкритий, перепитуємо сервер. Вебсокет тут — зайва інфраструктура. */
-const POLL_MS = 3_000;
+const POLL_MS = 2_000;
+
+/** Як часто, поки людина друкує, нагадувати серверу «я ще пишу» */
+const TYPING_PING_MS = 3_000;
+
+/** Базові смайлики — без бібліотеки: вистачає для «дякую» й «ок» */
+const EMOJI = [
+  "🙂", "😊", "😂", "😍", "😉", "😎", "🤔", "😅",
+  "😢", "😮", "😡", "🙏", "👍", "👎", "👌", "👋",
+  "💪", "👏", "🔥", "❤️", "✅", "❌", "📱", "🔧",
+];
+
+/** Своє повідомлення, поки сервер його не підтвердив */
+type Pending = { id: string; text: string; preview: string | null; failed: boolean; retry: FormData };
 
 type Props = {
   leadId: string;
@@ -36,9 +49,14 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
   const [sending, setSending] = useState(false);
   const [photo, setPhoto] = useState<Shrunk | null>(null);
   const [preparing, setPreparing] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const [pending, setPending] = useState<Pending[]>([]);
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
   const listRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const lastPing = useRef(0);
 
   const load = useCallback(async () => {
     // Згорнута вкладка нічого не показує — не смикаємо сервер тричі на секунду
@@ -47,8 +65,9 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
     try {
       const res = await fetch(`/api/chat/${leadId}?side=${side}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { messages: ChatMessage[] };
+      const data = (await res.json()) as { messages: ChatMessage[]; typing?: boolean };
       setMessages(data.messages);
+      setTyping(Boolean(data.typing));
       setLoadError("");
     } catch {
       setLoadError("Не вдалося завантажити листування. Спробуйте пізніше.");
@@ -77,10 +96,30 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
     load();
   };
 
-  // Нове повідомлення має бути видно без прокрутки вручну
+  // Нове повідомлення й «друкує…» мають бути видно без прокрутки вручну
   useEffect(() => {
     if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [open, messages]);
+  }, [open, messages, pending, typing]);
+
+  /** «Я друкую» — не частіше ніж раз на кілька секунд; збій тут нічого не ламає */
+  const pingTyping = () => {
+    const now = Date.now();
+    if (now - lastPing.current < TYPING_PING_MS) return;
+    lastPing.current = now;
+    fetch(`/api/chat/${leadId}/typing?side=${side}`, { method: "POST" }).catch(() => {});
+  };
+
+  /** Смайлик — туди, де стоїть курсор, і курсор одразу після нього */
+  const insertEmoji = (emoji: string) => {
+    const el = inputRef.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    setText(text.slice(0, start) + emoji + text.slice(end));
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
+  };
 
   const pickPhoto = async (file: File | undefined) => {
     if (!file) return;
@@ -103,37 +142,53 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
     setPhoto(null);
   };
 
+  /** Надіслати й одразу показати в стрічці з 🕒; збій — «Не надіслано · Повторити» */
+  const deliver = async (item: Pending) => {
+    setSending(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/chat/${leadId}?side=${side}`, { method: "POST", body: item.retry });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Не вдалося надіслати.");
+        throw new Error(String(res.status));
+      }
+      await load();
+      setPending((list) => list.filter((p) => p.id !== item.id));
+      if (item.preview) URL.revokeObjectURL(item.preview);
+    } catch {
+      setPending((list) => list.map((p) => (p.id === item.id ? { ...p, failed: true } : p)));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = text.trim();
     if ((!clean && !photo) || sending) return;
 
-    setSending(true);
-    setError("");
-    try {
-      const form = new FormData();
-      form.set("text", clean);
-      if (photo) {
-        form.set("image", photo.file);
-        form.set("width", String(photo.width));
-        form.set("height", String(photo.height));
-      }
-
-      const res = await fetch(`/api/chat/${leadId}?side=${side}`, { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Не вдалося надіслати.");
-        return;
-      }
-
-      setText("");
-      dropPhoto();
-      await load();
-    } catch {
-      setError("Не вдалося надіслати. Перевірте зв'язок.");
-    } finally {
-      setSending(false);
+    const form = new FormData();
+    form.set("text", clean);
+    if (photo) {
+      form.set("image", photo.file);
+      form.set("width", String(photo.width));
+      form.set("height", String(photo.height));
     }
+
+    const item: Pending = { id: crypto.randomUUID(), text: clean, preview: photo?.preview ?? null, failed: false, retry: form };
+    setPending((list) => [...list, item]);
+    setText("");
+    // Прев'ю фото ще потрібне в стрічці, тож не відкликаємо його, а лише прибираємо з чернетки
+    setPhoto(null);
+    setEmojiOpen(false);
+    lastPing.current = 0;
+    await deliver(item);
+  };
+
+  const retry = (item: Pending) => {
+    setPending((list) => list.map((p) => (p.id === item.id ? { ...p, failed: false } : p)));
+    deliver({ ...item, failed: false });
   };
 
   if (!open) {
@@ -174,7 +229,7 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
       <div className={styles.list} ref={listRef}>
         {messages === null ? (
           <p className={styles.hint}>Завантажуємо…</p>
-        ) : messages.length === 0 ? (
+        ) : messages.length === 0 && pending.length === 0 ? (
           <p className={styles.hint}>
             {side === "client"
               ? "Питайте що завгодно про свій ремонт — майстер відповість тут."
@@ -207,13 +262,49 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
                   )}
 
                   {m.text && <p className={styles.text}>{m.text}</p>}
-                  <time className={styles.time} dateTime={m.at}>
-                    {stamp.format(new Date(m.at))}
-                  </time>
+                  <span className={styles.meta}>
+                    <time className={styles.time} dateTime={m.at}>
+                      {stamp.format(new Date(m.at))}
+                    </time>
+                    {m.author === side && <Status state={m.readAt ? "read" : "sent"} />}
+                  </span>
+                </div>
+              </li>
+            ))}
+
+            {pending.map((p) => (
+              <li key={p.id} className={styles.mine}>
+                <div className={styles.bubble}>
+                  <span className={styles.author}>Ви</span>
+                  {p.preview && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.preview} alt="Фото надсилається" className={styles.pendingImg} />
+                  )}
+                  {p.text && <p className={styles.text}>{p.text}</p>}
+                  <span className={styles.meta}>
+                    {p.failed ? (
+                      <button type="button" className={styles.retry} onClick={() => retry(p)} disabled={sending}>
+                        Не надіслано · Повторити
+                      </button>
+                    ) : (
+                      <Status state="sending" />
+                    )}
+                  </span>
                 </div>
               </li>
             ))}
           </ol>
+        )}
+
+        {typing && (
+          <div className={styles.typing} role="status">
+            <span className={styles.dots} aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            {side === "client" ? "Майстер друкує…" : "Клієнт друкує…"}
+          </div>
         )}
       </div>
 
@@ -267,10 +358,37 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
           )}
         </button>
 
+        <div className={styles.emojiWrap}>
+          <button
+            type="button"
+            className={styles.attach}
+            onClick={() => setEmojiOpen((v) => !v)}
+            aria-label="Смайлики"
+            aria-expanded={emojiOpen}
+            title="Смайлики"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+              <path d="M9 9.5h.01M15 9.5h.01" />
+            </svg>
+          </button>
+          {emojiOpen && (
+            <div className={styles.emojiPanel} role="dialog" aria-label="Смайлики">
+              {EMOJI.map((e) => (
+                <button key={e} type="button" className={styles.emoji} onClick={() => insertEmoji(e)} aria-label={e}>
+                  {e}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <label htmlFor={`chat-${leadId}`} className="visually-hidden">
           Повідомлення
         </label>
         <textarea
+          ref={inputRef}
           id={`chat-${leadId}`}
           className={`field ${styles.input}`}
           rows={2}
@@ -279,6 +397,7 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
           onChange={(e) => {
             setText(e.target.value);
             setError("");
+            if (e.target.value.trim()) pingTyping();
           }}
           onKeyDown={(e) => {
             // Enter надсилає, Shift+Enter переносить рядок
@@ -300,5 +419,25 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
 
       <FormError>{error || loadError}</FormError>
     </section>
+  );
+}
+
+/** 🕒 надсилається → ✓ надіслано (сіра плашка) → ✓✓ прочитано (салатова) */
+function Status({ state }: { state: "sending" | "sent" | "read" }) {
+  const label = state === "sending" ? "Надсилається" : state === "sent" ? "Надіслано" : "Прочитано";
+  return (
+    <span className={state === "read" ? styles.statusRead : styles.status} title={label} aria-label={label}>
+      {state === "sending" ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 2" />
+        </svg>
+      ) : (
+        <svg width={state === "read" ? 20 : 14} height="14" viewBox={state === "read" ? "0 0 30 24" : "0 0 24 24"} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4 12.5l5 5L20 6.5" />
+          {state === "read" && <path d="M14 15.5l2 2L27 6.5" />}
+        </svg>
+      )}
+    </span>
   );
 }

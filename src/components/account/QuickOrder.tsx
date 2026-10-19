@@ -31,7 +31,7 @@ export default function QuickOrder({
   knownPhone = null,
 }: {
   compact?: boolean;
-  /** Яка знижка чекає на це замовлення: 5% забирають кнопкою, 10% діє сама */
+  /** Яка знижка чекає на це замовлення: 5% забирають кнопкою, решта діє сама */
   offer?: DiscountKind | null;
   /** Телефон із попередніх заявок — щоб не вводити вдруге */
   knownPhone?: string | null;
@@ -55,7 +55,8 @@ export default function QuickOrder({
   // ?znyzhka=1 — прийшли з «Скористатись» на сторінці знижок, ?vitayemo=1 — щойно зареєструвались
   const [applied, setApplied] = useState(params.get("znyzhka") === "1");
   const celebrate = params.get("vitayemo") === "1" && offer === "signup";
-  const discountOn = offer === "review" || (offer === "signup" && applied);
+  // 5% за реєстрацію забирають кнопкою; решта знижок діє сама
+  const discountOn = offer !== null && (offer !== "signup" || applied);
 
   // У списку моделі згруповані («iPhone 13 / 14»), а зі сторінки моделі приходить
   // точна назва — додаємо її окремим рядком, інакше поле показувало б «Оберіть модель»

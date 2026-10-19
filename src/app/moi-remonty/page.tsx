@@ -12,6 +12,7 @@ import { plural } from "@/components/account/plural";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { getReviewsByUser } from "@/db/reviews";
 import { discountOffer } from "@/db/discounts";
+import { getProfileExtras } from "@/lib/profile";
 import { getDevices, getEvents } from "@/db/events";
 import { unreadByLead } from "@/db/messages";
 import { getCabinetUser } from "@/lib/cabinetUser";
@@ -39,13 +40,14 @@ export default async function MyRepairsPage() {
   const name = user?.name;
   const email = user?.email;
 
-  const [leads, myReviews] = await Promise.all([
+  const [leads, myReviews, extras] = await Promise.all([
     user ? getClientLeads(user.id, email) : Promise.resolve([]),
     user ? getReviewsByUser(user.id) : Promise.resolve([]),
+    getProfileExtras(),
   ]);
-  // Яка знижка чекає на нове замовлення, і телефон із попередніх — щоб не вводити вдруге
-  const offer = discountOffer(leads, myReviews)?.kind ?? null;
-  const knownPhone = leads.find((l) => l.phone)?.phone ?? null;
+  // Яка знижка чекає на нове замовлення, і телефон із профілю чи попередніх заявок — щоб не вводити вдруге
+  const offer = discountOffer(leads, myReviews, extras.birthday)?.kind ?? null;
+  const knownPhone = extras.phone ?? leads.find((l) => l.phone)?.phone ?? null;
 
   // Активних може бути кілька — раніше показувався лише перший
   const active = leads.filter((l) => describeStatus(l.status).active);

@@ -1,0 +1,294 @@
+.wrap {
+  display: grid;
+  gap: 18px;
+}
+
+.skeleton {
+  height: 420px;
+  border-radius: 26px;
+  background: rgb(var(--fg-rgb) / .05);
+}
+
+/* ---------- Шапка: фото, імʼя, наскільки заповнено ---------- */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 26px);
+  padding: clamp(18px, 3vw, 28px);
+  border-radius: 26px;
+  border: 1px solid rgb(var(--lime-rgb) / .45);
+  background: rgb(var(--lime-rgb) / .1);
+}
+
+.heroText {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.heroName {
+  margin: 0;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: clamp(20px, 3vw, 26px);
+  letter-spacing: -.02em;
+}
+
+.heroMail {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-3);
+  overflow-wrap: anywhere;
+}
+
+.meter {
+  height: 8px;
+  margin-top: 10px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--fg-rgb) / .08);
+  overflow: hidden;
+}
+
+.meterBar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width .5s ease;
+}
+
+.meterText {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.avatarWrap {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.avatar {
+  position: relative;
+  width: clamp(76px, 14vw, 96px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.initial {
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 34px;
+  color: var(--on-accent);
+}
+
+.avatarBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.avatar:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* ---------- Картки розділів ---------- */
+.card {
+  display: grid;
+  gap: 18px;
+  padding: clamp(18px, 3vw, 28px);
+  border-radius: 26px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.h2 {
+  margin: 0;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: clamp(17px, 2.2vw, 20px);
+  letter-spacing: -.02em;
+}
+
+.row {
+  display: grid;
+  gap: 8px;
+}
+
+.row > label,
+.label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inline :global(.field) {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.stack {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.save {
+  flex: none;
+  min-height: 48px;
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.success {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.link {
+  justify-self: start;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---------- День народження ---------- */
+.promo {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgb(var(--lime-rgb) / .12);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bday,
+.bdayOn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.bdayOn {
+  border-color: rgb(var(--lime-rgb) / .6);
+  background: rgb(var(--lime-rgb) / .16);
+}
+
+.bdayIcon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* ---------- Пошта ---------- */
+.current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mail {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.code {
+  max-width: 180px;
+  letter-spacing: .3em;
+  font-variant-numeric: tabular-nums;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / .3);
+  border-top-color: currentColor;
+  animation: profileSpin .7s linear infinite;
+}
+
+@keyframes profileSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .save,
+  .inline :global(.btn) {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+  .meterBar { transition: none; }
+}

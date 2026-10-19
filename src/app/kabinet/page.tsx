@@ -6,6 +6,7 @@ import SignOutButton from "@/components/account/SignOutButton";
 import { plural } from "@/components/account/plural";
 import { getReviewsByUser, reviewTarget } from "@/db/reviews";
 import { discountOffer } from "@/db/discounts";
+import { getProfileExtras } from "@/lib/profile";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { unreadByLead } from "@/db/messages";
 import type { Lead } from "@/db/schema";
@@ -29,9 +30,10 @@ export default async function CabinetPage() {
   const name = user?.name;
   const email = user?.email;
 
-  const [leads, myReviews] = await Promise.all([
+  const [leads, myReviews, extras] = await Promise.all([
     user ? getClientLeads(user.id, email) : Promise.resolve([]),
     user ? getReviewsByUser(user.id) : Promise.resolve([]),
+    getProfileExtras(),
   ]);
 
   const active = leads.filter((l) => describeStatus(l.status).active);
@@ -47,18 +49,22 @@ export default async function CabinetPage() {
 
   const hasDiscount = myReviews.some((r) => r.discountAt && !r.discountLeadId);
   // Знижка за реєстрацію — на перший ремонт: поки ремонтів немає, вона чекає
-  const welcome = discountOffer(leads, myReviews)?.kind === "signup";
+  const offer = discountOffer(leads, myReviews, extras.birthday);
+  const welcome = offer?.kind === "signup";
+  const birthdayNow = offer?.kind === "birthday";
   const pending = myReviews.some((r) => !r.published && r.leadId && r.beforePath && r.afterPath);
   const canEarn = Boolean(reviewTarget(leads, myReviews)?.leadId);
-  const discountNote = welcome
-    ? "Є знижка 5% на перший ремонт"
-    : hasDiscount
-      ? "Є знижка 10% на наступний ремонт"
-      : pending
-        ? "Відгук на перевірці — знижка 10% слідом"
-        : canEarn
-          ? "Отримайте 10% за відгук"
-          : "Знижка 10% за відгук після ремонту";
+  const discountNote = birthdayNow
+    ? "🎂 Зараз діє −10% до дня народження"
+    : welcome
+      ? "Є знижка 5% на перший ремонт"
+      : hasDiscount
+        ? "Є знижка 10% на наступний ремонт"
+        : pending
+          ? "Відгук на перевірці — знижка 10% слідом"
+          : canEarn
+            ? "Отримайте 10% за відгук"
+            : "Знижка 10% за відгук після ремонту";
 
   const now = nextStep({ leads, active, unreadTotal, hasDiscount, canEarn });
 
@@ -105,7 +111,7 @@ export default async function CabinetPage() {
           <Arrow />
         </Link>
 
-        <Link href="/moi-znyzhky" className={hasDiscount || welcome ? styles.tileHot : styles.tile}>
+        <Link href="/moi-znyzhky" className={hasDiscount || welcome || birthdayNow ? styles.tileHot : styles.tile}>
           <span className={styles.icon} aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 5L5 19" />
@@ -115,6 +121,24 @@ export default async function CabinetPage() {
           </span>
           <span className={styles.tileTitle}>Мої знижки</span>
           <span className={styles.tileNote}>{discountNote}</span>
+          <Arrow />
+        </Link>
+
+        <Link href="/profil" className={styles.tile}>
+          <span className={styles.icon} aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8.5" r="3.6" />
+              <path d="M4.8 20a7.2 7.2 0 0 1 14.4 0" />
+            </svg>
+          </span>
+          <span className={styles.tileTitle}>Мій профіль</span>
+          <span className={styles.tileNote}>
+            {!extras.birthday
+              ? "Вкажіть день народження — і отримаєте −10% у своє свято"
+              : !extras.phone
+                ? "Додайте телефон — не вводитимете щоразу"
+                : "Фото, контакти й пароль"}
+          </span>
           <Arrow />
         </Link>
       </nav>

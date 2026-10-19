@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/kabinet", "/moi-remonty", "/moi-znyzhky", "/sso-callback", "/vhid", "/admin", "/api/"],
+      disallow: ["/kabinet", "/moi-remonty", "/moi-znyzhky", "/profil", "/sso-callback", "/vhid", "/admin", "/api/"],
     },
     sitemap: `${siteUrl()}/sitemap.xml`,
   };

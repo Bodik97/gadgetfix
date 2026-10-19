@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import { addMessage, getMessages, markRead, MAX_MESSAGE } from "@/db/messages";
+import { addMessage, getMessages, markRead, MAX_MESSAGE, otherTyping } from "@/db/messages";
 import { getLeadBrief } from "@/db/leads";
 import { canUseChat, type ChatSide } from "@/lib/chatAccess";
 import { esc } from "@/lib/telegram";
@@ -24,6 +24,8 @@ export type ChatMessage = {
   author: "client" | "master";
   text: string;
   at: string;
+  /** Коли другий бік прочитав; null — ще не бачив */
+  readAt: string | null;
   image: { url: string; width: number | null; height: number | null } | null;
 };
 
@@ -41,18 +43,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ lead
     return NextResponse.json({ error: "Немає доступу" }, { status: 403 });
   }
 
-  const messages = await getMessages(lead);
+  const [messages, typing] = await Promise.all([getMessages(lead), otherTyping(lead, role)]);
   // Відкрили чат — усе від іншого боку вважаємо прочитаним
   await markRead(lead, role);
 
   return NextResponse.json({
     role,
+    typing,
     messages: messages.map(
       (m): ChatMessage => ({
         id: m.id,
         author: m.author,
         text: m.text,
         at: m.createdAt.toISOString(),
+        readAt: m.readAt?.toISOString() ?? null,
         // Приватний файл віддаємо своїм маршрутом — там та сама перевірка прав
         image: m.imagePath
           ? { url: `/api/chat/${lead}/image/${m.id}`, width: m.imageWidth, height: m.imageHeight }

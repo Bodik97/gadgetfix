@@ -8,7 +8,7 @@ import { useClerkWanted } from "./authStore";
 const ClerkShell = dynamic(() => import("./ClerkShell"));
 
 /** Сторінки, яким Clerk потрібен у самому дереві: кабінет і вхід */
-const CLERK_ROUTES = ["/kabinet", "/moi-remonty", "/moi-znyzhky", "/vhid", "/sso-callback"];
+const CLERK_ROUTES = ["/kabinet", "/moi-remonty", "/moi-znyzhky", "/profil", "/vhid", "/sso-callback"];
 
 /**
  * Замість ClerkProvider на весь сайт. Кабінет і вхід — у провайдері, як раніше.

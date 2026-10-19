@@ -16,6 +16,9 @@ const m = vi.hoisted(() => ({
   notified: [] as string[],
   message: undefined as Record<string, unknown> | undefined,
   blob: null as unknown,
+  /** Чи друкує зараз інший бік, і хто повідомив «я друкую» */
+  otherTyping: false,
+  typing: [] as string[],
 }));
 
 vi.mock("@/lib/rateLimit", () => ({
@@ -30,9 +33,13 @@ vi.mock("@/lib/chatAccess", () => ({
 vi.mock("@/db/messages", () => ({
   MAX_MESSAGE: 1000,
   getMessages: async () => [
-    { id: "m1", author: "master", text: "Готово", createdAt: new Date("2026-05-01T10:00:00Z"), imagePath: null },
+    { id: "m1", author: "master", text: "Готово", createdAt: new Date("2026-05-01T10:00:00Z"), imagePath: null, readAt: new Date("2026-05-01T10:05:00Z") },
     { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2", author: "client", text: "", createdAt: new Date("2026-05-01T11:00:00Z"), imagePath: "chat/11111111-1111-1111-1111-111111111111/x", imageWidth: 800, imageHeight: 600 },
   ],
+  otherTyping: async () => m.otherTyping,
+  setTyping: async (lead: string, side: string) => {
+    m.typing.push(`${lead}:${side}`);
+  },
   markRead: async (lead: string, side: string) => {
     m.marked.push(`${lead}:${side}`);
   },
@@ -63,6 +70,7 @@ vi.mock("@/lib/telegram", async (orig) => ({
 
 import { GET, POST } from "@/app/api/chat/[lead]/route";
 import { GET as GET_IMAGE } from "@/app/api/chat/[lead]/image/[msg]/route";
+import { POST as TYPING } from "@/app/api/chat/[lead]/typing/route";
 
 const params = (lead: string) => ({ params: Promise.resolve({ lead }) });
 
@@ -92,6 +100,8 @@ beforeEach(() => {
   m.marked = [];
   m.uploaded = [];
   m.notified = [];
+  m.otherTyping = false;
+  m.typing = [];
   m.message = undefined;
   m.blob = null;
 });
@@ -105,6 +115,15 @@ describe("GET /api/chat/[lead]", () => {
     expect(body.messages).toHaveLength(2);
     expect(body.messages[1].image).toEqual({ url: "/api/chat/11111111-1111-1111-1111-111111111111/image/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2", width: 800, height: 600 });
     expect(m.marked).toEqual(["11111111-1111-1111-1111-111111111111:client"]);
+    // Галочки: прочитане другим боком має дату, ще не прочитане — null
+    expect(body.messages[0].readAt).toBe("2026-05-01T10:05:00.000Z");
+    expect(body.messages[1].readAt).toBeNull();
+    expect(body.typing).toBe(false);
+  });
+
+  it("інший бік друкує — чат про це знає", async () => {
+    m.otherTyping = true;
+    expect((await (await read("11111111-1111-1111-1111-111111111111")).json()).typing).toBe(true);
   });
 
   it("чужий чат — 403, нічого не позначаємо прочитаним", async () => {
@@ -214,5 +233,28 @@ describe("GET /api/chat/[lead]/image/[msg]", () => {
     m.message = { leadId: "11111111-1111-1111-1111-111111111111", imagePath: "chat/11111111-1111-1111-1111-111111111111/x" };
     m.blob = null;
     expect((await image("11111111-1111-1111-1111-111111111111", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2")).status).toBe(404);
+  });
+});
+
+describe("POST /api/chat/[lead]/typing", () => {
+  const typing = (lead: string, side?: string) =>
+    TYPING(new Request(`http://test/api/chat/${lead}/typing${side ? `?side=${side}` : ""}`, { method: "POST" }), params(lead));
+
+  it("власник чату — позначка «друкує» ставиться за його боком", async () => {
+    expect((await typing("11111111-1111-1111-1111-111111111111")).status).toBe(200);
+    expect(m.typing).toEqual(["11111111-1111-1111-1111-111111111111:client"]);
+  });
+
+  it("чужий чат чи «я майстер» без прав — 403, нічого не ставимо", async () => {
+    expect((await typing("22222222-2222-2222-2222-222222222222")).status).toBe(403);
+    expect((await typing("11111111-1111-1111-1111-111111111111", "master")).status).toBe(403);
+    expect(m.typing).toEqual([]);
+  });
+
+  it("забагато — тихо ігноруємо, без помилки", async () => {
+    m.limit = { ok: false, retryAfter: 30 };
+    const res = await typing("11111111-1111-1111-1111-111111111111");
+    expect(res.status).toBe(200);
+    expect(m.typing).toEqual([]);
   });
 });

@@ -13,6 +13,7 @@ import { connectLink } from "@/lib/clientBot";
 import { normalizeUaPhone } from "@/lib/phone";
 import { LIMITS, plainText, validName } from "@/lib/validate";
 import { verifiedEmail } from "@/lib/verifiedEmail";
+import { extrasOf } from "@/lib/profile";
 import { getClientLeads } from "@/db/leads";
 import { getReviewsByUser } from "@/db/reviews";
 import { claimDiscount, discountOffer, type DiscountOffer } from "@/db/discounts";
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
   let offer: DiscountOffer = null;
   if (userId) {
     const [repairs, written] = await Promise.all([getClientLeads(userId, profileEmail), getReviewsByUser(userId)]);
-    offer = discountOffer(repairs, written);
+    offer = discountOffer(repairs, written, extrasOf(profile).birthday);
   }
 
   let orderNo: number | undefined;

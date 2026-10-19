@@ -68,7 +68,7 @@ const cabinet = {
 };
 
 /** Усі сторінки кабінету підсвічують одну вкладку */
-const CABINET_PATHS = ["/kabinet", "/moi-remonty", "/moi-znyzhky"];
+const CABINET_PATHS = ["/kabinet", "/moi-remonty", "/moi-znyzhky", "/profil"];
 
 export default function BottomNav() {
   const pathname = usePathname();

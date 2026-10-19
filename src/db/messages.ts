@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNull, or } from "drizzle-orm";
 import { getDb } from "./index";
 import { leadMessages, leads, type LeadMessage } from "./schema";
 
@@ -60,6 +60,32 @@ export async function addMessage(
     imageWidth: msg.imageWidth ?? null,
     imageHeight: msg.imageHeight ?? null,
   });
+  // Надіслав — уже не друкує: «друкує…» не має висіти над готовим повідомленням
+  await setTyping(leadId, author, false);
+}
+
+/** Скільки після останнього натискання клавіші вважаємо, що людина ще друкує */
+export const TYPING_MS = 6_000;
+
+const typingColumn = (side: "client" | "master") => (side === "client" ? leads.clientTypingAt : leads.masterTypingAt);
+
+/** Позначити, що цей бік зараз друкує (або вже ні) */
+export async function setTyping(leadId: string, side: "client" | "master", typing = true): Promise<void> {
+  await getDb()
+    .update(leads)
+    .set(side === "client" ? { clientTypingAt: typing ? new Date() : null } : { masterTypingAt: typing ? new Date() : null })
+    .where(eq(leads.id, leadId));
+}
+
+/** Чи друкує зараз інший бік — для «Майстер друкує…» */
+export async function otherTyping(leadId: string, reader: "client" | "master"): Promise<boolean> {
+  const other = reader === "client" ? "master" : "client";
+  const [row] = await getDb()
+    .select({ id: leads.id })
+    .from(leads)
+    .where(and(eq(leads.id, leadId), gt(typingColumn(other), new Date(Date.now() - TYPING_MS))))
+    .limit(1);
+  return Boolean(row);
 }
 
 /** Одне повідомлення — щоб віддати фото лише тому, хто має доступ до заявки */

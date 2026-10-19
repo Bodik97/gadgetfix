@@ -5,6 +5,7 @@ import { discountOffer } from "@/db/discounts";
 import { getClientLeads } from "@/db/leads";
 import { getReviewsByUser } from "@/db/reviews";
 import { verifiedEmail } from "@/lib/verifiedEmail";
+import { extrasOf } from "@/lib/profile";
 
 /**
  * Чи чекає на клієнта, який зараз увійшов, знижка 5% за реєстрацію — вона діє
@@ -18,5 +19,5 @@ export async function signupDiscountWaiting(): Promise<boolean | null> {
     getClientLeads(user.id, verifiedEmail(user)),
     getReviewsByUser(user.id),
   ]);
-  return discountOffer(repairs, written)?.kind === "signup";
+  return discountOffer(repairs, written, extrasOf(user).birthday)?.kind === "signup";
 }
