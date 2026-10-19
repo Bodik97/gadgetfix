@@ -12,6 +12,7 @@ import TtnField from "./TtnField";
 import WarrantyField from "./WarrantyField";
 import { guessWarrantyDays, warrantyActive } from "@/data/warranty";
 import AssignButton from "./AssignButton";
+import { DISCOUNT_PERCENT, DISCOUNT_REASON } from "@/data/discounts";
 import { applyReviewDiscount } from "./actions";
 import styles from "./page.module.css";
 
@@ -69,7 +70,7 @@ export default function LeadCard({
   defaultOpen?: boolean;
   /** Чи підключив клієнт бота зі статусами; null — бот не налаштований, позначки немає */
   telegram?: boolean | null;
-  /** Знижка 15% за відгук: чекає, щоб її врахували, або вже врахована в цій заявці */
+  /** Знижка 10% за відгук: чекає, щоб її врахували, або вже врахована в цій заявці */
   discount?: { reviewId: string; applied: boolean } | null;
   /** Хто дивиться і як звати майстрів — щоб показати, хто взяв заявку */
   team: Team;
@@ -141,9 +142,15 @@ export default function LeadCard({
                 клієнт отримав
               </span>
             )}
-            {discount && (
+            {/* Знижка, закріплена за заявкою, — яскраво: ціну треба назвати вже з нею */}
+            {r.discount && (
+              <span className={styles.tagHot} title="Назвіть клієнту ціну вже зі знижкою">
+                −{DISCOUNT_PERCENT[r.discount]}% {DISCOUNT_REASON[r.discount]}
+              </span>
+            )}
+            {discount && !r.discount && (
               <span className={styles.tagMine} title="Клієнт лишив відгук із фото до і після">
-                {discount.applied ? "знижку −15% враховано" : "знижка −15% за відгук"}
+                {discount.applied ? "знижку −10% враховано" : "знижка −10% за відгук"}
               </span>
             )}
             {/* Чат і доставка ховаються в згорнутій картці — сигнал про них лишаємо зверху */}
@@ -206,6 +213,20 @@ export default function LeadCard({
 
       <NoteField id={r.id} events={events} />
 
+      {r.discount && (
+        <div className={styles.discountRow}>
+          <span className={styles.hint}>
+            <strong>
+              Знижка {DISCOUNT_PERCENT[r.discount]}% {DISCOUNT_REASON[r.discount]}
+            </strong>{" "}
+            — клієнт застосував її в замовленні. Назвіть ціну вже зі знижкою
+            {r.price !== null
+              ? `: якщо ${r.price} ₴ — без знижки, клієнту — ${Math.round((r.price * (100 - DISCOUNT_PERCENT[r.discount])) / 100)} ₴.`
+              : "."}
+          </span>
+        </div>
+      )}
+
       <MoneyFields
         id={r.id}
         price={r.price}
@@ -216,12 +237,12 @@ export default function LeadCard({
         hint={priceHint}
       />
 
-      {discount && !discount.applied && (
+      {discount && !discount.applied && !r.discount && (
         <form action={applyReviewDiscount} className={styles.discountRow}>
           <input type="hidden" name="reviewId" value={discount.reviewId} />
           <input type="hidden" name="leadId" value={r.id} />
           <span className={styles.hint}>
-            Клієнт має знижку 15% за відгук. Зменшіть ціну й відмітьте — знижка одноразова.
+            Клієнт має знижку 10% за відгук. Зменшіть ціну й відмітьте — знижка одноразова.
           </span>
           <button type="submit" className="btn btn-ghost">Знижку враховано</button>
         </form>

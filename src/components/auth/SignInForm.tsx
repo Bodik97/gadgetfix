@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSignIn, useSignUp } from "@clerk/nextjs";
 import FormError from "@/components/FormError";
+import { startsWithSignUp } from "./authStore";
 import styles from "./SignInForm.module.css";
 
 /** credentials — пошта+пароль; code — підтвердження пошти при реєстрації; codeLogin — вхід без пароля */
@@ -14,6 +15,22 @@ type Mode = "signin" | "signup";
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 const NEED_CONSENT = "Позначте згоду на обробку персональних даних — без неї не можемо створити кабінет.";
 const MIN_PASSWORD = 8;
+
+type FieldErrors = { email?: string; password?: string; agree?: string };
+
+/** Помилка під полем; id збігається з aria-describedby поля */
+function FieldError({ id, text }: { id: string; text?: string }) {
+  if (!text) return null;
+  return (
+    <span id={`${id}-note`} className={styles.fieldError} role="alert">
+      {text}
+    </span>
+  );
+}
+
+/** Стан поля для стилю й читача екрана: червона рамка й посилання на помилку */
+const invalid = (id: string, text?: string) =>
+  text ? ({ "aria-invalid": true, "aria-describedby": `${id}-note` } as const) : {};
 
 /** Код помилки Clerk лежить у різних місцях залежно від методу — дістаємо звідусіль */
 function errorCode(error: unknown): string {
@@ -36,7 +53,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("credentials");
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(() => (startsWithSignUp() ? "signup" : "signin"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -45,6 +62,9 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  // Помилки під конкретними полями — щоб було видно, що саме виправити
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
   // Згода на обробку персональних даних — обовʼязкова для будь-якого способу входу
   const [agree, setAgree] = useState(false);
   // Код просили після правильного пароля (новий пристрій): тоді signIn скидати не можна
@@ -57,17 +77,38 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
     router.refresh();
   };
 
+  // Щойно зареєструвався — одразу у форму замовлення, де чекає знижка 5%
+  const goToWelcome = () => {
+    onDone?.();
+    router.push("/moi-remonty?vitayemo=1");
+    router.refresh();
+  };
+
   /** Вхід паролем; якщо акаунта немає — реєструємо з цим же паролем */
   const submitCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     const mail = email.trim();
 
-    if (!EMAIL_RE.test(mail)) {
-      setError("Перевірте адресу пошти — здається, у ній помилка.");
-      return;
-    }
-    if (password.length < MIN_PASSWORD) {
-      setError(`Пароль має бути щонайменше ${MIN_PASSWORD} символів.`);
+    const found: FieldErrors = {
+      email: !mail
+        ? "Впишіть пошту — на неї прийде код."
+        : EMAIL_RE.test(mail)
+          ? undefined
+          : "Перевірте адресу пошти — здається, у ній помилка.",
+      password: !password
+        ? mode === "signup"
+          ? `Придумайте пароль — щонайменше ${MIN_PASSWORD} символів.`
+          : "Впишіть пароль."
+        : password.length < MIN_PASSWORD
+          ? `Пароль має бути щонайменше ${MIN_PASSWORD} символів.`
+          : undefined,
+      agree: mode === "signup" && !agree ? NEED_CONSENT : undefined,
+    };
+    const first = (["email", "password", "agree"] as const).find((k) => found[k]);
+    setFieldErrors(found);
+    setError("");
+    if (first) {
+      document.getElementById(`v-${first}`)?.focus();
       return;
     }
     if (mode === "signup") {
@@ -115,9 +156,16 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
         return;
       }
 
+      // Clerk відповів так, що код не розібрати, — не кажемо «акаунта немає», бо це може бути неправдою
+      if (!code) {
+        console.error("[signIn] невідома помилка Clerk:", signInError);
+        setError("Не вдалося увійти. Спробуйте ще раз або увійдіть кодом на пошту.");
+        return;
+      }
+
       // Акаунт є, але пароля в нього немає: реєструвався до того, як ми ввели паролі.
       // Пускаємо кодом — пароль він задасть у себе на сторінці.
-      if (code && code !== "form_identifier_not_found") {
+      if (code !== "form_identifier_not_found") {
         // Після невдалої спроби signIn лишається у стані помилки — інакше код не надішлеться
         signIn.reset();
         const { error: sendError } = await signIn.emailCode.sendCode({ emailAddress: mail });
@@ -143,11 +191,6 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
 
   /** Новий акаунт: пошта, пароль, імʼя й обовʼязкова згода; далі — код на пошту */
   const register = async (mail: string) => {
-    if (!agree) {
-      setError(NEED_CONSENT);
-      return;
-    }
-
     setBusy(true);
     setError("");
     try {
@@ -161,10 +204,14 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
 
       if (created?.error) {
         const createCode = errorCode(created.error);
+        // Людина вже з нами — перемикаємо на «Вхід», пошту й пароль не губимо
+        if (createCode === "form_identifier_exists") {
+          setMode("signin");
+          setNotice("Ви вже з нами! Натисніть «Увійти» — якщо знижку ще не використано, вона чекає в кабінеті.");
+          return;
+        }
         setError(
-          createCode === "form_identifier_exists"
-            ? "Акаунт із цією поштою вже є. Перейдіть на «Вхід»."
-            : createCode === "form_password_pwned"
+          createCode === "form_password_pwned"
               ? "Цей пароль засвітився у витоках даних. Придумайте інший."
               : createCode === "form_password_length_too_short"
                 ? `Пароль має бути щонайменше ${MIN_PASSWORD} символів.`
@@ -246,7 +293,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
     setError("");
     const { error: ssoError } = await signIn.sso({
       strategy: "oauth_google",
-      redirectUrl: "/kabinet",
+      redirectUrl: mode === "signup" ? "/moi-remonty?vitayemo=1" : "/kabinet",
       redirectCallbackUrl: "/sso-callback",
     });
     if (ssoError) {
@@ -268,7 +315,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
       if (isNew) {
         await signUp.verifications.verifyEmailCode({ code: code.trim() });
         if (signUp.status !== "complete") throw new Error("incomplete");
-        await signUp.finalize({ navigate: goToAccount });
+        await signUp.finalize({ navigate: goToWelcome });
       } else {
         await signIn.emailCode.verifyCode({ code: code.trim() });
         if (signIn.status !== "complete") throw new Error("incomplete");
@@ -295,7 +342,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
           {notice && <div className={styles.notice}>{notice}</div>}
 
           <p className={styles.sentTo}>
-            {isNew ? "Підтвердіть пошту — надіслали код на " : "Надіслали код на "}
+            {isNew ? "Майже готово! Введіть код із листа — і знижка ваша. Надіслали на " : "Надіслали код на "}
             <strong>{email}</strong>
           </p>
 
@@ -322,7 +369,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
           <FormError>{error}</FormError>
 
           <button type="submit" className="btn btn-accent btn-lg" disabled={busy}>
-            {busy ? "Перевіряємо…" : isNew ? "Завершити реєстрацію" : "Увійти"}
+            {busy ? "Перевіряємо…" : isNew ? "Активувати −5%" : "Увійти"}
           </button>
 
           <div className={styles.actions}>
@@ -342,6 +389,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
     setMode(next);
     setError("");
     setNotice("");
+    setFieldErrors({});
   };
 
   return (
@@ -357,8 +405,19 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
 
       <form onSubmit={submitCredentials} className={styles.form} noValidate>
         {mode === "signup" && (
+          <div className={styles.bonus}>
+            <strong>−5%</strong>
+            <span>на перший ремонт — одразу після реєстрації</span>
+          </div>
+        )}
+
+        {notice && <div className={styles.notice}>{notice}</div>}
+
+        {mode === "signup" && (
           <div className={styles.row}>
-            <label htmlFor="v-name">Імʼя</label>
+            <label htmlFor="v-name">
+              Імʼя <span className={styles.optional}>— не обовʼязково</span>
+            </label>
             <input
               id="v-name"
               className="field"
@@ -375,42 +434,66 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
           <label htmlFor="v-email">Пошта</label>
           <input
             id="v-email"
-            className="field"
+            className={fieldErrors.email ? "field field-invalid" : "field"}
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
             value={email}
+            {...invalid("v-email", fieldErrors.email)}
             onChange={(e) => {
               setEmail(e.target.value);
               setError("");
+              setFieldErrors((f) => ({ ...f, email: undefined }));
             }}
           />
+          <FieldError id="v-email" text={fieldErrors.email} />
         </div>
 
         <div className={styles.row}>
           <label htmlFor="v-password">Пароль</label>
-          <input
-            id="v-password"
-            className="field"
-            type="password"
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            placeholder="Щонайменше 8 символів"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError("");
-            }}
-          />
+          <div className={styles.passWrap}>
+            <input
+              id="v-password"
+              className={fieldErrors.password ? "field field-invalid" : "field"}
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              placeholder="Щонайменше 8 символів"
+              value={password}
+              {...invalid("v-password", fieldErrors.password)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+                setFieldErrors((f) => ({ ...f, password: undefined }));
+              }}
+            />
+            <button
+              type="button"
+              className={styles.passToggle}
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Сховати пароль" : "Показати пароль"}
+              aria-pressed={showPassword}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+                <circle cx="12" cy="12" r="3" />
+                {showPassword && <path d="M4 4l16 16" />}
+              </svg>
+            </button>
+          </div>
+          <FieldError id="v-password" text={fieldErrors.password} />
         </div>
 
         {mode === "signup" && (
           <label className={styles.consent}>
             <input
+              id="v-agree"
               type="checkbox"
               checked={agree}
+              {...invalid("v-agree", fieldErrors.agree)}
               onChange={(e) => {
                 setAgree(e.target.checked);
                 setError("");
+                setFieldErrors((f) => ({ ...f, agree: undefined }));
               }}
             />
             <span>
@@ -421,6 +504,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
             </span>
           </label>
         )}
+        {mode === "signup" && <FieldError id="v-agree" text={fieldErrors.agree} />}
 
         <FormError>{error}</FormError>
 
@@ -428,7 +512,7 @@ export default function SignInForm({ onDone, bare }: Props = {}) {
         <div id="clerk-captcha" />
 
         <button type="submit" className="btn btn-accent btn-lg" disabled={busy}>
-          {busy ? (mode === "signup" ? "Створюємо…" : "Заходимо…") : mode === "signup" ? "Створити акаунт" : "Увійти"}
+          {busy ? (mode === "signup" ? "Створюємо…" : "Заходимо…") : mode === "signup" ? "Зареєструватись і отримати −5%" : "Увійти"}
         </button>
 
         <div className={styles.or} aria-hidden="true">

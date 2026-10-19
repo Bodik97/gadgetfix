@@ -13,6 +13,10 @@ import { connectLink } from "@/lib/clientBot";
 import { normalizeUaPhone } from "@/lib/phone";
 import { LIMITS, plainText, validName } from "@/lib/validate";
 import { verifiedEmail } from "@/lib/verifiedEmail";
+import { getClientLeads } from "@/db/leads";
+import { getReviewsByUser } from "@/db/reviews";
+import { claimDiscount, discountOffer, type DiscountOffer } from "@/db/discounts";
+import { DISCOUNT_PERCENT, DISCOUNT_REASON, type DiscountKind } from "@/data/discounts";
 
 const SOURCES = ["landing", "model", "services", "mail-in"] as const;
 type Source = (typeof SOURCES)[number];
@@ -28,10 +32,16 @@ export type Lead = {
   city?: string;
   branch?: string;
   source: Source;
+  /** Клієнт натиснув «Скористатись знижкою 5%» — сервер ще перевірить, чи вона йому належить */
+  useDiscount?: boolean;
 };
 
-function telegramText(lead: Lead, orderNo?: number): string {
-  const head = orderNo ? `<b>Нова заявка №${orderNo}</b>` : "<b>Нова заявка</b>";
+function telegramText(lead: Lead, orderNo?: number, discount?: DiscountKind | null): string {
+  const title = orderNo ? `<b>Нова заявка №${orderNo}</b>` : "<b>Нова заявка</b>";
+  // Знижку — одразу під заголовком, щоб майстер назвав ціну вже з нею
+  const head = discount
+    ? `${title}\n🏷 <b>ЗНИЖКА −${DISCOUNT_PERCENT[discount]}% ${DISCOUNT_REASON[discount]}</b> — назвіть ціну вже зі знижкою`
+    : title;
 
   const rows: [string, string | undefined][] = [
     ["Ім'я", lead.name],
@@ -107,8 +117,16 @@ export async function POST(request: Request) {
 
   const source: Source = SOURCES.includes(lead.source) ? lead.source : "landing";
 
+  // Знижку рахуємо до вставки: інакше нова заявка вже «з'їла» б перший ремонт
+  let offer: DiscountOffer = null;
+  if (userId) {
+    const [repairs, written] = await Promise.all([getClientLeads(userId, profileEmail), getReviewsByUser(userId)]);
+    offer = discountOffer(repairs, written);
+  }
+
   let orderNo: number | undefined;
   let leadId: string | undefined;
+  let discount: DiscountKind | null = null;
 
   try {
     const [row] = await getDb()
@@ -138,6 +156,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Не вдалося зберегти заявку" }, { status: 500 });
   }
 
+  // Заявка вже збережена — збій зі знижкою не має її губити, майстер побачить заявку без мітки
+  if (leadId && offer) {
+    try {
+      discount = await claimDiscount(leadId, offer, lead.useDiscount === true);
+    } catch (e) {
+      console.error("[lead] знижку не закріплено:", e);
+    }
+  }
+
   // Сповіщаємо про кожну заявку, не лише анонімну: заявка о 21:00 інакше
   // пролежить до ранку, бо майстер не тримає адмінку відкритою.
   // Push на телефони; ніхто не прийняв — Telegram, як раніше.
@@ -145,12 +172,12 @@ export async function POST(request: Request) {
     const what = [lead.model, lead.service].map((v) => clean(v)).find(Boolean);
     await alertMasters(
       {
-        title: `Нова заявка №${orderNo}`,
+        title: discount ? `Нова заявка №${orderNo} · −${DISCOUNT_PERCENT[discount]}%` : `Нова заявка №${orderNo}`,
         body: [name, what, phone].filter(Boolean).join(" · "),
         url: leadLink(orderNo, leadId),
         tag: `lead-${leadId}`,
       },
-      telegramText({ ...lead, name, phone: phone ?? undefined, email: profileEmail ?? undefined }, orderNo),
+      telegramText({ ...lead, name, phone: phone ?? undefined, email: profileEmail ?? undefined }, orderNo, discount),
     );
 
     // Нагадування, доки заявку не візьмуть. Збій тут не має зачіпати клієнта:
@@ -168,5 +195,5 @@ export async function POST(request: Request) {
     ? connectLink({ id: leadId })
     : null;
 
-  return NextResponse.json({ ok: true, telegram });
+  return NextResponse.json({ ok: true, telegram, orderNo: orderNo ?? null, discount });
 }

@@ -694,7 +694,7 @@ describe("deleteReview", () => {
   });
 });
 
-describe("знижка 15% за відгук", () => {
+describe("знижка 10% за відгук", () => {
   const REVIEW = { id: "r1", leadId: LEAD.id, beforePath: "reviews/b", afterPath: "reviews/a", discountAt: null };
   const updateOf = () => fake.writes().find((q) => q.sql.startsWith('update "reviews"'))!;
 
@@ -737,7 +737,7 @@ describe("знижка 15% за відгук", () => {
   it("врахована знижка пишеться в хроніку заявки лише раз", async () => {
     await actions.applyReviewDiscount(form({ reviewId: "r1", leadId: LEAD.id }));
     expect(updateOf().sql).toMatch(/"discount_at" is not null and "reviews"\."discount_lead_id" is null/);
-    expect(writesText().some((t) => t.startsWith('insert into "lead_events"') && t.includes("знижку 15%"))).toBe(true);
+    expect(writesText().some((t) => t.startsWith('insert into "lead_events"') && t.includes("знижку 10%"))).toBe(true);
 
     fake.reset();
     claims.rows = [];

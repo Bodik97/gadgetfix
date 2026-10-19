@@ -137,7 +137,7 @@ export default function ReviewForm({ leadId }: { leadId?: string }) {
               <BeforeAfterPicker value={photos} onChange={setPhotos} />
               <p className={styles.bonus}>
                 Ремонтувались через сайт? Додайте обидва фото — після перевірки відгуку отримаєте{" "}
-                <strong>знижку 15%</strong> на наступний ремонт гаджетів.
+                <strong>знижку 10%</strong> на наступний ремонт гаджетів.
               </p>
             </div>
 

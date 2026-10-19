@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthState } from "./auth/authStore";
 import BookingForm from "./BookingForm";
 import Logo from "./Logo";
 import { services } from "@/data/services";
@@ -21,6 +23,8 @@ export default function BookingProvider({ children }: { children: React.ReactNod
   const [open, setOpen] = useState(false);
   const [preset, setPreset] = useState<{ service?: string; model?: string }>({});
   const ref = useRef<HTMLDialogElement>(null);
+  const router = useRouter();
+  const { isSignedIn } = useAuthState();
 
   // Нативний <dialog> сам тримає фокус усередині й закривається на Esc
   useEffect(() => {
@@ -40,6 +44,14 @@ export default function BookingProvider({ children }: { children: React.ReactNod
   }, [open]);
 
   const openWith: Opener = (p) => {
+    // Хто увійшов, замовляє з кабінету: контакти вже є, і там видно його знижку
+    if (isSignedIn) {
+      const q = new URLSearchParams();
+      if (p?.service) q.set("service", p.service);
+      if (p?.model) q.set("model", p.model);
+      router.push(q.size ? `/moi-remonty?${q}` : "/moi-remonty");
+      return;
+    }
     setPreset(p ?? {});
     setOpen(true);
   };
@@ -73,7 +85,7 @@ export default function BookingProvider({ children }: { children: React.ReactNod
             <h2 id="booking-title" className={styles.title}>
               Залиште номер&nbsp;— передзвонимо
             </h2>
-            <p className={styles.lead}>Підкажемо ціну й&nbsp;термін. Діагностика безкоштовна.</p>
+            <p className={styles.lead}>Підкажемо ціну й&nbsp;термін. Діагностика безкоштовна, якщо ремонтуємо в&nbsp;нас.</p>
           </div>
 
           {open && (

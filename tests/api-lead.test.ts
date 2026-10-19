@@ -16,6 +16,10 @@ const m = vi.hoisted(() => ({
   pushed: [] as { title: string; body: string; url: string }[],
   escalated: [] as string[],
   startFails: false,
+  // Знижки: попередні заявки й відгуки клієнта та що закріпили за новою заявкою
+  priorLeads: [] as { status: string }[],
+  reviews: [] as Record<string, unknown>[],
+  claimed: [] as { leadId: string; offer: unknown; wantSignup: boolean }[],
 }));
 
 vi.mock("@/lib/rateLimit", () => ({
@@ -41,6 +45,17 @@ vi.mock("@/db", () => ({
       }),
     }),
   }),
+}));
+
+vi.mock("@/db/leads", () => ({ getClientLeads: async () => m.priorLeads }));
+vi.mock("@/db/reviews", () => ({ getReviewsByUser: async () => m.reviews }));
+vi.mock("@/db/discounts", async (orig) => ({
+  ...(await orig<typeof import("@/db/discounts")>()),
+  claimDiscount: async (leadId: string, offer: { kind: string } | null, wantSignup: boolean) => {
+    m.claimed.push({ leadId, offer, wantSignup });
+    if (offer?.kind === "review") return "review";
+    return offer?.kind === "signup" && wantSignup ? "signup" : null;
+  },
 }));
 
 vi.mock("@/lib/telegram", async (orig) => ({
@@ -87,6 +102,9 @@ beforeEach(() => {
   m.pushed = [];
   m.escalated = [];
   m.startFails = false;
+  m.priorLeads = [];
+  m.reviews = [];
+  m.claimed = [];
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -95,7 +113,7 @@ describe("POST /api/lead: що приймаємо", () => {
     const res = await post({ name: " Олег ", phone: "073 315 02 38", source: "model", model: "iPhone 13" });
     expect(res.status).toBe(200);
     // telegram: null — клієнтський бот у тестах не налаштований
-    expect(await res.json()).toEqual({ ok: true, telegram: null });
+    expect(await res.json()).toEqual({ ok: true, telegram: null, orderNo: 42, discount: null });
 
     expect(m.inserted).toHaveLength(1);
     expect(m.inserted[0]).toMatchObject({
@@ -235,5 +253,55 @@ describe("POST /api/lead: збій бази", () => {
     expect(res.status).toBe(500);
     expect(m.notified).toHaveLength(1);
     expect(m.notified[0]).toContain("0733150238");
+  });
+});
+
+describe("POST /api/lead: знижки", () => {
+  const order = { name: "Олег", phone: "073 315 02 38", source: "landing", service: "Заміна екрана" };
+
+  it("без входу знижки немає, навіть якщо попросили", async () => {
+    const res = await post({ ...order, useDiscount: true });
+    expect((await res.json()).discount).toBeNull();
+    expect(m.claimed).toHaveLength(0);
+  });
+
+  it("перший ремонт і «Скористатись» — 5% закріплено, майстер бачить це в сповіщенні", async () => {
+    m.userId = "user_1";
+    const res = await post({ ...order, useDiscount: true });
+    expect(await res.json()).toMatchObject({ orderNo: 42, discount: "signup" });
+    expect(m.claimed[0]).toMatchObject({ leadId: "lead-42", offer: { kind: "signup" }, wantSignup: true });
+    expect(m.notified[0]).toContain("ЗНИЖКА −5% за реєстрацію");
+    expect(m.pushed[0].title).toBe("Нова заявка №42 · −5%");
+  });
+
+  it("5% не натиснули — заявка без знижки", async () => {
+    m.userId = "user_1";
+    const res = await post(order);
+    expect((await res.json()).discount).toBeNull();
+    expect(m.notified[0]).not.toContain("ЗНИЖКА");
+  });
+
+  it("уже ремонтувався — 5% не дають, хоч би що прийшло з браузера", async () => {
+    m.userId = "user_1";
+    m.priorLeads = [{ status: "done" }];
+    const res = await post({ ...order, useDiscount: true });
+    expect((await res.json()).discount).toBeNull();
+  });
+
+  it("відхилена заявка не з'їдає знижку за реєстрацію", async () => {
+    m.userId = "user_1";
+    m.priorLeads = [{ status: "rejected" }];
+    const res = await post({ ...order, useDiscount: true });
+    expect((await res.json()).discount).toBe("signup");
+  });
+
+  it("невикористана знижка за відгук застосовується сама", async () => {
+    m.userId = "user_1";
+    m.priorLeads = [{ status: "done" }];
+    m.reviews = [{ id: "r1", discountAt: new Date(), discountLeadId: null }];
+    const res = await post(order);
+    expect((await res.json()).discount).toBe("review");
+    expect(m.claimed[0].offer).toEqual({ kind: "review", reviewId: "r1" });
+    expect(m.notified[0]).toContain("ЗНИЖКА −10% за відгук");
   });
 });

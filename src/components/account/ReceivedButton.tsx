@@ -10,7 +10,7 @@ import styles from "./ReceivedButton.module.css";
 /**
  * «Я отримав гаджет» у картці готового ремонту. Після підтвердження одразу
  * пропонуємо відгук: саме зараз враження найсвіжіші, а за відгук із фото
- * клієнт отримує −15% на наступний ремонт.
+ * клієнт отримує −10% на наступний ремонт.
  */
 export default function ReceivedButton({ id, received }: { id: string; received: boolean }) {
   const [pending, start] = useTransition();
@@ -52,7 +52,7 @@ export default function ReceivedButton({ id, received }: { id: string; received:
         </div>
       ) : (
         <div className={styles.offer}>
-          <p className={styles.offerText}>Пристрій уже у вас? Підтвердьте — майстер закриє заявку, а ви отримаєте змогу лишити відгук за −15%.</p>
+          <p className={styles.offerText}>Пристрій уже у вас? Підтвердьте — майстер закриє заявку, а ви отримаєте змогу лишити відгук за −10%.</p>
           <button type="button" className={styles.button} onClick={confirm} disabled={pending}>
             {pending ? <span className={styles.spinner} aria-hidden="true" /> : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -75,7 +75,7 @@ export default function ReceivedButton({ id, received }: { id: string; received:
               </h2>
               <p className={styles.dialogText}>
                 Розкажіть, як усе пройшло, і додайте фото до і після — після перевірки відгуку
-                отримаєте <strong>−15% на наступний ремонт</strong>.
+                отримаєте <strong>−10% на наступний ремонт</strong>.
               </p>
             </div>
             <button type="button" className={styles.close} onClick={close} aria-label="Закрити — лишу відгук пізніше">

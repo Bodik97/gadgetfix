@@ -7,7 +7,11 @@ import { bookingModels } from "@/data/landing";
 import ServiceSelect from "../ServiceSelect";
 import { site } from "@/data/site";
 import FormError from "../FormError";
-import { LIMITS, plainText } from "@/lib/validate";
+import FormField, { fieldState } from "../FormField";
+import PhoneInput from "../PhoneInput";
+import DiscountTicket from "./DiscountTicket";
+import { DISCOUNT_PERCENT, type DiscountKind } from "@/data/discounts";
+import { LIMITS, phoneProblem, plainText } from "@/lib/validate";
 import styles from "./QuickOrder.module.css";
 
 /**
@@ -16,8 +20,22 @@ import styles from "./QuickOrder.module.css";
  * «Заявку прийнято» не зникало разом зі старим.
  */
 let justSent = false;
+/** Номер заявки й закріплена знижка — для того ж підтвердження після оновлення */
+let lastResult: Result = { orderNo: null, discount: null };
 
-export default function QuickOrder({ compact }: { compact?: boolean }) {
+type Result = { orderNo: number | null; discount: DiscountKind | null };
+
+export default function QuickOrder({
+  compact,
+  offer = null,
+  knownPhone = null,
+}: {
+  compact?: boolean;
+  /** Яка знижка чекає на це замовлення: 5% забирають кнопкою, 10% діє сама */
+  offer?: DiscountKind | null;
+  /** Телефон із попередніх заявок — щоб не вводити вдруге */
+  knownPhone?: string | null;
+}) {
   const { user } = useUser();
   const router = useRouter();
   const params = useSearchParams();
@@ -32,6 +50,12 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(justSent);
+  const [result, setResult] = useState<Result>(lastResult);
+
+  // ?znyzhka=1 — прийшли з «Скористатись» на сторінці знижок, ?vitayemo=1 — щойно зареєструвались
+  const [applied, setApplied] = useState(params.get("znyzhka") === "1");
+  const celebrate = params.get("vitayemo") === "1" && offer === "signup";
+  const discountOn = offer === "review" || (offer === "signup" && applied);
 
   // У списку моделі згруповані («iPhone 13 / 14»), а зі сторінки моделі приходить
   // точна назва — додаємо її окремим рядком, інакше поле показувало б «Оберіть модель»
@@ -47,13 +71,25 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
   }, [preset]);
 
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
-  const phone = user?.primaryPhoneNumber?.phoneNumber ?? "";
+  const profilePhone = user?.primaryPhoneNumber?.phoneNumber ?? "";
+  // Без телефону майстрові нікому передзвонити й назвати ціну — питаємо його тут
+  const [typedPhone, setTypedPhone] = useState(knownPhone ?? "");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const phone = profilePhone || typedPhone;
   const contact = phone || email;
 
   const send = async () => {
     if (!service && !note.trim()) {
       setError("Оберіть послугу або опишіть, що трапилось.");
       return;
+    }
+    if (!profilePhone) {
+      const problem = phoneProblem(typedPhone);
+      if (problem) {
+        setPhoneError(problem);
+        document.getElementById("qo-phone")?.focus();
+        return;
+      }
     }
 
     setSending(true);
@@ -65,15 +101,19 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
         // Контакти беремо з профілю — клієнт уже авторизований
         body: JSON.stringify({
           name: user?.firstName ?? email,
-          phone: phone || "—",
+          phone,
           email,
           model,
           service,
           problem: note,
           source: "landing",
+          useDiscount: offer === "signup" && applied,
         }),
       });
       if (!res.ok) throw new Error(String(res.status));
+      const data = (await res.json()) as Partial<Result>;
+      lastResult = { orderNo: data.orderNo ?? null, discount: data.discount ?? null };
+      setResult(lastResult);
 
       setSent(true);
       // Лише з порожнього стану: там оновлення сторінки замінює цю форму новою
@@ -99,7 +139,14 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
           </span>
 
           <div>
-            <div className={styles.doneTitle}>Заявку прийнято</div>
+            <div className={styles.doneTitle}>
+              {result.orderNo ? `Заявку №${result.orderNo} прийнято` : "Заявку прийнято"}
+            </div>
+            {result.discount && (
+              <p className={styles.doneDiscount}>
+                Знижку {DISCOUNT_PERCENT[result.discount]}% закріплено за замовленням — майстер назве ціну вже з нею.
+              </p>
+            )}
             <p className={styles.doneText}>
               Зв&apos;яжемося {contact ? <>з вами ({contact})</> : "з вами"} протягом 25 хвилин.
               Заявка вже вгорі цієї сторінки — там буде видно кожен етап.
@@ -113,6 +160,7 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
           onClick={() => {
             setSent(false);
             justSent = false;
+            lastResult = { orderNo: null, discount: null };
             setService("");
             setModel("");
             setNote("");
@@ -130,9 +178,9 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
         {/* У порожньому стані заголовок дає сама секція — другий тут зайвий */}
         {!compact && <h3 className={styles.title}>Ще один ремонт</h3>}
         <p className={styles.lead}>
-          Ваші контакти вже є — оберіть послугу й натисніть «Замовити». Решту спитаємо по
-          телефону. Діагностика безкоштовна; ремонт — за передоплатою за деталь після
-          погодження ціни.
+          {profilePhone ? "Ваші контакти вже є — оберіть послугу" : "Оберіть послугу"} й натисніть
+          «Замовити». Решту спитаємо по телефону. Діагностика безкоштовна, якщо ремонтуємо в нас;
+          ремонт — за передоплатою за деталь після погодження ціни.
         </p>
       </div>
 
@@ -185,6 +233,37 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
         />
       </div>
 
+      {!profilePhone && (
+        <FormField
+          id="qo-phone"
+          label="Телефон"
+          hint="Передзвонимо й назвемо ціну. Після +38 починайте з&nbsp;нуля."
+          error={phoneError}
+        >
+          <PhoneInput
+            {...fieldState("qo-phone", phoneError)}
+            value={typedPhone}
+            onChange={(v) => {
+              setTypedPhone(v);
+              if (phoneError) setPhoneError(phoneProblem(v));
+            }}
+            onBlur={() => typedPhone && setPhoneError(phoneProblem(typedPhone))}
+          />
+        </FormField>
+      )}
+
+      {offer && (
+        <div className={styles.wide}>
+          <DiscountTicket
+            kind={offer}
+            applied={applied}
+            onApply={() => setApplied(true)}
+            onCancel={() => setApplied(false)}
+            celebrate={celebrate}
+          />
+        </div>
+      )}
+
       <FormError>{error}</FormError>
 
       <button
@@ -193,7 +272,7 @@ export default function QuickOrder({ compact }: { compact?: boolean }) {
         className={`btn btn-accent btn-lg ${styles.submit}`}
         disabled={sending}
       >
-        {sending ? "Надсилаємо…" : "Замовити"}
+        {sending ? "Надсилаємо…" : discountOn && offer ? `Замовити зі знижкою ${DISCOUNT_PERCENT[offer]}%` : "Замовити"}
       </button>
     </div>
   );

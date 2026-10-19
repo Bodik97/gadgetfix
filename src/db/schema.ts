@@ -27,6 +27,12 @@ export const leadStatus = pgEnum("lead_status", [
   "rejected",
 ]);
 
+/**
+ * Знижка, закріплена за заявкою в момент замовлення: signup — 5% на перший
+ * ремонт за реєстрацію, review — 10% за схвалений відгук. Одна на заявку.
+ */
+export const leadDiscount = pgEnum("lead_discount", ["signup", "review"]);
+
 export const leads = pgTable(
   "leads",
   {
@@ -107,6 +113,9 @@ export const leads = pgTable(
     /** До якої дати діє гарантія. Ставиться при видачі; NULL — ще не видано або без гарантії. */
     warrantyUntil: timestamp("warranty_until", { withTimezone: true }),
 
+    /** Яку знижку майстер має врахувати в ціні. NULL — без знижки. */
+    discount: leadDiscount("discount"),
+
     source: leadSource("source").notNull(),
     status: leadStatus("status").notNull().default("new"),
 
@@ -159,7 +168,7 @@ export const reviews = pgTable(
 
     /** Виданий ремонт клієнта на момент відгуку. NULL — ремонту через сайт не було, знижки немає. */
     leadId: uuid("lead_id"),
-    /** Коли нарахували знижку 15% — при схваленні відгуку з обома фото й виданим ремонтом */
+    /** Коли нарахували знижку 10% — при схваленні відгуку з обома фото й виданим ремонтом */
     discountAt: timestamp("discount_at", { withTimezone: true }),
     /** Заявка, на яку майстер застосував знижку. NULL — знижка ще чекає. */
     discountLeadId: uuid("discount_lead_id"),

@@ -256,7 +256,7 @@ function BookingFormInner({
         </button>
 
         <p className={styles.note}>
-          Передзвонимо до 25&nbsp;хвилин у&nbsp;робочий час. Діагностика безкоштовна.{" "}
+          Передзвонимо до 25&nbsp;хвилин у&nbsp;робочий час. Діагностика безкоштовна, якщо ремонтуємо в&nbsp;нас.{" "}
           <a href="/personalni-dani" target="_blank" rel="noopener">
             Як ми зберігаємо дані
           </a>

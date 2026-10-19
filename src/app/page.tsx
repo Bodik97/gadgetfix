@@ -8,10 +8,10 @@ import FaqAside from "@/components/FaqAside";
 import HeroStatus from "@/components/HeroStatus";
 import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
-import ReviewForm from "@/components/ReviewForm";
 import ReviewShowcase from "@/components/ReviewShowcase";
 import WorkSlider from "@/components/WorkSlider";
 import ParcelDecor from "@/components/ParcelDecor";
+import RegisterBonus from "@/components/RegisterBonus";
 import StatusCheck from "@/components/StatusCheck";
 import { getPublishedReviews, getReviewStats } from "@/db/reviews";
 import { getWorks } from "@/db/works";
@@ -293,16 +293,7 @@ export default async function Home() {
           {hasRealReviews && <ReviewShowcase reviews={shownReviews} stats={reviewStats} />}
 
 
-          <div className={styles.reviewFormWrap}>
-            <div>
-              <h3 className={styles.reviewFormTitle}>Розкажіть, як усе пройшло</h3>
-              <p className={styles.reviewFormText}>
-                Відгуки лишають клієнти з акаунтом. Це найчесніший спосіб показати
-                новим людям, чого чекати від сервісу.
-              </p>
-            </div>
-            <ReviewForm />
-          </div>
+          <RegisterBonus />
         </div>
       </section>
 

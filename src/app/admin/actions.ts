@@ -10,6 +10,7 @@ import { devices, leadMessages, leads, pushSubscriptions, reviews, works, type L
 import { STATUS_OPTIONS } from "@/db/leads";
 import { guessWarrantyDays, isWarrantyTerm, warrantyEnd } from "@/data/warranty";
 import { addEvent, getHandoverDate, getLeadById, registerDevice } from "@/db/events";
+import { releaseDiscount } from "@/db/discounts";
 import { addExpense, EXPENSE_CATEGORIES, removeExpense } from "@/db/expenses";
 import { addPart, removePart, shiftPartQty } from "@/db/parts";
 import { rateLimit, release } from "@/lib/rateLimit";
@@ -121,6 +122,9 @@ export async function setStatus(formData: FormData): Promise<void> {
     await closeOrder(before);
   } else {
     await getDb().update(leads).set({ status: next, updatedAt: new Date() }).where(eq(leads.id, id));
+
+    // Відмова не має «з'їдати» знижку клієнта
+    if (next === "rejected") await releaseDiscount(before);
 
     // Хроніка: клієнт бачить, що саме сталося, а не лише підсвічену стадію
     await addEvent(id, { status: next });
@@ -364,7 +368,7 @@ export async function setReviewPublished(formData: FormData): Promise<void> {
   const [review] = await getDb().select().from(reviews).where(eq(reviews.id, id)).limit(1);
   if (!review) return;
 
-  // Знижка 15% — за схвалений відгук з обома фото від клієнта, що ремонтувався через сайт.
+  // Знижка 10% — за схвалений відгук з обома фото від клієнта, що ремонтувався через сайт.
   // Нараховуємо раз: якщо відгук потім сховати, знижка в людини лишається.
   const earned = publish && !review.discountAt && review.leadId && review.beforePath && review.afterPath;
 
@@ -379,7 +383,7 @@ export async function setReviewPublished(formData: FormData): Promise<void> {
 }
 
 /**
- * Знижку 15% нараховує або скасовує сам майстер, перевіривши відгук. Потрібен акаунт
+ * Знижку 10% нараховує або скасовує сам майстер, перевіривши відгук. Потрібен акаунт
  * клієнта — знижка живе в ньому. Скасувати можна, лише поки її не використали.
  */
 export async function setReviewDiscount(formData: FormData): Promise<void> {
@@ -417,7 +421,10 @@ export async function applyReviewDiscount(formData: FormData): Promise<void> {
     .where(and(eq(reviews.id, reviewId), isNotNull(reviews.discountAt), isNull(reviews.discountLeadId)))
     .returning({ id: reviews.id });
 
-  if (applied.length > 0) await addEvent(leadId, { text: "Врахували знижку 15% за відгук." });
+  if (applied.length > 0) {
+    await getDb().update(leads).set({ discount: "review" }).where(eq(leads.id, leadId));
+    await addEvent(leadId, { text: "Врахували знижку 10% за відгук." });
+  }
 
   revalidatePath("/admin");
   revalidatePath("/moi-remonty");

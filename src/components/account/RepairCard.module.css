@@ -115,6 +115,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.discount {
+  display: grid;
+  gap: 2px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
 .priceNote {
   font-family: var(--font-manrope), sans-serif;
   font-size: 12.5px;

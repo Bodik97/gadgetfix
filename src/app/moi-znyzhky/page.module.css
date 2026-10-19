@@ -26,6 +26,12 @@
   text-wrap: pretty;
 }
 
+.use {
+  justify-self: start;
+  margin-top: 8px;
+  min-height: 46px;
+}
+
 .discountText strong {
   color: var(--text);
   font-size: 16px;

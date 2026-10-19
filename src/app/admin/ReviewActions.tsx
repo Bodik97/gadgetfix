@@ -96,7 +96,7 @@ export default function ReviewActions({
             <input type="hidden" name="grant" value="1" />
             <Submit className={styles.discount}>
               <Icon name="percent" />
-              Нарахувати −15%
+              Нарахувати −10%
             </Submit>
           </form>
         )}
@@ -104,7 +104,7 @@ export default function ReviewActions({
         {discount === "granted" && (
           <span className={styles.discountOn}>
             <Icon name="percent" />
-            −15% нараховано
+            −10% нараховано
             <form action={setReviewDiscount}>
               <input type="hidden" name="id" value={id} />
               <input type="hidden" name="grant" value="0" />
@@ -118,7 +118,7 @@ export default function ReviewActions({
         {discount === "used" && (
           <span className={styles.discountUsed}>
             <Icon name="percent" />
-            −15% використано
+            −10% використано
           </span>
         )}
 

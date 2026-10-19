@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import AuthShell from "./AuthShell";
 import SignInForm from "./SignInForm";
+import { startsWithSignUp } from "./authStore";
 import styles from "./AuthModal.module.css";
 
 export default function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -58,8 +59,13 @@ export default function AuthModal({ open, onClose }: { open: boolean; onClose: (
           <AuthShell
             compact
             titleId="auth-title"
-            title="Кабінет клієнта"
-            lead="Статус ремонту, посилка й гарантія — в одному місці."
+            // Відкрили з «Отримати −5%» — нагадуємо, заради чого реєструються
+            title={startsWithSignUp() ? "Ваші −5% на перший ремонт" : "Кабінет клієнта"}
+            lead={
+              startsWithSignUp()
+                ? "Створіть кабінет за хвилину — знижка запрацює одразу."
+                : "Статус ремонту, посилка й гарантія — в одному місці."
+            }
           >
             <SignInForm onDone={onClose} bare />
           </AuthShell>

@@ -5,6 +5,7 @@ import SetPassword from "@/components/account/SetPassword";
 import SignOutButton from "@/components/account/SignOutButton";
 import { plural } from "@/components/account/plural";
 import { getReviewsByUser, reviewTarget } from "@/db/reviews";
+import { discountOffer } from "@/db/discounts";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { unreadByLead } from "@/db/messages";
 import type { Lead } from "@/db/schema";
@@ -45,15 +46,19 @@ export default async function CabinetPage() {
         : "Замовте перший ремонт";
 
   const hasDiscount = myReviews.some((r) => r.discountAt && !r.discountLeadId);
+  // Знижка за реєстрацію — на перший ремонт: поки ремонтів немає, вона чекає
+  const welcome = discountOffer(leads, myReviews)?.kind === "signup";
   const pending = myReviews.some((r) => !r.published && r.leadId && r.beforePath && r.afterPath);
   const canEarn = Boolean(reviewTarget(leads, myReviews)?.leadId);
-  const discountNote = hasDiscount
-    ? "Є знижка 15% на наступний ремонт"
-    : pending
-      ? "Відгук на перевірці — знижка 15% слідом"
-      : canEarn
-        ? "Отримайте 15% за відгук"
-        : "Знижка 15% за відгук після ремонту";
+  const discountNote = welcome
+    ? "Є знижка 5% на перший ремонт"
+    : hasDiscount
+      ? "Є знижка 10% на наступний ремонт"
+      : pending
+        ? "Відгук на перевірці — знижка 10% слідом"
+        : canEarn
+          ? "Отримайте 10% за відгук"
+          : "Знижка 10% за відгук після ремонту";
 
   const now = nextStep({ leads, active, unreadTotal, hasDiscount, canEarn });
 
@@ -100,7 +105,7 @@ export default async function CabinetPage() {
           <Arrow />
         </Link>
 
-        <Link href="/moi-znyzhky" className={hasDiscount ? styles.tileHot : styles.tile}>
+        <Link href="/moi-znyzhky" className={hasDiscount || welcome ? styles.tileHot : styles.tile}>
           <span className={styles.icon} aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 5L5 19" />
@@ -169,17 +174,17 @@ function nextStep({
 
   if (hasDiscount) {
     return {
-      title: "У вас знижка 15%",
-      note: "Майстер врахує її в ціні наступного ремонту.",
-      action: "Мої знижки",
-      href: "/moi-znyzhky",
+      title: "У вас знижка 10%",
+      note: "Застосуємо її автоматично до наступного замовлення.",
+      action: "Замовити ремонт",
+      href: "/moi-remonty",
       hot: true,
     };
   }
 
   if (canEarn) {
     return {
-      title: "Отримайте 15% на наступний ремонт",
+      title: "Отримайте 10% на наступний ремонт",
       note: "Залиште відгук із фото до і після.",
       action: "Залишити відгук",
       href: "/moi-znyzhky",
@@ -201,10 +206,10 @@ function nextStep({
 
   if (leads.length === 0) {
     return {
-      title: "Замовте перший ремонт",
-      note: "Залиште заявку — передзвонимо й підкажемо ціну.",
-      action: "Замовити",
-      href: "/moi-remonty",
+      title: "Замовте перший ремонт зі знижкою 5%",
+      note: "Знижка за реєстрацію вже ваша — залиште заявку, і майстер назве ціну з нею.",
+      action: "Скористатись знижкою",
+      href: "/moi-remonty?znyzhka=1",
       hot: true,
     };
   }

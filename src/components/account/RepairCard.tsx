@@ -1,4 +1,5 @@
 import { describeStatus } from "@/db/leads";
+import { DISCOUNT_PERCENT, DISCOUNT_REASON } from "@/data/discounts";
 import type { Lead, LeadEvent } from "@/db/schema";
 import Chat from "@/components/Chat";
 import TelegramConnect from "@/components/TelegramConnect";
@@ -108,6 +109,16 @@ export default function RepairCard({
           <dt>Прийнято</dt>
           <dd>{dateTime.format(lead.createdAt)}</dd>
         </div>
+
+        {lead.discount && (
+          <div className={styles.fact}>
+            <dt>Знижка</dt>
+            <dd className={styles.discount}>
+              −{DISCOUNT_PERCENT[lead.discount]}% {DISCOUNT_REASON[lead.discount]}
+              <span className={styles.priceNote}>майстер назве ціну вже з нею</span>
+            </dd>
+          </div>
+        )}
 
         {lead.problem && (
           <div className={styles.fact}>

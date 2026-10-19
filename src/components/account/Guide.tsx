@@ -63,8 +63,8 @@ const steps: Step[] = [
   },
   {
     scene: "review",
-    title: "Відгук — і мінус 15%",
-    text: "Розкажіть, як усе пройшло, і додайте фото до і після. Після перевірки отримаєте знижку 15% на наступний ремонт.",
+    title: "Відгук — і мінус 10%",
+    text: "Розкажіть, як усе пройшло, і додайте фото до і після. Після перевірки отримаєте знижку 10% на наступний ремонт.",
     target: ['[data-guide="review"] form', '[data-guide="review"] a.btn', '[data-guide="review"]'],
     missing: "Форма відгуку — у кабінеті, на сторінці «Мої знижки».",
   },
@@ -106,13 +106,14 @@ function readSeen(): boolean {
 // Значення змінюємо лише самі, у цій же вкладці, — підписуватись нема на що
 const noSubscribe = () => () => {};
 
-export default function Guide() {
+export default function Guide({ collapsed }: { collapsed?: boolean } = {}) {
   // Новому клієнтові розгортаємо з порога; хто вже згортав — бачить лише плашку.
+  // collapsed — ремонтів ще немає: першою має бути форма замовлення, а не екскурсія.
   // На сервері вважаємо «бачив»: так у постійного клієнта велика панель не блимає
   const seen = useSyncExternalStore(noSubscribe, readSeen, () => true);
   // Вибір людини на цій сторінці; null — ще нічого не натискала
   const [choice, setChoice] = useState<boolean | null>(null);
-  const open = choice ?? !seen;
+  const open = choice ?? (!seen && !collapsed);
   const [step, setStep] = useState(0);
   const [note, setNote] = useState("");
   // Блоку ще немає, бо немає ремонту, — ведемо до форми замовлення, а не лише пояснюємо
@@ -365,7 +366,7 @@ function SceneArt({ scene }: { scene: Scene }) {
           ))}
           <g className={styles.tag}>
             <rect x="58" y="84" width="44" height="26" rx="8" className={styles.tagBody} />
-            <text x="80" y="102" textAnchor="middle" className={styles.tagText}>−15%</text>
+            <text x="80" y="102" textAnchor="middle" className={styles.tagText}>−10%</text>
           </g>
         </g>
       )}

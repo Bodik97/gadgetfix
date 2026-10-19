@@ -88,7 +88,7 @@ async function Accounts() {
             <Link href={`/admin/kliyenty/${a.id}`} className={styles.row}>
               <span className={styles.name}>
                 {a.name}
-                {a.hasDiscount && <span className={styles.regular}>знижка 15%</span>}
+                {a.hasDiscount && <span className={styles.regular}>знижка 10%</span>}
               </span>
 
               <span className={styles.phone}>

@@ -15,9 +15,11 @@ type Store = {
   wanted: boolean;
   /** Вікно входу відкрите */
   modalOpen: boolean;
+  /** Вікно відкрили одразу на вкладці «Реєстрація» */
+  signUp: boolean;
 };
 
-let store: Store = { clerkLoaded: false, clerkSignedIn: false, wanted: false, modalOpen: false };
+let store: Store = { clerkLoaded: false, clerkSignedIn: false, wanted: false, modalOpen: false, signUp: false };
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<Store>) {
@@ -73,11 +75,21 @@ export function prepareSignIn() {
 }
 
 export function openSignIn() {
-  set({ wanted: true, modalOpen: true });
+  set({ wanted: true, modalOpen: true, signUp: false });
+}
+
+/** Те саме вікно, але одразу на вкладці «Реєстрація» */
+export function openSignUp() {
+  set({ wanted: true, modalOpen: true, signUp: true });
+}
+
+/** З якої вкладки почати форму — читає форма, коли вікно відкривається */
+export function startsWithSignUp(): boolean {
+  return store.modalOpen && store.signUp;
 }
 
 export function closeSignIn() {
-  set({ modalOpen: false });
+  set({ modalOpen: false, signUp: false });
 }
 
 /** Clerk повідомляє свій стан — викликає лише міст усередині ClerkProvider */

@@ -20,6 +20,70 @@
   gap: 6px;
 }
 
+.optional {
+  color: var(--text-3);
+}
+
+.fieldError {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--danger);
+}
+
+/* Нагадування на «Реєстрації»: заради чого це все */
+.bonus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--lime-rgb) / .5);
+  background: rgb(var(--lime-rgb) / .14);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.bonus strong {
+  flex: none;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 20px;
+  letter-spacing: -.02em;
+  color: var(--accent-text);
+}
+
+/* Пароль з кнопкою «показати» всередині поля */
+.passWrap {
+  position: relative;
+}
+
+.passWrap :global(.field) {
+  width: 100%;
+  padding-right: 52px;
+}
+
+.passToggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.passToggle:hover,
+.passToggle[aria-pressed="true"] {
+  color: var(--text);
+}
+
 /* Поле коду — великі цифри з розрядкою */
 .codeField {
   text-align: center;

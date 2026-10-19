@@ -56,7 +56,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         <Fact label="Останній вхід" value={a.lastSignInAt ? dateTime.format(a.lastSignInAt) : "—"} />
         <Fact label="Ремонтів" value={String(a.repairs)} />
         <Fact label="Оплачено" value={uah(a.paid)} />
-        <Fact label="Знижка 15%" value={a.hasDiscount ? "є, не використана" : "немає"} hot={a.hasDiscount} />
+        <Fact label="Знижка 10%" value={a.hasDiscount ? "є, не використана" : "немає"} hot={a.hasDiscount} />
       </dl>
 
       {/* Ремонти */}
@@ -116,7 +116,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
                   {r.published ? "на сайті" : "на перевірці"}
                 </span>
                 <span className={styles.num}>
-                  {r.discountLeadId ? "знижку використано" : r.discountAt ? "знижка 15% є" : "без знижки"}
+                  {r.discountLeadId ? "знижку використано" : r.discountAt ? "знижка 10% є" : "без знижки"}
                 </span>
                 <span className={styles.num}>{date.format(r.createdAt)}</span>
               </Link>

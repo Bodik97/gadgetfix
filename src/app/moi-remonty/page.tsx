@@ -10,6 +10,8 @@ import SignOutButton from "@/components/account/SignOutButton";
 import CabinetBack from "@/components/account/CabinetBack";
 import { plural } from "@/components/account/plural";
 import { describeStatus, getClientLeads } from "@/db/leads";
+import { getReviewsByUser } from "@/db/reviews";
+import { discountOffer } from "@/db/discounts";
 import { getDevices, getEvents } from "@/db/events";
 import { unreadByLead } from "@/db/messages";
 import { getCabinetUser } from "@/lib/cabinetUser";
@@ -37,7 +39,13 @@ export default async function MyRepairsPage() {
   const name = user?.name;
   const email = user?.email;
 
-  const leads = user ? await getClientLeads(user.id, email) : [];
+  const [leads, myReviews] = await Promise.all([
+    user ? getClientLeads(user.id, email) : Promise.resolve([]),
+    user ? getReviewsByUser(user.id) : Promise.resolve([]),
+  ]);
+  // Яка знижка чекає на нове замовлення, і телефон із попередніх — щоб не вводити вдруге
+  const offer = discountOffer(leads, myReviews)?.kind ?? null;
+  const knownPhone = leads.find((l) => l.phone)?.phone ?? null;
 
   // Активних може бути кілька — раніше показувався лише перший
   const active = leads.filter((l) => describeStatus(l.status).active);
@@ -88,7 +96,7 @@ export default async function MyRepairsPage() {
         </p>
       </header>
 
-      <Guide />
+      <Guide collapsed={leads.length === 0} />
 
       {/* Найголовніше — вгорі: що зараз відбувається з пристроєм */}
       {active.length > 0 ? (
@@ -124,7 +132,7 @@ export default async function MyRepairsPage() {
             {leads.length > 0 ? "Зараз нічого не в роботі" : "Замовити ремонт"}
           </h2>
           <Suspense fallback={null}>
-            <QuickOrder compact />
+            <QuickOrder compact offer={offer} knownPhone={knownPhone} />
           </Suspense>
         </section>
       )}
@@ -156,7 +164,7 @@ export default async function MyRepairsPage() {
       {active.length > 0 && (
         <section className={styles.section}>
           <Suspense fallback={null}>
-            <QuickOrder />
+            <QuickOrder offer={offer} knownPhone={knownPhone} />
           </Suspense>
         </section>
       )}

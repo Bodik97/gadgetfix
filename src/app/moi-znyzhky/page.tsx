@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import CabinetBack from "@/components/account/CabinetBack";
 import SignOutButton from "@/components/account/SignOutButton";
 import ReviewForm from "@/components/ReviewForm";
 import { getReviewsByUser, reviewTarget } from "@/db/reviews";
 import { getClientLeads } from "@/db/leads";
+import { discountOffer } from "@/db/discounts";
+import { DISCOUNT_PERCENT, DISCOUNT_REASON } from "@/data/discounts";
 import { getCabinetUser } from "@/lib/cabinetUser";
 import base from "../moi-remonty/page.module.css";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Мої знижки",
-  description: "Знижка 15% за відгук із фото до і після ремонту.",
+  description: "Знижка 5% на перший ремонт за реєстрацію і 10% за відгук із фото до і після.",
   robots: { index: false, follow: false },
 };
 
@@ -25,8 +28,9 @@ const dateShort = new Intl.DateTimeFormat("uk-UA", {
 });
 
 /**
- * Знижки клієнта. Окремої таблиці знижок немає: 15% нараховують за відгук
- * із фото до і після про виданий ремонт — тож усе читаємо з відгуків.
+ * Знижки клієнта. Окремої таблиці знижок немає: 5% за реєстрацію діє, поки
+ * ремонтів ще не було, а 10% нараховують за відгук із фото до і після про
+ * виданий ремонт — тож усе читаємо із заявок і відгуків.
  */
 export default async function MyDiscountsPage() {
   // Маршрут закритий у proxy — сюди потрапляє лише авторизований клієнт
@@ -39,8 +43,10 @@ export default async function MyDiscountsPage() {
   ]);
 
   const ready = myReviews.filter((r) => r.discountAt && !r.discountLeadId);
-  const used = myReviews.filter((r) => r.discountLeadId);
+  // Використана знижка — та, що закріплена за заявкою (відхилена заявка її повертає)
+  const used = leads.filter((l) => l.discount && l.status !== "rejected");
   const pending = myReviews.filter((r) => !r.published && r.leadId && r.beforePath && r.afterPath);
+  const welcome = discountOffer(leads, myReviews)?.kind === "signup";
 
   // Відгук пишуть про виданий ремонт — лише такий дає знижку
   const found = reviewTarget(leads, myReviews);
@@ -61,36 +67,49 @@ export default async function MyDiscountsPage() {
         <h2 id="aktyvni" className={base.h2}>
           Активні
         </h2>
+        {welcome && (
+          <div className={styles.discount}>
+            <span className={styles.percent}>−5%</span>
+            <span className={styles.discountText}>
+              <strong>На перший ремонт — за реєстрацію</strong>
+              <span>Натисніть — і знижка застосується до вашого замовлення.</span>
+              <Link href="/moi-remonty?znyzhka=1" className={`btn btn-accent ${styles.use}`}>
+                Скористатись знижкою 5%
+              </Link>
+            </span>
+          </div>
+        )}
         {ready.length > 0 ? (
           ready.map((r) => (
             <div key={r.id} className={styles.discount}>
-              <span className={styles.percent}>−15%</span>
+              <span className={styles.percent}>−10%</span>
               <span className={styles.discountText}>
                 <strong>На наступний ремонт</strong>
                 <span>
-                  Нараховано {r.discountAt ? dateShort.format(r.discountAt) : ""}. Майстер врахує знижку в&nbsp;ціні&nbsp;— нічого
-                  вводити не треба.
+                  Нараховано {r.discountAt ? dateShort.format(r.discountAt) : ""}. Застосуємо автоматично до наступного
+                  замовлення&nbsp;— нічого натискати не треба.
                 </span>
+                <Link href="/moi-remonty" className={`btn btn-accent ${styles.use}`}>
+                  Замовити ремонт зі знижкою
+                </Link>
               </span>
             </div>
           ))
+        ) : pending.length > 0 ? (
+          <p className={base.hint}>Ваш відгук на перевірці. Щойно опублікуємо — тут з’явиться знижка 10%.</p>
         ) : (
-          <p className={base.hint}>
-            {pending.length > 0
-              ? "Ваш відгук на перевірці. Щойно опублікуємо — тут з’явиться знижка 15%."
-              : "Зараз активних знижок немає."}
-          </p>
+          !welcome && <p className={base.hint}>Зараз активних знижок немає.</p>
         )}
       </section>
 
       <section className={base.section} aria-labelledby="yak">
         <h2 id="yak" className={base.h2}>
-          Як отримати 15%
+          Як отримати 10%
         </h2>
         <ol className={styles.steps}>
           <li>Відремонтуйте пристрій у&nbsp;нас і&nbsp;заберіть його.</li>
           <li>Напишіть відгук і&nbsp;додайте фото пристрою до і&nbsp;після ремонту.</li>
-          <li>Після перевірки відгуку отримаєте знижку 15% на&nbsp;наступний ремонт.</li>
+          <li>Після перевірки відгуку отримаєте знижку 10% на&nbsp;наступний ремонт.</li>
         </ol>
 
         {target ? (
@@ -115,12 +134,12 @@ export default async function MyDiscountsPage() {
             Використані
           </h2>
           <ul className={styles.used}>
-            {used.map((r) => (
-              <li key={r.id}>
-                <span>Знижка 15%</span>
-                <span className={styles.usedNote}>
-                  {r.discountAt ? `нараховано ${dateShort.format(r.discountAt)}` : "використано"}
+            {used.map((l) => (
+              <li key={l.id}>
+                <span>
+                  Знижка {l.discount ? `${DISCOUNT_PERCENT[l.discount]}% ${DISCOUNT_REASON[l.discount]}` : ""}
                 </span>
+                <span className={styles.usedNote}>у замовленні №{l.orderNo}</span>
               </li>
             ))}
           </ul>
