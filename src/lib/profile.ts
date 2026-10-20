@@ -10,13 +10,18 @@ import { normalizeUaPhone } from "@/lib/phone";
  * Лежать у publicMetadata — їх змінює лише сервер, тож клієнт не перепише
  * собі день народження заради знижки.
  */
-export type ProfileExtras = { birthday: string | null; phone: string | null };
+export type ProfileExtras = {
+  birthday: string | null;
+  phone: string | null;
+  /** Фото з Clerk; null — клієнт його ще не додав */
+  image: string | null;
+};
 
 export function extrasOf(user: User | null): ProfileExtras {
   const meta = (user?.publicMetadata ?? {}) as { birthday?: unknown; phone?: unknown };
   const birthday = typeof meta.birthday === "string" && BIRTHDAY_RE.test(meta.birthday) ? meta.birthday : null;
   const phone = typeof meta.phone === "string" ? normalizeUaPhone(meta.phone) : null;
-  return { birthday, phone };
+  return { birthday, phone, image: user?.hasImage ? user.imageUrl : null };
 }
 
 /** Для сторінок кабінету — один запит до Clerk на рендер */

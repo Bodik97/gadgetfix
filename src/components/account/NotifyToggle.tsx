@@ -85,7 +85,7 @@ export default function NotifyToggle() {
         </span>
       </div>
       {state === "off" && (
-        <button type="button" className="btn btn-accent" onClick={enable} disabled={busy}>
+        <button type="button" className="btn btn-ghost" onClick={enable} disabled={busy}>
           {busy ? "Вмикаємо…" : "Увімкнути"}
         </button>
       )}

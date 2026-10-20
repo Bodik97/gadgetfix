@@ -120,11 +120,18 @@
 }
 
 @media (max-width: 380px) {
+  /* На 320px п'ять пунктів ледь вміщались — забираємо зайве повітря по краях */
+  .list {
+    padding: 6px 6px;
+    gap: 3px;
+  }
+
   .label {
     font-size: 10px;
   }
 
   .cta {
+    padding: 6px 8px;
     font-size: 11.5px;
   }
 }

@@ -19,7 +19,16 @@ const longDate = new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "long
  * Фото, імʼя, пошту й пароль зберігає сам Clerk; телефон і дату — сервер,
  * бо від дати залежить знижка.
  */
-export default function Profile({ birthday, phone }: { birthday: string | null; phone: string | null }) {
+export default function Profile({
+  birthday,
+  phone,
+  guessPhone = null,
+}: {
+  birthday: string | null;
+  phone: string | null;
+  /** Телефон з останньої заявки — коли в профілі його ще немає */
+  guessPhone?: string | null;
+}) {
   const { user, isLoaded } = useUser();
 
   if (!isLoaded || !user) {
@@ -49,8 +58,7 @@ export default function Profile({ birthday, phone }: { birthday: string | null; 
         <h2 id="pro-dani" className={styles.h2}>
           Особисті дані
         </h2>
-        <NameField />
-        <PhoneField saved={phone} />
+        <PersonalFields savedPhone={phone} guessPhone={guessPhone} />
         <BirthdayField saved={birthday} />
       </section>
 
@@ -128,105 +136,100 @@ function Avatar() {
   );
 }
 
-/* ---------- Імʼя ---------- */
-function NameField() {
+/* ---------- Імʼя й телефон: одна кнопка «Зберегти зміни» ---------- */
+function PersonalFields({ savedPhone, guessPhone }: { savedPhone: string | null; guessPhone: string | null }) {
   const { user } = useUser();
+  const router = useRouter();
   const [name, setName] = useState(user?.firstName ?? "");
-  const [state, setState] = useState<"idle" | "busy" | "saved">("idle");
-  const [error, setError] = useState("");
+  // Телефону в профілі немає — підставляємо з останньої заявки, щоб лише підтвердити
+  const [phone, setPhone] = useState(savedPhone ?? guessPhone ?? "");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; form?: string }>({});
 
   if (!user) return null;
-  const changed = name.trim() !== (user.firstName ?? "");
+  const nameChanged = name.trim() !== (user.firstName ?? "");
+  const phoneChanged = phone !== (savedPhone ?? "");
+  const changed = nameChanged || phoneChanged;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setError("Впишіть імʼя — так майстер звертатиметься до вас.");
+    const found = {
+      name: name.trim() ? undefined : "Впишіть імʼя — так майстер звертатиметься до вас.",
+      phone: phone ? (phoneProblem(phone) ?? undefined) : undefined,
+    };
+    if (found.name || found.phone) {
+      setErrors(found);
       return;
     }
-    setState("busy");
-    setError("");
+    setBusy(true);
+    setErrors({});
     try {
-      await user.update({ firstName: name.trim() });
-      setState("saved");
+      if (nameChanged) await user.update({ firstName: name.trim() });
+      if (phoneChanged) {
+        const res = await saveProfilePhone(phone);
+        if (!res.ok) {
+          setErrors({ phone: res.error });
+          return;
+        }
+      }
+      setSaved(true);
+      router.refresh();
     } catch {
-      setError("Не вдалося зберегти. Спробуйте ще раз.");
-      setState("idle");
+      setErrors({ form: "Не вдалося зберегти. Спробуйте ще раз." });
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <form className={styles.row} onSubmit={save}>
-      <label htmlFor="pro-name">Імʼя</label>
-      <div className={styles.inline}>
+    <form className={styles.stackWide} onSubmit={save}>
+      <div className={styles.row}>
+        <label htmlFor="pro-name">Імʼя</label>
         <input
           id="pro-name"
-          className="field"
+          className={errors.name ? "field field-invalid" : "field"}
           autoComplete="given-name"
           placeholder="Як до вас звертатись"
           value={name}
           maxLength={50}
           onChange={(e) => {
             setName(e.target.value);
-            setState("idle");
-            setError("");
+            setSaved(false);
+            setErrors({});
           }}
         />
-        <SaveButton state={state} disabled={!changed} />
+        {errors.name && <p className={styles.error}>{errors.name}</p>}
       </div>
-      {error && <p className={styles.error}>{error}</p>}
-    </form>
-  );
-}
 
-/* ---------- Телефон ---------- */
-function PhoneField({ saved }: { saved: string | null }) {
-  const router = useRouter();
-  const [phone, setPhone] = useState(saved ?? "");
-  const [state, setState] = useState<"idle" | "busy" | "saved">("idle");
-  const [error, setError] = useState("");
-  const changed = phone !== (saved ?? "");
-
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const problem = phone ? phoneProblem(phone) : null;
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    setState("busy");
-    setError("");
-    const res = await saveProfilePhone(phone).catch(() => ({ ok: false as const, error: "Не вдалося зберегти." }));
-    if (!res.ok) {
-      setError(res.error);
-      setState("idle");
-      return;
-    }
-    setState("saved");
-    router.refresh();
-  };
-
-  return (
-    <form className={styles.row} onSubmit={save}>
-      <label htmlFor="pro-phone">Телефон</label>
-      <div className={styles.inline}>
+      <div className={styles.row}>
+        <label htmlFor="pro-phone">Телефон</label>
         <PhoneInput
           id="pro-phone"
           value={phone}
-          aria-invalid={error ? true : undefined}
-          className={error ? "field field-invalid" : "field"}
+          aria-invalid={errors.phone ? true : undefined}
+          className={errors.phone ? "field field-invalid" : "field"}
           onChange={(v) => {
             setPhone(v);
-            setState("idle");
-            setError("");
+            setSaved(false);
+            setErrors({});
           }}
         />
-        <SaveButton state={state} disabled={!changed} />
+        {errors.phone ? (
+          <p className={styles.error}>{errors.phone}</p>
+        ) : !savedPhone && guessPhone && phone === guessPhone ? (
+          <p className={styles.note}>Узяли з вашої заявки — перевірте й збережіть, щоб підставляти в кожне замовлення.</p>
+        ) : (
+          <p className={styles.note}>Підставимо в кожне замовлення — вводити щоразу не треба.</p>
+        )}
       </div>
-      {error ? (
-        <p className={styles.error}>{error}</p>
-      ) : (
-        <p className={styles.note}>Підставимо в кожне замовлення — вводити щоразу не треба.</p>
+
+      {errors.form && <p className={styles.error}>{errors.form}</p>}
+      {saved && !changed && <p className={styles.success}>✓ Збережено</p>}
+      {changed && (
+        <button type="submit" className={`btn btn-accent ${styles.save}`} disabled={busy}>
+          {busy ? "Зберігаємо…" : "Зберегти зміни"}
+        </button>
       )}
     </form>
   );

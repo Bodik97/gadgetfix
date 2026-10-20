@@ -3,11 +3,12 @@
 import { useClerk } from "@clerk/nextjs";
 import styles from "./SignOutButton.module.css";
 
-export default function SignOutButton() {
+/** quiet — тихе посилання внизу сторінки, щоб «Вийти» не натискали випадково */
+export default function SignOutButton({ quiet }: { quiet?: boolean } = {}) {
   const { signOut } = useClerk();
 
   return (
-    <button type="button" className={styles.button} onClick={() => signOut({ redirectUrl: "/" })}>
+    <button type="button" className={quiet ? styles.quiet : styles.button} onClick={() => signOut({ redirectUrl: "/" })}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M15 17l5-5-5-5" />
         <path d="M20 12H9" />

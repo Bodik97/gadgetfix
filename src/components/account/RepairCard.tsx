@@ -2,6 +2,8 @@ import { describeStatus } from "@/db/leads";
 import { DISCOUNT_PERCENT, DISCOUNT_REASON } from "@/data/discounts";
 import type { Lead, LeadEvent } from "@/db/schema";
 import Chat from "@/components/Chat";
+import CoachMark from "./CoachMark";
+import Hint from "@/components/Hint";
 import TelegramConnect from "@/components/TelegramConnect";
 import { connectLink } from "@/lib/clientBot";
 import { masterPhone } from "@/lib/admin";
@@ -75,11 +77,14 @@ export default function RepairCard({
   lead,
   events,
   unread = 0,
+  coach = false,
 }: {
   lead: Lead;
   events: LeadEvent[];
   /** Непрочитані від майстра — щоб клієнт не пропустив відповідь */
   unread?: number;
+  /** Перша картка на сторінці — разова підказка, як тут усе влаштовано */
+  coach?: boolean;
 }) {
   const s = describeStatus(lead.status);
   const what = lead.model ?? lead.service ?? "Ремонт";
@@ -100,45 +105,48 @@ export default function RepairCard({
         </span>
       </header>
 
-      <p className={styles.hint}>{s.hint}</p>
+      <p className={styles.hint}>
+        {s.hint}
+        <Hint
+          label="Як читати етапи"
+          text="Прийнято → Діагностика → Ремонт → Готово. Етап оновлюється сам — дзвонити й перепитувати не треба."
+        />
+      </p>
 
       <RepairSteps status={s} />
 
-      <dl className={styles.facts}>
-        <div className={styles.fact}>
-          <dt>Прийнято</dt>
-          <dd>{dateTime.format(lead.createdAt)}</dd>
-        </div>
+      {/* Гроші — завжди на виду; решта деталей — під «Детальніше» */}
+      {(lead.price !== null || lead.discount) && (
+        <dl className={styles.facts}>
+          {lead.price !== null && (
+            <div className={styles.fact}>
+              <dt>
+                Ціна
+                <Hint label="Про ціну" text="Ціну погоджено з вами до початку робіт — вона більше не зміниться." />
+              </dt>
+              <dd className={styles.price}>
+                {lead.price.toLocaleString("uk-UA")} ₴
+                <span className={styles.priceNote}>
+                  {lead.paidAt ? "оплачено" : "погоджена — не зміниться"}
+                </span>
+              </dd>
+            </div>
+          )}
 
-        {lead.discount && (
-          <div className={styles.fact}>
-            <dt>Знижка</dt>
-            <dd className={styles.discount}>
-              −{DISCOUNT_PERCENT[lead.discount]}% {DISCOUNT_REASON[lead.discount]}
-              <span className={styles.priceNote}>майстер назве ціну вже з нею</span>
-            </dd>
-          </div>
-        )}
-
-        {lead.problem && (
-          <div className={styles.fact}>
-            <dt>Проблема</dt>
-            <dd>{lead.problem}</dd>
-          </div>
-        )}
-
-        {lead.price !== null && (
-          <div className={styles.fact}>
-            <dt>Ціна</dt>
-            <dd className={styles.price}>
-              {lead.price.toLocaleString("uk-UA")} ₴
-              <span className={styles.priceNote}>
-                {lead.paidAt ? "оплачено" : "погоджена — не зміниться"}
-              </span>
-            </dd>
-          </div>
-        )}
-      </dl>
+          {lead.discount && (
+            <div className={styles.fact}>
+              <dt>
+                Знижка
+                <Hint label="Про знижку" text="На одне замовлення діє одна знижка. Майстер назве ціну вже з нею — нічого вводити не треба." />
+              </dt>
+              <dd className={styles.discount}>
+                −{DISCOUNT_PERCENT[lead.discount]}% {DISCOUNT_REASON[lead.discount]}
+                <span className={styles.priceNote}>майстер назве ціну вже з нею</span>
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
 
       {/* Передоплата за деталь — умова початку робіт */}
       {lead.prepayment !== null && !lead.paidAt && (
@@ -162,6 +170,12 @@ export default function RepairCard({
               {lead.prepaidAt
                 ? `Передоплату отримано — ${lead.prepayment.toLocaleString("uk-UA")} ₴`
                 : `Передоплата за деталь — ${lead.prepayment.toLocaleString("uk-UA")} ₴`}
+              {!lead.prepaidAt && (
+                <Hint
+                  label="Навіщо передоплата"
+                  text="Оплачуєте лише деталь — її замовляють саме під ваш пристрій. Решту — коли заберете готовий."
+                />
+              )}
             </div>
             <p className={styles.payText}>
               {lead.prepaidAt
@@ -197,7 +211,12 @@ export default function RepairCard({
         </div>
       )}
 
-      <Timeline events={events} />
+      {coach && (
+        <CoachMark id="repair-card">
+          Етап ремонту оновлюється сам — дзвонити не треба. Є питання чи фото — натисніть «Написати майстру»,
+          відповідь прийде сюди ж.
+        </CoachMark>
+      )}
 
       {/* Чат — головна дія й завжди перший: розгорнувшись, він займає рядок,
           а дзвінок і Telegram лишаються разом під ним */}
@@ -215,6 +234,24 @@ export default function RepairCard({
 
         <TelegramConnect href={connectLink(lead)} label="Статус у Telegram" quiet className={styles.action} />
       </div>
+
+      {/* Деталі й історія — за потреби, щоб головне в картці не губилось */}
+      <details className={styles.more}>
+        <summary className={styles.moreSummary}>Детальніше: дата, опис і що вже зроблено</summary>
+        <dl className={styles.facts}>
+          <div className={styles.fact}>
+            <dt>Прийнято</dt>
+            <dd>{dateTime.format(lead.createdAt)}</dd>
+          </div>
+          {lead.problem && (
+            <div className={styles.fact}>
+              <dt>Проблема</dt>
+              <dd>{lead.problem}</dd>
+            </div>
+          )}
+        </dl>
+        <Timeline events={events} />
+      </details>
     </article>
   );
 }

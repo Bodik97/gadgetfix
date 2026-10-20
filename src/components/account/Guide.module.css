@@ -174,12 +174,12 @@
   background: var(--accent);
 }
 
-/* Більша зона дотику, ніж видно смужку */
+/* Зона дотику — 44px заввишки, хоча видно лише смужку */
 .dot,
 .dotOn,
 .dotDone {
   background-clip: content-box;
-  padding-block: 8px;
+  padding-block: 18px;
   box-sizing: content-box;
 }
 
@@ -495,49 +495,6 @@
   }
 }
 
-/* Telegram: літачок прилітає, на екрані — сповіщення */
-/* Літачок пролітає крізь екран і лишає по собі сповіщення */
-.plane {
-  fill: #2aabee;
-  animation: fly 1.3s cubic-bezier(.4, .1, .4, 1) both;
-}
-
-@keyframes fly {
-  0% {
-    opacity: 0;
-    transform: translate(-30px, 40px);
-  }
-  15% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(140px, -100px);
-  }
-}
-
-.toast {
-  animation: pop .4s .9s cubic-bezier(.34, 1.6, .5, 1) both;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.ping {
-  fill: #ff5a5a;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: pop .35s 1.2s cubic-bezier(.34, 1.8, .5, 1) both, ping 1.6s 1.6s ease-in-out infinite;
-}
-
-@keyframes ping {
-  50% {
-    transform: scale(1.18);
-  }
-}
-
 /* Доставка: коробка під'їжджає, ставиться галочка */
 .box {
   animation: slide .8s cubic-bezier(.2, .9, .3, 1.1) both;
@@ -603,79 +560,6 @@
 @keyframes tick {
   to {
     stroke-dashoffset: 0;
-  }
-}
-
-/* Гарантія: щит малюється, галочка, дата */
-.shield {
-  fill: rgb(220 243 90 / .12);
-  stroke: #dcf35a;
-  stroke-width: 3;
-  stroke-linejoin: round;
-  stroke-dasharray: 220;
-  stroke-dashoffset: 220;
-  animation: tick 1s .1s ease-out forwards;
-}
-
-.shieldTick {
-  fill: none;
-  stroke: #dcf35a;
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 40;
-  stroke-dashoffset: 40;
-  animation: tick .4s 1s ease-out forwards;
-}
-
-.dateLine {
-  animation: pop .4s 1.3s both;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-/* Відгук: золоті зірки хвилею, бирка −10% гойдається */
-.star {
-  fill: #ffc83d;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: star .5s calc(.1s + var(--i) * .12s) cubic-bezier(.34, 1.8, .5, 1) both;
-}
-
-@keyframes star {
-  from {
-    opacity: 0;
-    transform: scale(.2) rotate(-120deg);
-  }
-}
-
-.tag {
-  transform-box: fill-box;
-  transform-origin: 50% 0;
-  animation: pop .45s .8s cubic-bezier(.34, 1.6, .5, 1) both, swing 2.6s 1.3s ease-in-out infinite;
-}
-
-.tagBody {
-  fill: #dcf35a;
-}
-
-.tagText {
-  fill: #15180f;
-  font-family: var(--font-unbounded), sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-@keyframes swing {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-  25% {
-    transform: rotate(-6deg);
-  }
-  75% {
-    transform: rotate(6deg);
   }
 }
 

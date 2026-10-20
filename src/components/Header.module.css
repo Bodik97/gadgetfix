@@ -182,3 +182,27 @@
     padding: 8px var(--gutter);
   }
 }
+
+/* Найвужчі телефони (iPhone SE, 320–380px): логотип і три кнопки по 46px
+   не вміщались — шапка розпирала всю сторінку вбік */
+@media (max-width: 380px) {
+  .nav {
+    gap: 8px;
+  }
+
+  .actions {
+    gap: 4px;
+  }
+
+  .nav .actions > a,
+  .nav .actions > button,
+  .nav .actions > * > a,
+  .nav .actions > * > button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav > :first-child img {
+    height: 22px;
+  }
+}

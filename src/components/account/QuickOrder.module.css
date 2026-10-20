@@ -52,6 +52,39 @@
   width: 100%;
 }
 
+/* Згорнута форма: нейтральна кнопка, щоб не важила як ремонт у роботі */
+.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  border: 1px dashed var(--border-active);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.more span {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--accent-text);
+}
+
+.more:hover {
+  border-style: solid;
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
 .doneDiscount {
   margin: 8px 0 0;
   padding: 8px 12px;

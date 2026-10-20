@@ -9,6 +9,27 @@
   background: rgb(var(--lime-rgb) / .12);
 }
 
+/* Знижку вже застосовано до заявки в роботі — суцільна рамка й галочка */
+.discountOn {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1.5px solid rgb(var(--lime-rgb) / .8);
+  background: rgb(var(--lime-rgb) / .18);
+}
+
+.empty {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed var(--border-active);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
 .percent {
   flex: none;
   font-family: var(--font-unbounded), sans-serif;

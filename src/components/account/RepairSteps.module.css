@@ -85,10 +85,13 @@
 
 @media (max-width: 520px) {
   .steps {
-    gap: 4px;
+    gap: 6px;
   }
 
+  /* «Діагностика» — найдовше слово: дозволяємо перенос, щоб підписи не злипались */
   .label {
-    font-size: 11.5px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    hyphens: auto;
   }
 }

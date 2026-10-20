@@ -27,10 +27,13 @@ type Result = { orderNo: number | null; discount: DiscountKind | null };
 
 export default function QuickOrder({
   compact,
+  collapsed,
   offer = null,
   knownPhone = null,
 }: {
   compact?: boolean;
+  /** Згорнути в кнопку «+ Замовити ще один ремонт» — коли вже є ремонт у роботі */
+  collapsed?: boolean;
   /** Яка знижка чекає на це замовлення: 5% забирають кнопкою, решта діє сама */
   offer?: DiscountKind | null;
   /** Телефон із попередніх заявок — щоб не вводити вдруге */
@@ -65,7 +68,9 @@ export default function QuickOrder({
   // Прийшли з кнопки «Записатись» — форма може бути в самому низу сторінки,
   // під активними ремонтами. Так само з підтвердженням після оновлення сторінки
   const cardRef = useRef<HTMLDivElement>(null);
-  const preset = Boolean(presetService || presetModel);
+  // ?zamovyty=1 — прийшли саме замовити («Записатись», «Замовити ремонт»): форму відкриваємо одразу
+  const preset = Boolean(presetService || presetModel) || params.get("zamovyty") === "1" || applied;
+  const [expanded, setExpanded] = useState(!collapsed || preset);
   useEffect(() => {
     if (preset || justSent) cardRef.current?.scrollIntoView({ block: "center" });
     justSent = false;
@@ -127,6 +132,14 @@ export default function QuickOrder({
       setSending(false);
     }
   };
+
+  if (!expanded && !sent) {
+    return (
+      <button type="button" className={styles.more} onClick={() => setExpanded(true)}>
+        <span aria-hidden="true">+</span> Замовити ще один ремонт
+      </button>
+    );
+  }
 
   if (sent) {
     return (

@@ -21,7 +21,8 @@
 
 .h1 {
   font-family: var(--font-unbounded), sans-serif;
-  font-size: clamp(30px, 5.5vw, 46px);
+  /* На телефоні 24px: Unbounded широкий, 30px займали півекрана */
+  font-size: clamp(24px, 6.4vw, 46px);
   letter-spacing: -.03em;
   line-height: 1.05;
   margin: 0;
@@ -56,7 +57,7 @@
 .h2 {
   margin: 0;
   font-family: var(--font-unbounded), sans-serif;
-  font-size: clamp(19px, 2.6vw, 24px);
+  font-size: clamp(17px, 2.6vw, 24px);
   letter-spacing: -.02em;
 }
 
@@ -125,3 +126,41 @@
   color: var(--text-2);
 }
 
+
+/* Запрошення до відгуку, коли ремонти лише завершені */
+.review {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgb(var(--lime-rgb) / .5);
+  background: rgb(var(--lime-rgb) / .12);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.review:hover {
+  color: var(--text);
+  border-color: var(--accent-text);
+}
+
+.review strong {
+  display: block;
+  font-size: 16px;
+}
+
+.reviewPct {
+  flex: none;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 28px;
+  letter-spacing: -.03em;
+  color: var(--accent-text);
+}
+
+.reviewNote {
+  display: block;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-2);
+}

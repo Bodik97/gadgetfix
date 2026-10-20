@@ -61,7 +61,7 @@ export default function SetPassword() {
             Ви входите кодом на пошту. Задайте пароль — і наступного разу зайдете швидше.
           </p>
         </div>
-        <button type="button" className="btn btn-accent" onClick={() => setOpen(true)}>
+        <button type="button" className="btn btn-ghost" onClick={() => setOpen(true)}>
           Задати пароль
         </button>
       </div>

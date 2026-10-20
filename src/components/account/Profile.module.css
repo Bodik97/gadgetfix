@@ -30,7 +30,7 @@
 .heroName {
   margin: 0;
   font-family: var(--font-unbounded), sans-serif;
-  font-size: clamp(20px, 3vw, 26px);
+  font-size: clamp(18px, 3vw, 26px);
   letter-spacing: -.02em;
 }
 
@@ -154,6 +154,15 @@
 .inline :global(.field) {
   flex: 1 1 220px;
   min-width: 0;
+}
+
+.stackWide {
+  display: grid;
+  gap: 18px;
+}
+
+.stackWide .save {
+  justify-self: start;
 }
 
 .stack {

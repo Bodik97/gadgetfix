@@ -21,7 +21,8 @@ const POLL_MS = 3_000;
  * «оновити сторінку». Питаємо короткий відбиток стану і, якщо він змінився,
  * робимо м'яке оновлення: воно перемальовує дані й лишає прокрутку на місці.
  */
-export default function LiveRefresh({ label, silent }: { label?: string; silent?: boolean }) {
+/** withText — підпис лишається й на телефоні: у кабінеті одна крапка без слів схожа на помилку */
+export default function LiveRefresh({ label, silent, withText }: { label?: string; silent?: boolean; withText?: boolean }) {
   const router = useRouter();
   const seen = useRef<string | null>(null);
   const [justUpdated, setJustUpdated] = useState(false);
@@ -79,7 +80,7 @@ export default function LiveRefresh({ label, silent }: { label?: string; silent?
   if (silent) return null;
 
   return (
-    <div className={styles.wrap} role="status" aria-live="polite">
+    <div className={withText ? `${styles.wrap} ${styles.withText}` : styles.wrap} role="status" aria-live="polite">
       {justUpdated ? (
         <span className={styles.updated}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

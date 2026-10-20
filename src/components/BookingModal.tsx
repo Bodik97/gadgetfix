@@ -46,10 +46,10 @@ export default function BookingProvider({ children }: { children: React.ReactNod
   const openWith: Opener = (p) => {
     // Хто увійшов, замовляє з кабінету: контакти вже є, і там видно його знижку
     if (isSignedIn) {
-      const q = new URLSearchParams();
+      const q = new URLSearchParams({ zamovyty: "1" });
       if (p?.service) q.set("service", p.service);
       if (p?.model) q.set("model", p.model);
-      router.push(q.size ? `/moi-remonty?${q}` : "/moi-remonty");
+      router.push(`/moi-remonty?${q}`);
       return;
     }
     setPreset(p ?? {});

@@ -10,7 +10,7 @@ import styles from "./Guide.module.css";
  * не опис, а саме місце, де натискати.
  */
 
-type Scene = "stage" | "chat" | "telegram" | "delivery" | "warranty" | "review";
+type Scene = "stage" | "chat" | "delivery";
 
 type Step = {
   scene: Scene;
@@ -36,16 +36,9 @@ const steps: Step[] = [
   {
     scene: "chat",
     title: "Питання — одразу майстру",
-    text: "У картці ремонту натисніть «Написати майстру». Можна додати фото, а відповідь прийде сюди ж.",
+    text: "У картці ремонту натисніть «Написати майстру». Можна додати фото, а відповідь прийде сюди ж. Хочете статус у Telegram — кнопка поруч.",
     target: ['[data-guide="chat"] > button:first-child', '[data-guide="chat"] > :first-child'],
     missing: "Чат із майстром зʼявиться після замовлення ремонту.",
-  },
-  {
-    scene: "telegram",
-    title: "Статус у Telegram",
-    text: "Натисніть «Статус у Telegram», а в боті — «Start». Він сам напише про кожен етап і про погоджену ціну.",
-    target: ['[data-guide="chat"] > a[target="_blank"]'],
-    missing: "Кнопка Telegram зʼявиться після замовлення ремонту.",
   },
   {
     scene: "delivery",
@@ -53,20 +46,6 @@ const steps: Step[] = [
     text: "Заберіть пристрій у сервісі або замовте доставку Новою Поштою з картки ремонту. Отримали — натисніть «Я отримав гаджет».",
     target: ['[data-guide="received"] button', '[data-guide="delivery"] button', '[data-guide="delivery"]'],
     missing: "Кнопки доставки й «Я отримав гаджет» зʼявляться в картці, щойно пристрій буде готовий.",
-  },
-  {
-    scene: "warranty",
-    title: "Гарантія завжди під рукою",
-    text: "Нижче видно, до якої дати діє гарантія на кожен пристрій, і всі ваші завершені ремонти.",
-    target: ['[data-guide="warranty"] > :last-child', '[data-guide="history"] > :last-child'],
-    missing: "Гарантія зʼявиться після першого ремонту.",
-  },
-  {
-    scene: "review",
-    title: "Відгук — і мінус 10%",
-    text: "Розкажіть, як усе пройшло, і додайте фото до і після. Після перевірки отримаєте знижку 10% на наступний ремонт.",
-    target: ['[data-guide="review"] form', '[data-guide="review"] a.btn', '[data-guide="review"]'],
-    missing: "Форма відгуку — у кабінеті, на сторінці «Мої знижки».",
   },
 ];
 
@@ -321,16 +300,6 @@ function SceneArt({ scene }: { scene: Scene }) {
         </g>
       )}
 
-      {scene === "telegram" && (
-        <g>
-          <rect x="54" y="56" width="52" height="30" rx="9" className={`${styles.bubble} ${styles.toast}`} />
-          <rect x="62" y="65" width="28" height="5" rx="2.5" className={`${styles.line} ${styles.toast}`} />
-          <rect x="62" y="74" width="18" height="5" rx="2.5" className={`${styles.line} ${styles.toast}`} />
-          <circle cx="106" cy="56" r="8" className={styles.ping} />
-          <path d="M8 120l40-16-28-2z M20 102l6 12 22-10z" className={styles.plane} />
-        </g>
-      )}
-
       {scene === "delivery" && (
         <g>
           <g className={styles.box}>
@@ -342,32 +311,6 @@ function SceneArt({ scene }: { scene: Scene }) {
           ))}
           <circle cx="100" cy="112" r="10" className={styles.okDisk} />
           <path d="M95 112l3.5 3.5L106 108" className={styles.okTick} />
-        </g>
-      )}
-
-      {scene === "warranty" && (
-        <g>
-          <path d="M80 44l26 10v20c0 18-11 30-26 36-15-6-26-18-26-36V54z" className={styles.shield} />
-          <path d="M68 78l8 8 16-17" className={styles.shieldTick} />
-          <rect x="60" y="122" width="40" height="8" rx="4" className={`${styles.line} ${styles.dateLine}`} />
-        </g>
-      )}
-
-      {scene === "review" && (
-        <g>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <path
-              key={i}
-              d="M0 -7l2.1 4.3 4.7.7-3.4 3.3.8 4.7L0 3.8l-4.2 2.2.8-4.7L-6.8-2l4.7-.7z"
-              transform={`translate(${56 + i * 12} 62)`}
-              className={styles.star}
-              style={{ "--i": i } as React.CSSProperties}
-            />
-          ))}
-          <g className={styles.tag}>
-            <rect x="58" y="84" width="44" height="26" rx="8" className={styles.tagBody} />
-            <text x="80" y="102" textAnchor="middle" className={styles.tagText}>−10%</text>
-          </g>
         </g>
       )}
     </svg>

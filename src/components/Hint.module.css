@@ -1,0 +1,58 @@
+.wrap {
+  display: inline;
+}
+
+/* Видимий кружечок малий, а зона дотику — 32px */
+.btn,
+.btnOn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  vertical-align: 1px;
+  border: 1px solid var(--border-active);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn::after,
+.btnOn::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+}
+
+.btnOn,
+.btn:hover {
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+}
+
+.btn:focus-visible,
+.btnOn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.note {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgb(var(--lime-rgb) / .12);
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-2);
+}
