@@ -89,9 +89,11 @@ export async function findLeads(filter: LeadFilter): Promise<{ rows: Lead[]; fou
 }
 
 /** Мінімум про заявку — для сповіщення майстру: номер і чиє це звернення */
-export async function getLeadBrief(id: string): Promise<{ orderNo: number; name: string } | undefined> {
+export async function getLeadBrief(
+  id: string,
+): Promise<{ orderNo: number; name: string; clerkUserId: string | null } | undefined> {
   const [row] = await getDb()
-    .select({ orderNo: leads.orderNo, name: leads.name })
+    .select({ orderNo: leads.orderNo, name: leads.name, clerkUserId: leads.clerkUserId })
     .from(leads)
     .where(eq(leads.id, id))
     .limit(1);

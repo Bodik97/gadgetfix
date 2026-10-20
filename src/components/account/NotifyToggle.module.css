@@ -1,0 +1,46 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-active);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 14px;
+  background: rgb(var(--lime-rgb) / .16);
+  color: var(--accent-text);
+}
+
+.text {
+  display: grid;
+  gap: 3px;
+  flex: 1 1 240px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.text strong {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.on {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--accent-text);
+}

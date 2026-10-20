@@ -19,6 +19,7 @@ const m = vi.hoisted(() => ({
   /** Чи друкує зараз інший бік, і хто повідомив «я друкую» */
   otherTyping: false,
   typing: [] as string[],
+  reacted: [] as { lead: string; msg: string; side: string; emoji: string | null }[],
 }));
 
 vi.mock("@/lib/rateLimit", () => ({
@@ -37,6 +38,10 @@ vi.mock("@/db/messages", () => ({
     { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2", author: "client", text: "", createdAt: new Date("2026-05-01T11:00:00Z"), imagePath: "chat/11111111-1111-1111-1111-111111111111/x", imageWidth: 800, imageHeight: 600 },
   ],
   otherTyping: async () => m.otherTyping,
+  setReaction: async (lead: string, msg: string, side: string, emoji: string | null) => {
+    m.reacted.push({ lead, msg, side, emoji });
+    return true;
+  },
   setTyping: async (lead: string, side: string) => {
     m.typing.push(`${lead}:${side}`);
   },
@@ -71,6 +76,7 @@ vi.mock("@/lib/telegram", async (orig) => ({
 import { GET, POST } from "@/app/api/chat/[lead]/route";
 import { GET as GET_IMAGE } from "@/app/api/chat/[lead]/image/[msg]/route";
 import { POST as TYPING } from "@/app/api/chat/[lead]/typing/route";
+import { POST as REACT } from "@/app/api/chat/[lead]/react/route";
 
 const params = (lead: string) => ({ params: Promise.resolve({ lead }) });
 
@@ -102,6 +108,7 @@ beforeEach(() => {
   m.notified = [];
   m.otherTyping = false;
   m.typing = [];
+  m.reacted = [];
   m.message = undefined;
   m.blob = null;
 });
@@ -256,5 +263,36 @@ describe("POST /api/chat/[lead]/typing", () => {
     const res = await typing("11111111-1111-1111-1111-111111111111");
     expect(res.status).toBe(200);
     expect(m.typing).toEqual([]);
+  });
+});
+
+describe("POST /api/chat/[lead]/react", () => {
+  const MSG = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1";
+  const react = (lead: string, body: unknown, side?: string) =>
+    REACT(
+      new Request(`http://test/api/chat/${lead}/react${side ? `?side=${side}` : ""}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+      params(lead),
+    );
+
+  it("власник ставить і знімає реакцію від свого боку", async () => {
+    expect((await react("11111111-1111-1111-1111-111111111111", { message: MSG, emoji: "👍" })).status).toBe(200);
+    expect((await react("11111111-1111-1111-1111-111111111111", { message: MSG, emoji: null })).status).toBe(200);
+    expect(m.reacted).toEqual([
+      { lead: "11111111-1111-1111-1111-111111111111", msg: MSG, side: "client", emoji: "👍" },
+      { lead: "11111111-1111-1111-1111-111111111111", msg: MSG, side: "client", emoji: null },
+    ]);
+  });
+
+  it("чужий чат — 403", async () => {
+    expect((await react("22222222-2222-2222-2222-222222222222", { message: MSG, emoji: "👍" })).status).toBe(403);
+    expect(m.reacted).toEqual([]);
+  });
+
+  it("кривий id повідомлення — 400", async () => {
+    expect((await react("11111111-1111-1111-1111-111111111111", { message: "x", emoji: "👍" })).status).toBe(400);
   });
 });

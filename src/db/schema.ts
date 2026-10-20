@@ -279,6 +279,13 @@ export const leadMessages = pgTable(
     /** Коли другий бік прочитав. NULL = ще не бачив — з цього рахуємо лічильник. */
     readAt: timestamp("read_at", { withTimezone: true }),
 
+    /** Реакції смайликом — по одній від кожного боку. NULL — не реагував. */
+    clientReaction: text("client_reaction"),
+    masterReaction: text("master_reaction"),
+
+    /** Коли клієнту пішов лист, бо повідомлення майстра довго лишалось непрочитаним */
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -428,6 +435,27 @@ export const pushSubscriptions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint)],
+);
+
+/**
+ * Push-підписки клієнтів — окремо від майстерських: sendPush без адресата шле
+ * на всі пристрої майстрів, і клієнти не мають отримувати їхні сповіщення.
+ */
+export const clientPushSubscriptions = pgTable(
+  "client_push_subscriptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("client_push_subscriptions_endpoint_idx").on(t.endpoint),
+    index("client_push_subscriptions_user_idx").on(t.clerkUserId),
+  ],
 );
 
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;

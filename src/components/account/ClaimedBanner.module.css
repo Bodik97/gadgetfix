@@ -1,0 +1,21 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgb(var(--lime-rgb) / .6);
+  background: rgb(var(--lime-rgb) / .16);
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.banner strong {
+  color: var(--text);
+}
+
+.icon {
+  font-size: 26px;
+  line-height: 1;
+}

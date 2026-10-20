@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import CabinetBack from "@/components/account/CabinetBack";
 import SetPassword from "@/components/account/SetPassword";
+import NotifyToggle from "@/components/account/NotifyToggle";
 import SignOutButton from "@/components/account/SignOutButton";
 import { plural } from "@/components/account/plural";
 import { getReviewsByUser, reviewTarget } from "@/db/reviews";
 import { discountOffer } from "@/db/discounts";
 import { getProfileExtras } from "@/lib/profile";
+import { claimPendingLead } from "@/lib/leadClaim";
+import ClaimedBanner from "@/components/account/ClaimedBanner";
 import { describeStatus, getClientLeads } from "@/db/leads";
 import { unreadByLead } from "@/db/messages";
 import type { Lead } from "@/db/schema";
@@ -29,6 +32,9 @@ export default async function CabinetPage() {
   const user = await getCabinetUser();
   const name = user?.name;
   const email = user?.email;
+
+  // Заявку лишили без входу в цьому ж браузері — спершу переносимо її сюди
+  const claimed = user ? await claimPendingLead(user.id, email ?? null) : null;
 
   const [leads, myReviews, extras] = await Promise.all([
     user ? getClientLeads(user.id, email) : Promise.resolve([]),
@@ -80,7 +86,11 @@ export default async function CabinetPage() {
         {email && <p className={base.who}>{email}</p>}
       </header>
 
+      {claimed && <ClaimedBanner orderNo={claimed.orderNo} discount={claimed.discount} />}
+
       <SetPassword />
+
+      {leads.length > 0 && <NotifyToggle />}
 
       {/* Одна найважливіша дія — щоб не шукати її по розділах */}
       {now && (

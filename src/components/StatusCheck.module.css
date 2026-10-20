@@ -92,3 +92,21 @@
 }
 
 /* Кнопка бота під хронікою — щоб наступного разу статус прийшов сам */
+
+/* Під результатом — запрошення в кабінет: там те саме без номера, плюс чат */
+.cabinet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.cabinet span {
+  flex: 1 1 240px;
+}

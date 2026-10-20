@@ -113,7 +113,7 @@ describe("POST /api/lead: що приймаємо", () => {
     const res = await post({ name: " Олег ", phone: "073 315 02 38", source: "model", model: "iPhone 13" });
     expect(res.status).toBe(200);
     // telegram: null — клієнтський бот у тестах не налаштований
-    expect(await res.json()).toEqual({ ok: true, telegram: null, orderNo: 42, discount: null });
+    expect(await res.json()).toEqual({ ok: true, telegram: null, orderNo: 42, discount: null, claimable: false });
 
     expect(m.inserted).toHaveLength(1);
     expect(m.inserted[0]).toMatchObject({
@@ -303,5 +303,28 @@ describe("POST /api/lead: знижки", () => {
     expect((await res.json()).discount).toBe("review");
     expect(m.claimed[0].offer).toEqual({ kind: "review", reviewId: "r1" });
     expect(m.notified[0]).toContain("ЗНИЖКА −10% за відгук");
+  });
+});
+
+describe("POST /api/lead: кабінет після заявки без входу", () => {
+  const order = { name: "Олег", phone: "073 315 02 38", source: "landing" };
+
+  it("без входу — підписане cookie, щоб заявка переїхала в новий кабінет", async () => {
+    vi.stubEnv("ADMIN_SESSION_SECRET", "test-secret");
+    const res = await post(order);
+    expect((await res.json()).claimable).toBe(true);
+    const cookie = res.headers.get("set-cookie") ?? "";
+    expect(cookie).toMatch(/^gf_claim=lead-42\.[\w-]+;/);
+    expect(cookie).toContain("HttpOnly");
+    vi.unstubAllEnvs();
+  });
+
+  it("з входом заявка й так у кабінеті — cookie не ставимо", async () => {
+    vi.stubEnv("ADMIN_SESSION_SECRET", "test-secret");
+    m.userId = "user_1";
+    const res = await post(order);
+    expect((await res.json()).claimable).toBe(false);
+    expect(res.headers.get("set-cookie")).toBeNull();
+    vi.unstubAllEnvs();
   });
 });

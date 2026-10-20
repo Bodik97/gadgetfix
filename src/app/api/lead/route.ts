@@ -14,6 +14,7 @@ import { normalizeUaPhone } from "@/lib/phone";
 import { LIMITS, plainText, validName } from "@/lib/validate";
 import { verifiedEmail } from "@/lib/verifiedEmail";
 import { extrasOf } from "@/lib/profile";
+import { CLAIM_COOKIE, CLAIM_MS, claimToken } from "@/lib/leadClaim";
 import { getClientLeads } from "@/db/leads";
 import { getReviewsByUser } from "@/db/reviews";
 import { claimDiscount, discountOffer, type DiscountOffer } from "@/db/discounts";
@@ -196,5 +197,17 @@ export async function POST(request: Request) {
     ? connectLink({ id: leadId })
     : null;
 
-  return NextResponse.json({ ok: true, telegram, orderNo: orderNo ?? null, discount });
+  // Без входу — пропонуємо створити кабінет: заявка переїде туди з −5%
+  const claim = !userId && leadId ? claimToken(leadId) : null;
+  const res = NextResponse.json({ ok: true, telegram, orderNo: orderNo ?? null, discount, claimable: Boolean(claim) });
+  if (claim) {
+    res.cookies.set(CLAIM_COOKIE, claim, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: CLAIM_MS / 1000,
+      path: "/",
+    });
+  }
+  return res;
 }

@@ -64,6 +64,29 @@ export async function addMessage(
   await setTyping(leadId, author, false);
 }
 
+/** Смайлики для реакцій — лише з цього набору, щоб у базу не потрапляло будь-що */
+export const REACTIONS = ["👍", "❤️", "😂", "😮", "🙏", "🔥"] as const;
+
+/**
+ * Реакція на повідомлення іншого боку. На своє не реагують; та сама реакція
+ * вдруге — знімає її. Повертає, чи щось змінилось.
+ */
+export async function setReaction(
+  leadId: string,
+  messageId: string,
+  side: "client" | "master",
+  emoji: string | null,
+): Promise<boolean> {
+  if (emoji !== null && !(REACTIONS as readonly string[]).includes(emoji)) return false;
+  const other = side === "client" ? "master" : "client";
+  const rows = await getDb()
+    .update(leadMessages)
+    .set(side === "client" ? { clientReaction: emoji } : { masterReaction: emoji })
+    .where(and(eq(leadMessages.id, messageId), eq(leadMessages.leadId, leadId), eq(leadMessages.author, other)))
+    .returning({ id: leadMessages.id });
+  return rows.length > 0;
+}
+
 /** Скільки після останнього натискання клавіші вважаємо, що людина ще друкує */
 export const TYPING_MS = 6_000;
 

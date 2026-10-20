@@ -5,6 +5,7 @@ import type { Lead } from "@/db/schema";
 import QRCode from "qrcode";
 import { WARRANTY_RANGE } from "@/data/warranty";
 import { connectLink } from "@/lib/clientBot";
+import { siteUrl } from "@/lib/siteUrl";
 
 /**
  * Квитанція про прийом у ремонт — окремий документ для друку.
@@ -30,7 +31,7 @@ const dateFormat = new Intl.DateTimeFormat("uk-UA", {
 
 const uah = (n: number) => `${n.toLocaleString("uk-UA")} ₴`;
 
-function half(lead: Lead, copy: string, botQr: string | null): string {
+function half(lead: Lead, copy: string, botQr: string | null, cabinetQr: string | null = null): string {
   const rows: [string, string][] = [
     ["Клієнт", esc(lead.name)],
     ["Телефон", esc(lead.phone ?? "—")],
@@ -72,8 +73,16 @@ function half(lead: Lead, copy: string, botQr: string | null): string {
     </ul>
 
     ${
-      botQr
-        ? `<div class="bot">${botQr}<div><b>Статус ремонту — у Telegram</b><br>Наведіть камеру телефона на код і натисніть «Start»: бот напише, коли пристрій буде готовий.</div></div>`
+      botQr || cabinetQr
+        ? `<div class="qrs">${
+            botQr
+              ? `<div class="bot">${botQr}<div><b>Статус ремонту — у Telegram</b><br>Наведіть камеру на код і натисніть «Start»: бот напише, коли пристрій буде готовий.</div></div>`
+              : ""
+          }${
+            cabinetQr
+              ? `<div class="bot">${cabinetQr}<div><b>Кабінет на сайті</b><br>Етапи ремонту, чат із майстром і гарантія. −10% на наступний ремонт за відгук.</div></div>`
+              : ""
+          }</div>`
         : ""
     }
 
@@ -97,6 +106,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   // QR веде в бота зі статусами — лише на примірнику клієнта
   const link = connectLink(lead);
   const botQr = link ? await QRCode.toString(link, { type: "svg", margin: 0, width: 96 }) : null;
+  // Другий QR — у кабінет: хто вже має акаунт, одразу до ремонтів, решта — на вхід
+  const cabinetQr = await QRCode.toString(`${siteUrl()}${lead.clerkUserId ? "/moi-remonty" : "/vhid"}`, {
+    type: "svg",
+    margin: 0,
+    width: 96,
+  });
 
   const html = `<!doctype html>
 <html lang="uk">
@@ -136,7 +151,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   th { width: 62mm; color: #666; font-size: 12px; padding-right: 8px; }
   .terms { margin: 0 0 6mm; padding-left: 16px; color: #333; font-size: 11.5px; }
   .terms li { margin-bottom: 2px; }
-  .bot { display: flex; gap: 5mm; align-items: center; margin-bottom: 6mm; font-size: 12px; }
+  .qrs { display: flex; gap: 6mm; margin-bottom: 6mm; }
+  .bot { display: flex; flex: 1; gap: 4mm; align-items: center; font-size: 11.5px; }
   .bot svg { flex: none; width: 24mm; height: 24mm; }
   .signs { display: flex; gap: 12mm; margin-bottom: 5mm; }
   .sign { flex: 1; border-top: 1px solid #999; padding-top: 3px; }
@@ -164,7 +180,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 <body>
   <div class="sheet">
     <button class="print" onclick="window.print()">Друкувати</button>
-    ${half(lead, "примірник клієнта", botQr)}
+    ${half(lead, "примірник клієнта", botQr, cabinetQr)}
     <hr class="cut">
     ${half(lead, "примірник сервісу", null)}
   </div>

@@ -6,6 +6,7 @@ import { phoneKey, phoneKeySql } from "@/db/clients";
 import { leads, telegramChats, type Lead } from "@/db/schema";
 import { ARCHIVED, describeStatus } from "@/data/leadStatus";
 import { esc } from "./telegram";
+import { siteUrl } from "./siteUrl";
 
 /**
  * Бот для клієнтів: пише в Telegram, коли майстер міняє статус ремонту.
@@ -274,6 +275,16 @@ async function tellClient(lead: Who, html: string, buttons?: InlineButton[]): Pr
   }
 }
 
+/**
+ * Рядок про кабінет під повідомленням бота: хто вже має акаунт — посилання
+ * на свої ремонти, хто ні — запрошення з −5% на перший ремонт.
+ */
+export function cabinetLine(lead: Pick<Lead, "clerkUserId">): string {
+  return lead.clerkUserId
+    ? `<a href="${siteUrl()}/moi-remonty">Відкрити в кабінеті →</a>`
+    : `<a href="${siteUrl()}/vhid">Створіть кабінет</a> — етапи ремонту й чат із майстром на сайті, −5% на перший ремонт.`;
+}
+
 /** Дані кнопки «Я отримав посилку» під повідомленням про відправку */
 export const receivedButton = (lead: Pick<Lead, "id">) => `got:${lead.id.replace(/-/g, "")}`;
 
@@ -285,7 +296,7 @@ export async function notifyClientStatus(lead: Lead): Promise<boolean> {
   const buttons =
     lead.status === "shipped" && lead.ttn ? [{ text: "Я отримав посилку", callback_data: receivedButton(lead) }] : undefined;
 
-  return tellClient(lead, statusText(lead), buttons);
+  return tellClient(lead, `${statusText(lead)}\n\n${cabinetLine(lead)}`, buttons);
 }
 
 const uah = (n: number) => `${n.toLocaleString("uk-UA")} ₴`;
@@ -383,7 +394,7 @@ export async function forwardMasterMessage(leadId: string, text: string, photo: 
       .filter(Boolean)
       .join("\n\n");
 
-    return body ? tellClient(lead, `${head}\n${body}`) : photoSent;
+    return body ? tellClient(lead, `${head}\n${body}\n\n${cabinetLine(lead)}`) : photoSent;
   } catch (e) {
     console.error("[client-bot] відповідь майстра не переслано:", e);
     return false;

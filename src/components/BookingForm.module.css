@@ -161,3 +161,29 @@
     stroke-dashoffset: 0;
   }
 }
+
+/* Після заявки без входу: кабінет із −5% на цю ж заявку */
+.claim {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px dashed rgb(var(--lime-rgb) / .7);
+  background: rgb(var(--lime-rgb) / .1);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.claim strong {
+  font-size: 16px;
+  color: var(--text);
+}
+
+.claim :global(.btn) {
+  margin-top: 6px;
+}

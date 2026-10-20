@@ -9,6 +9,7 @@ import { leadLink } from "@/lib/adminLinks";
 import { siteUrl } from "@/lib/siteUrl";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
 import { forwardMasterMessage } from "@/lib/clientBot";
+import { sendClientPush } from "@/lib/clientPush";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ export type ChatMessage = {
   at: string;
   /** Коли другий бік прочитав; null — ще не бачив */
   readAt: string | null;
+  /** Реакції смайликом від кожного боку */
+  reactions: { client: string | null; master: string | null };
   image: { url: string; width: number | null; height: number | null } | null;
 };
 
@@ -57,6 +60,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ lead
         text: m.text,
         at: m.createdAt.toISOString(),
         readAt: m.readAt?.toISOString() ?? null,
+        reactions: { client: m.clientReaction ?? null, master: m.masterReaction ?? null },
         // Приватний файл віддаємо своїм маршрутом — там та сама перевірка прав
         image: m.imagePath
           ? { url: `/api/chat/${lead}/image/${m.id}`, width: m.imageWidth, height: m.imageHeight }
@@ -140,8 +144,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ lea
     );
   }
 
-  // Пише майстер — клієнт із підключеним ботом отримує відповідь у Telegram
-  if (role === "master") await forwardMasterMessage(lead, text, imagePath && file instanceof File ? file : null);
+  // Пише майстер — клієнт дізнається всіма каналами, які має: Telegram і push
+  if (role === "master") {
+    await forwardMasterMessage(lead, text, imagePath && file instanceof File ? file : null);
+    const brief = await getLeadBrief(lead);
+    if (brief?.clerkUserId) {
+      await sendClientPush(brief.clerkUserId, {
+        title: `Майстер відповів · №${brief.orderNo}`,
+        body: text ? text.slice(0, 160) : "Надіслав фото",
+        url: "/moi-remonty",
+        tag: `chat-${lead}`,
+      }).catch((e) => console.error("[chat] push клієнту:", e));
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -67,6 +67,61 @@
   color: var(--text);
 }
 
+/* Обгортка — щоб кнопка ↓ стояла над стрічкою й не прокручувалась разом із нею */
+.listWrap {
+  position: relative;
+}
+
+/* ↓ до останніх — маленька кругла, як у месенджерах */
+.down {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-active);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 4px 14px rgb(0 0 0 / .14);
+  cursor: pointer;
+  animation: downIn .18s ease-out;
+}
+
+.down:hover {
+  border-color: var(--accent-text);
+}
+
+.down:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.downBadge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+@keyframes downIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
 .list {
   /* Обмежуємо висоту, щоб довге листування не розтягувало картку; на
      низькому екрані телефона лишаємо місце полю вводу й клавіатурі */
@@ -96,10 +151,98 @@
 .mine,
 .theirs {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .mine {
-  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+/* ---------- Реакції ---------- */
+.reactions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: -6px;
+  padding: 0 8px;
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  font-size: 15px;
+  animation: reactPop .3s cubic-bezier(.2, 1.5, .4, 1);
+}
+
+/* Помітна, але тиха: рамка й фон, щоб було зрозуміло, що це кнопка */
+.reactAdd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+}
+
+.reactAdd:hover,
+.reactAdd[aria-expanded="true"] {
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+}
+
+.reactBar {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 4;
+  display: flex;
+  gap: 2px;
+  padding: 5px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border-active);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.react,
+.reactOn {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .12s ease;
+}
+
+.react:hover {
+  transform: scale(1.2);
+}
+
+.reactOn {
+  background: rgb(var(--lime-rgb) / .22);
+}
+
+@keyframes reactPop {
+  from { transform: scale(.4); }
+  to { transform: none; }
 }
 
 .bubble {
@@ -434,4 +577,7 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation: none; }
   .dots i { animation: none; opacity: .7; }
+  .reaction { animation: none; }
+  .down { animation: none; }
+  .react:hover { transform: none; }
 }

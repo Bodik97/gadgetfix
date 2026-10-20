@@ -8,6 +8,7 @@ import FormField, { fieldState } from "./FormField";
 import Logo from "./Logo";
 import PhoneInput from "./PhoneInput";
 import TelegramConnect from "./TelegramConnect";
+import { openSignUp, prepareSignIn } from "./auth/authStore";
 import { LIMITS, nameProblem, onlyLetters, phoneProblem, plainText } from "@/lib/validate";
 import styles from "./BookingForm.module.css";
 
@@ -58,6 +59,8 @@ function BookingFormInner({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [telegram, setTelegram] = useState<string | null>(null);
+  // Заявку лишили без входу — пропонуємо кабінет: заявка переїде туди з −5%
+  const [claim, setClaim] = useState<number | null>(null);
   // Обовʼязкові лише імʼя й телефон. У простій формі решта ховається, щоб не
   // лякати; відкрита одразу, коли послугу вже обрали кнопкою на сайті
   const [details, setDetails] = useState(!simple || Boolean(initialChoice));
@@ -102,7 +105,9 @@ function BookingFormInner({
         }),
       });
       if (!res.ok) throw new Error(String(res.status));
-      setTelegram((await res.json().catch(() => null))?.telegram ?? null);
+      const data = await res.json().catch(() => null);
+      setTelegram(data?.telegram ?? null);
+      setClaim(data?.claimable ? (data.orderNo ?? null) : null);
       setSent(true);
     } catch {
       setError("Не вдалося надіслати. Зателефонуйте, будь ласка: " + site.phones[0].label);
@@ -137,6 +142,25 @@ function BookingFormInner({
             </a>
             .
           </p>
+          {claim && (
+            <div className={styles.claim}>
+              <strong>🎁 −5% на цю заявку</strong>
+              <span>
+                Створіть кабінет за хвилину — знижку застосуємо до заявки №{claim}, а статус ремонту бачитимете без
+                дзвінків.
+              </span>
+              <button
+                type="button"
+                className="btn btn-accent"
+                onClick={openSignUp}
+                onPointerEnter={prepareSignIn}
+                onFocus={prepareSignIn}
+                data-track="claim-signup"
+              >
+                Створити кабінет і отримати −5%
+              </button>
+            </div>
+          )}
           <TelegramConnect href={telegram} />
           <button type="button" onClick={reset} className="btn btn-ghost">
             Надіслати ще одну

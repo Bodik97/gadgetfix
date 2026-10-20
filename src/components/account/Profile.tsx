@@ -7,6 +7,7 @@ import { saveBirthday, saveProfilePhone } from "@/app/actions/profile";
 import { BIRTHDAY_WINDOW_DAYS, DISCOUNT_PERCENT, inBirthdayWindow } from "@/data/discounts";
 import { shrinkImage } from "@/lib/shrinkImage";
 import FormError from "../FormError";
+import PasswordInput from "../PasswordInput";
 import PhoneInput from "../PhoneInput";
 import { phoneProblem } from "@/lib/validate";
 import styles from "./Profile.module.css";
@@ -512,9 +513,7 @@ function PasswordField() {
       ) : (
         <form className={styles.stack} onSubmit={save}>
           {has && (
-            <input
-              type="password"
-              className="field"
+            <PasswordInput
               autoComplete="current-password"
               placeholder="Поточний пароль"
               aria-label="Поточний пароль"
@@ -522,9 +521,7 @@ function PasswordField() {
               onChange={(e) => setCurrent(e.target.value)}
             />
           )}
-          <input
-            type="password"
-            className="field"
+          <PasswordInput
             autoComplete="new-password"
             placeholder="Новий пароль — щонайменше 8 символів"
             aria-label="Новий пароль"

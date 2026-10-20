@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import LiveRefresh from "@/components/LiveRefresh";
 import Devices from "@/components/account/Devices";
 import Guide from "@/components/account/Guide";
+import NotifyToggle from "@/components/account/NotifyToggle";
 import History from "@/components/account/History";
 import QuickOrder from "@/components/account/QuickOrder";
 import RepairCard from "@/components/account/RepairCard";
@@ -13,6 +14,8 @@ import { describeStatus, getClientLeads } from "@/db/leads";
 import { getReviewsByUser } from "@/db/reviews";
 import { discountOffer } from "@/db/discounts";
 import { getProfileExtras } from "@/lib/profile";
+import { claimPendingLead } from "@/lib/leadClaim";
+import ClaimedBanner from "@/components/account/ClaimedBanner";
 import { getDevices, getEvents } from "@/db/events";
 import { unreadByLead } from "@/db/messages";
 import { getCabinetUser } from "@/lib/cabinetUser";
@@ -39,6 +42,9 @@ export default async function MyRepairsPage() {
   const user = await getCabinetUser();
   const name = user?.name;
   const email = user?.email;
+
+  // Заявку лишили без входу в цьому ж браузері — спершу переносимо її сюди
+  const claimed = user ? await claimPendingLead(user.id, email ?? null) : null;
 
   const [leads, myReviews, extras] = await Promise.all([
     user ? getClientLeads(user.id, email) : Promise.resolve([]),
@@ -97,6 +103,11 @@ export default async function MyRepairsPage() {
           {email}
         </p>
       </header>
+
+      {claimed && <ClaimedBanner orderNo={claimed.orderNo} discount={claimed.discount} />}
+
+      {/* Пропонуємо сповіщення тим, кому вже є про що сповіщати */}
+      {leads.length > 0 && <NotifyToggle />}
 
       <Guide collapsed={leads.length === 0} />
 

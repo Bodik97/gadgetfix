@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import type { Order } from "@/app/api/orders/[no]/route";
+import Link from "next/link";
 import FormError from "./FormError";
+import { openSignUp, prepareSignIn, useAuthState } from "./auth/authStore";
 import styles from "./StatusCheck.module.css";
 
 export default function StatusCheck({
@@ -20,6 +22,7 @@ export default function StatusCheck({
   const [error, setError] = useState("");
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
+  const { isSignedIn } = useAuthState();
 
   const reset = () => {
     setError("");
@@ -143,6 +146,31 @@ export default function StatusCheck({
                 </ul>
               )}
 
+              {/* Хто перевіряє за номером — ще не в кабінеті: там те саме без номера, плюс чат */}
+              <div className={styles.cabinet}>
+                {isSignedIn ? (
+                  <Link href="/moi-remonty" className="btn btn-accent">
+                    Відкрити в кабінеті
+                  </Link>
+                ) : (
+                  <>
+                    <span>
+                      Бачте етапи без номера й квитанції, пишіть майстру в чат — а після ремонту отримайте −10% за
+                      відгук.
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-accent"
+                      onClick={openSignUp}
+                      onPointerEnter={prepareSignIn}
+                      onFocus={prepareSignIn}
+                      data-track="status-signup"
+                    >
+                      Створити кабінет
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -27,6 +27,9 @@ const EMOJI = [
   "💪", "👏", "🔥", "❤️", "✅", "❌", "📱", "🔧",
 ];
 
+/** Швидкі реакції — той самий набір, що приймає сервер */
+const REACTIONS = ["👍", "❤️", "😂", "😮", "🙏", "🔥"];
+
 /** Своє повідомлення, поки сервер його не підтвердив */
 type Pending = { id: string; text: string; preview: string | null; failed: boolean; retry: FormData };
 
@@ -52,8 +55,15 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
   const [typing, setTyping] = useState(false);
   const [pending, setPending] = useState<Pending[]>([]);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  // Під яким повідомленням зараз відкритий рядок реакцій
+  const [reacting, setReacting] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
+  // Як у месенджерах: внизу — нові повідомлення підтягуються; прогорнули вгору — нічого не смикаємо
+  const atBottom = useRef(true);
+  const [showDown, setShowDown] = useState(false);
+  // Скільки повідомлень було в стрічці, коли людина востаннє бачила низ — для лічильника на ↓
+  const [seen, setSeen] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastPing = useRef(0);
@@ -92,14 +102,34 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
   }, [open, load]);
 
   const openChat = () => {
+    atBottom.current = true;
     setOpen(true);
     load();
   };
 
-  // Нове повідомлення й «друкує…» мають бути видно без прокрутки вручну
+  const total = (messages?.length ?? 0) + pending.length;
+
+  // Опитування оновлює стрічку щокілька секунд — тягнемо вниз лише того, хто й так унизу
   useEffect(() => {
-    if (open && listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+    const el = listRef.current;
+    if (open && el && atBottom.current) el.scrollTop = el.scrollHeight;
   }, [open, messages, pending, typing]);
+
+  const onScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    atBottom.current = bottom;
+    setShowDown(!bottom);
+    if (bottom) setSeen(total);
+  };
+
+  const scrollDown = () => {
+    const el = listRef.current;
+    el?.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  };
+
+  const unseen = Math.max(0, total - seen);
 
   /** «Я друкую» — не частіше ніж раз на кілька секунд; збій тут нічого не ламає */
   const pingTyping = () => {
@@ -176,6 +206,8 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
       form.set("height", String(photo.height));
     }
 
+    // Своє повідомлення завжди показуємо — опускаємось униз
+    atBottom.current = true;
     const item: Pending = { id: crypto.randomUUID(), text: clean, preview: photo?.preview ?? null, failed: false, retry: form };
     setPending((list) => [...list, item]);
     setText("");
@@ -184,6 +216,20 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
     setEmojiOpen(false);
     lastPing.current = 0;
     await deliver(item);
+  };
+
+  /** Реакція одразу в стрічці; та сама вдруге — знімає. Сервер підтвердить при наступному опитуванні */
+  const react = async (m: ChatMessage, emoji: string) => {
+    const next = m.reactions[side] === emoji ? null : emoji;
+    setReacting(null);
+    setMessages((list) =>
+      list?.map((x) => (x.id === m.id ? { ...x, reactions: { ...x.reactions, [side]: next } } : x)) ?? list,
+    );
+    await fetch(`/api/chat/${leadId}/react?side=${side}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: m.id, emoji: next }),
+    }).catch(() => {});
   };
 
   const retry = (item: Pending) => {
@@ -226,85 +272,137 @@ export default function Chat({ leadId, side, unread = 0 }: Props) {
         </button>
       </header>
 
-      <div className={styles.list} ref={listRef}>
-        {messages === null ? (
-          <p className={styles.hint}>Завантажуємо…</p>
-        ) : messages.length === 0 && pending.length === 0 ? (
-          <p className={styles.hint}>
-            {side === "client"
-              ? "Питайте що завгодно про свій ремонт — майстер відповість тут."
-              : "Клієнт ще нічого не писав. Можете написати першим."}
-          </p>
-        ) : (
-          <ol className={styles.messages}>
-            {messages.map((m) => (
-              <li key={m.id} className={m.author === side ? styles.mine : styles.theirs}>
-                <div className={styles.bubble}>
-                  <span className={styles.author}>
-                    {m.author === side ? "Ви" : side === "client" ? "Майстер" : "Клієнт"}
-                  </span>
+      <div className={styles.listWrap}>
+        <div className={styles.list} ref={listRef} onScroll={onScroll}>
+          {messages === null ? (
+            <p className={styles.hint}>Завантажуємо…</p>
+          ) : messages.length === 0 && pending.length === 0 ? (
+            <p className={styles.hint}>
+              {side === "client"
+                ? "Питайте що завгодно про свій ремонт — майстер відповість тут."
+                : "Клієнт ще нічого не писав. Можете написати першим."}
+            </p>
+          ) : (
+            <ol className={styles.messages}>
+              {messages.map((m) => (
+                <li key={m.id} className={m.author === side ? styles.mine : styles.theirs}>
+                  <div className={styles.bubble}>
+                    <span className={styles.author}>
+                      {m.author === side ? "Ви" : side === "client" ? "Майстер" : "Клієнт"}
+                    </span>
 
-                  {m.image && (
-                    <a
-                      href={m.image.url}
-                      target="_blank"
-                      rel="noopener"
-                      className={styles.photo}
-                      style={
-                        m.image.width && m.image.height
-                          ? { aspectRatio: `${m.image.width} / ${m.image.height}` }
-                          : undefined
-                      }
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={m.image.url} alt="Фото в листуванні" loading="lazy" />
-                    </a>
-                  )}
-
-                  {m.text && <p className={styles.text}>{m.text}</p>}
-                  <span className={styles.meta}>
-                    <time className={styles.time} dateTime={m.at}>
-                      {stamp.format(new Date(m.at))}
-                    </time>
-                    {m.author === side && <Status state={m.readAt ? "read" : "sent"} />}
-                  </span>
-                </div>
-              </li>
-            ))}
-
-            {pending.map((p) => (
-              <li key={p.id} className={styles.mine}>
-                <div className={styles.bubble}>
-                  <span className={styles.author}>Ви</span>
-                  {p.preview && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.preview} alt="Фото надсилається" className={styles.pendingImg} />
-                  )}
-                  {p.text && <p className={styles.text}>{p.text}</p>}
-                  <span className={styles.meta}>
-                    {p.failed ? (
-                      <button type="button" className={styles.retry} onClick={() => retry(p)} disabled={sending}>
-                        Не надіслано · Повторити
-                      </button>
-                    ) : (
-                      <Status state="sending" />
+                    {m.image && (
+                      <a
+                        href={m.image.url}
+                        target="_blank"
+                        rel="noopener"
+                        className={styles.photo}
+                        style={
+                          m.image.width && m.image.height
+                            ? { aspectRatio: `${m.image.width} / ${m.image.height}` }
+                            : undefined
+                        }
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={m.image.url} alt="Фото в листуванні" loading="lazy" />
+                      </a>
                     )}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
 
-        {typing && (
-          <div className={styles.typing} role="status">
-            <span className={styles.dots} aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-            {side === "client" ? "Майстер друкує…" : "Клієнт друкує…"}
-          </div>
+                    {m.text && <p className={styles.text}>{m.text}</p>}
+                    <span className={styles.meta}>
+                      <time className={styles.time} dateTime={m.at}>
+                        {stamp.format(new Date(m.at))}
+                      </time>
+                      {m.author === side && <Status state={m.readAt ? "read" : "sent"} />}
+                    </span>
+                  </div>
+
+                  {/* Реакції: видно обом; ставити можна лише на повідомлення іншого боку */}
+                  {(m.reactions.client || m.reactions.master || m.author !== side) && (
+                    <div className={styles.reactions}>
+                      {[m.reactions.client, m.reactions.master].filter(Boolean).map((r, i) => (
+                        <span key={i} className={styles.reaction}>
+                          {r}
+                        </span>
+                      ))}
+                      {m.author !== side && (
+                        <button
+                          type="button"
+                          className={styles.reactAdd}
+                          onClick={() => setReacting(reacting === m.id ? null : m.id)}
+                          aria-label="Відреагувати"
+                          aria-expanded={reacting === m.id}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="11" cy="12" r="8" />
+                            <path d="M7.8 14a4 4 0 0 0 6.4 0M8.5 9.5h.01M13.5 9.5h.01M19 3v4M17 5h4" />
+                          </svg>
+                        </button>
+                      )}
+                      {reacting === m.id && (
+                        <div className={styles.reactBar} role="group" aria-label="Реакції">
+                          {REACTIONS.map((e) => (
+                            <button
+                              key={e}
+                              type="button"
+                              className={m.reactions[side] === e ? styles.reactOn : styles.react}
+                              onClick={() => react(m, e)}
+                              aria-label={e}
+                              aria-pressed={m.reactions[side] === e}
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+
+              {pending.map((p) => (
+                <li key={p.id} className={styles.mine}>
+                  <div className={styles.bubble}>
+                    <span className={styles.author}>Ви</span>
+                    {p.preview && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.preview} alt="Фото надсилається" className={styles.pendingImg} />
+                    )}
+                    {p.text && <p className={styles.text}>{p.text}</p>}
+                    <span className={styles.meta}>
+                      {p.failed ? (
+                        <button type="button" className={styles.retry} onClick={() => retry(p)} disabled={sending}>
+                          Не надіслано · Повторити
+                        </button>
+                      ) : (
+                        <Status state="sending" />
+                      )}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          {typing && (
+            <div className={styles.typing} role="status">
+              <span className={styles.dots} aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              {side === "client" ? "Майстер друкує…" : "Клієнт друкує…"}
+            </div>
+          )}
+        </div>
+
+        {showDown && (
+          <button type="button" className={styles.down} onClick={scrollDown} aria-label="До останніх повідомлень">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 9.5l6 6 6-6" />
+            </svg>
+            {unseen > 0 && <span className={styles.downBadge}>{unseen}</span>}
+          </button>
         )}
       </div>
 

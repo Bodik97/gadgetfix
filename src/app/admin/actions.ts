@@ -11,6 +11,8 @@ import { STATUS_OPTIONS } from "@/db/leads";
 import { guessWarrantyDays, isWarrantyTerm, warrantyEnd } from "@/data/warranty";
 import { addEvent, getHandoverDate, getLeadById, registerDevice } from "@/db/events";
 import { releaseDiscount } from "@/db/discounts";
+import { sendClientPush } from "@/lib/clientPush";
+import { describeStatus } from "@/data/leadStatus";
 import { addExpense, EXPENSE_CATEGORIES, removeExpense } from "@/db/expenses";
 import { addPart, removePart, shiftPartQty } from "@/db/parts";
 import { rateLimit, release } from "@/lib/rateLimit";
@@ -131,6 +133,17 @@ export async function setStatus(formData: FormData): Promise<void> {
 
     // Клієнт із підключеним ботом дізнається про новий етап одразу, у Telegram
     await notifyClientStatus({ ...before, status: next });
+  }
+
+  // І push на телефон, якщо клієнт його увімкнув у кабінеті
+  if (before.clerkUserId) {
+    const s = describeStatus(next);
+    await sendClientPush(before.clerkUserId, {
+      title: `№${before.orderNo}: ${s.label}`,
+      body: s.hint,
+      url: "/moi-remonty",
+      tag: `status-${id}`,
+    }).catch((e) => console.error("[status] push клієнту:", e));
   }
 
   revalidatePath("/admin");
