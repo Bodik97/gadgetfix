@@ -7,17 +7,28 @@ import { getReviewsByUser } from "@/db/reviews";
 import { verifiedEmail } from "@/lib/verifiedEmail";
 import { extrasOf } from "@/lib/profile";
 
+/** Де клієнт на шляху до −10%: зареєструвався → відремонтувався → лишив відгук */
+export type Journey = {
+  /** Знижка 5% за реєстрацію ще чекає на перший ремонт */
+  signupWaiting: boolean;
+  repaired: boolean;
+  reviewed: boolean;
+};
+
 /**
- * Чи чекає на клієнта, який зараз увійшов, знижка 5% за реєстрацію — вона діє
- * лише на перший ремонт. Блок на головній питає це після входу — так головна
- * лишається статичною. Без входу — null.
+ * Шлях знижок клієнта, який зараз увійшов. Блок на головній питає це вже в
+ * браузері — так головна лишається статичною. Без входу — null.
  */
-export async function signupDiscountWaiting(): Promise<boolean | null> {
+export async function myJourney(): Promise<Journey | null> {
   const user = await currentUser();
   if (!user) return null;
   const [repairs, written] = await Promise.all([
     getClientLeads(user.id, verifiedEmail(user)),
     getReviewsByUser(user.id),
   ]);
-  return discountOffer(repairs, written, extrasOf(user).birthday)?.kind === "signup";
+  return {
+    signupWaiting: discountOffer(repairs, written, extrasOf(user).birthday)?.kind === "signup",
+    repaired: repairs.some((l) => l.status === "done" || l.receivedAt),
+    reviewed: written.length > 0,
+  };
 }

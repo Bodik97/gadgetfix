@@ -1,0 +1,878 @@
+/* «Бонуси GadgetFix»: текст ліворуч, картки праворуч (на телефоні — колода під текстом) */
+.wrap {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: clamp(36px, 5vw, 56px);
+  margin-top: clamp(56px, 8vw, 112px);
+}
+
+/* Декор — у межах блоку: винесений за край, він розпирав сторінку вбік */
+.decor {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.sun {
+  fill: var(--accent);
+  fill-opacity: .25;
+}
+
+/* Один пунктир для всього блоку: фонова крива, маршрут між кроками й дорога айфончика */
+.dash {
+  fill: none;
+  stroke: rgb(var(--fg-rgb) / .3);
+  stroke-width: 2;
+  stroke-dasharray: 6 10;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Маршрут 1 → 2 → 3 лежить на столі під картками й нахиляється разом із ним */
+.route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Пунктир «тече» — одна довжина штриха з проміжком за цикл, тож без ривків */
+.track {
+  animation: dashFlow 1.1s linear infinite;
+}
+
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* ---------- Текст ліворуч ---------- */
+.copy {
+  display: grid;
+  gap: 20px;
+  align-content: center;
+  justify-items: start;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  background: #111311;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.pill i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Через .copy — щоб перебити тонкий .band h2 головної: тут заголовок жирний, як на макеті */
+.copy .title {
+  margin: 0;
+  font-family: var(--font-unbounded), sans-serif;
+  font-weight: 700;
+  font-size: clamp(30px, 5vw, 60px);
+  letter-spacing: -.04em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.lead {
+  margin: 0;
+  max-width: 44ch;
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.progress {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 470px);
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgb(var(--fg-rgb) / .08);
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .06);
+}
+
+.progressHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.progressHead span {
+  color: var(--text-2);
+}
+
+/* Смужка шляху з айфончиком над нею */
+.barsWrap {
+  position: relative;
+  padding-top: 20px;
+}
+
+/* Пунктир під айфончиком — дорога, якою він їде */
+.barsWrap::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  /* Той самий штрих, що й на маршруті: 6px лінія, 10px проміжок */
+  background: repeating-linear-gradient(90deg, rgb(var(--fg-rgb) / .3) 0 6px, transparent 6px 16px);
+  animation: roadFlow 1.1s linear infinite;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+@keyframes roadFlow {
+  to {
+    background-position: 16px 0;
+  }
+}
+
+.rider {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  animation: ride 7s ease-in-out infinite alternate;
+}
+
+.riderBody {
+  fill: #111311;
+}
+
+.riderScreen {
+  fill: var(--accent);
+}
+
+@keyframes ride {
+  0% {
+    left: 0;
+    rotate: -4deg;
+  }
+  50% {
+    rotate: 4deg;
+  }
+  100% {
+    left: calc(100% - 30px);
+    rotate: -4deg;
+  }
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.bar {
+  position: relative;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--fg-rgb) / .1);
+  overflow: hidden;
+}
+
+/* Зроблений крок заповнюється — по черзі, коли блок з'являється */
+.bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width .6s var(--ease) var(--d, 0ms);
+}
+
+.bar .fill {
+  width: 100%;
+}
+
+.wait .bar .fill {
+  width: 0;
+}
+
+.barLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Картки ---------- */
+.side {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+}
+
+.board {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+/* Полотно Three.js — під картками, мишку не перехоплює; без 3D його не видно */
+.scene {
+  display: none;
+}
+
+.card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 22px 22px 24px;
+  border-radius: 26px;
+  box-shadow: 0 22px 50px rgb(0 0 0 / .14), 0 2px 6px rgb(0 0 0 / .06);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dark {
+  background: #111311;
+  color: #f2f2ec;
+}
+
+.lime {
+  background: var(--accent);
+  color: #101110;
+}
+
+.light {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgb(var(--fg-rgb) / .08);
+}
+
+/* Номер кроку — великий кружок у куті: послідовність 1 → 2 → 3 читається з погляду */
+.stepNo {
+  position: absolute;
+  top: -12px;
+  left: -10px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid var(--bg);
+  background: var(--accent);
+  color: #101110;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.lime .stepNo {
+  background: #111311;
+  color: var(--accent);
+}
+
+/* Наступний крок людини — кільце довкола картки */
+.isNext {
+  outline: 3px solid var(--accent);
+  outline-offset: 5px;
+}
+
+.lime.isNext {
+  outline-color: #111311;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.lime .icon,
+.light .icon {
+  color: currentColor;
+}
+
+.chip,
+.chipDark,
+.doneChip,
+.nextChip {
+  padding: 5px 11px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip {
+  border: 1px solid currentColor;
+  opacity: .75;
+}
+
+.chipDark,
+.light .nextChip {
+  background: #111311;
+  color: var(--accent);
+}
+
+.doneChip {
+  background: rgb(var(--lime-rgb) / .2);
+  color: inherit;
+}
+
+.lime .doneChip {
+  background: rgb(0 0 0 / .1);
+}
+
+.nextChip {
+  background: var(--accent);
+  color: #101110;
+}
+
+.lime .nextChip {
+  background: #111311;
+  color: var(--accent);
+}
+
+.cardLabel {
+  font-size: 13.5px;
+  opacity: .8;
+}
+
+.pct {
+  font-family: var(--font-unbounded), sans-serif;
+  font-weight: 700;
+  font-size: clamp(46px, 6vw, 68px);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.dark .pct {
+  color: var(--accent);
+}
+
+.bigText {
+  font-family: var(--font-unbounded), sans-serif;
+  font-weight: 700;
+  font-size: clamp(24px, 2.6vw, 30px);
+  line-height: 1.1;
+  letter-spacing: -.03em;
+}
+
+.cardText {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  opacity: .85;
+  text-wrap: pretty;
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 1px solid rgb(var(--fg-rgb) / .08);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .08);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stars {
+  color: #f5b301;
+  letter-spacing: 1px;
+}
+
+/* ---------- Поява: картки «падають на стіл» по черзі ---------- */
+.wait .card {
+  opacity: 0;
+}
+
+.in .card {
+  animation: drop .7s cubic-bezier(.2, 1.25, .4, 1) both;
+  animation-delay: calc(var(--i) * 120ms);
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    translate: 0 -48px;
+    scale: .92;
+  }
+}
+
+/* ---------- Телефон і планшет: покроковий слайдер ---------- */
+.slider {
+  display: none;
+}
+
+@media (max-width: 959px) {
+  /* Розкладені картки — лише на широкому екрані */
+  .board {
+    display: none;
+  }
+
+  .slider {
+    position: relative;
+    display: grid;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .sliderHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .sliderCount {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent-text);
+  }
+
+  .sliderArrows {
+    display: flex;
+    gap: 8px;
+  }
+
+  .sliderArrows button {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border-active);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .sliderArrows button:disabled {
+    opacity: .35;
+    cursor: default;
+  }
+
+  /* Рідна прокрутка з прилипанням: гортається пальцем, як галерея; сусідній слайд визирає */
+  .track2 {
+    display: flex;
+    gap: 12px;
+    margin: 0 calc(var(--gutter) * -1);
+    padding: 6px var(--gutter) 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--gutter);
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .track2::-webkit-scrollbar {
+    display: none;
+  }
+
+  .slide {
+    flex: 0 0 80%;
+    max-width: 340px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+    padding: 16px 16px 18px;
+    border-radius: 24px;
+    scroll-snap-align: start;
+    box-shadow: 0 14px 34px rgb(0 0 0 / .12);
+    transition: scale .3s var(--ease), opacity .3s;
+    scale: .96;
+    opacity: .75;
+  }
+
+  .slide.on {
+    scale: 1;
+    opacity: 1;
+  }
+
+  .slideTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  /* Ілюстрація: значок у кружку + три «іскри», що оживають на активному слайді */
+  .art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgb(var(--lime-rgb) / .18);
+  }
+
+  .lime .art {
+    background: rgb(0 0 0 / .1);
+  }
+
+  .art .icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .art i {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0;
+  }
+
+  .lime .art i {
+    background: #111311;
+  }
+
+  .art i:nth-of-type(1) { top: 2px; right: 0; }
+  .art i:nth-of-type(2) { bottom: 4px; right: -4px; }
+  .art i:nth-of-type(3) { top: 10px; left: -4px; }
+
+  .slidePct {
+    font-family: var(--font-unbounded), sans-serif;
+    font-weight: 700;
+    font-size: 38px;
+    line-height: 1;
+    letter-spacing: -.05em;
+  }
+
+  .dark .slidePct {
+    color: var(--accent);
+  }
+
+  .slideBigText {
+    font-family: var(--font-unbounded), sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1.1;
+    letter-spacing: -.03em;
+  }
+
+  .slideTitle {
+    margin: 2px 0 0;
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .slideHow {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.5;
+    opacity: .88;
+  }
+
+  .slideBtn {
+    margin-top: 6px;
+    min-height: 46px;
+    width: 100%;
+  }
+
+  .slideBtnDark {
+    background: #111311;
+    color: var(--accent);
+    border-color: #111311;
+  }
+
+  .dots {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  /* Видимо — крапка, а зона дотику 28×28 */
+  .dot,
+  .dotOn {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .dot::after,
+  .dotOn::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--r-pill);
+    background: rgb(var(--fg-rgb) / .2);
+    translate: -50% -50%;
+    transition: width .25s, background .25s;
+  }
+
+  .dotOn::after {
+    width: 22px;
+    background: var(--accent-text);
+  }
+
+  .swipeHint {
+    justify-self: center;
+    font-size: 13.5px;
+    color: var(--text-3);
+  }
+
+  .hand {
+    display: inline-block;
+    animation: nudgeRight 1.2s ease-in-out infinite;
+  }
+
+  @keyframes nudgeRight {
+    50% { translate: 6px 0; }
+  }
+
+  /* ---------- Своя анімація для кожного слайда, коли він стає активним ---------- */
+  .on .slidePct,
+  .on .slideBigText {
+    animation: popIn .5s cubic-bezier(.2, 1.4, .4, 1) both;
+  }
+
+  @keyframes popIn {
+    from { scale: .7; opacity: 0; }
+  }
+
+  /* Реєстрація: значок «вистрибує», іскри розлітаються */
+  .on[data-anim="signup"] .art {
+    animation: jump .6s cubic-bezier(.2, 1.6, .4, 1) both;
+  }
+
+  .on[data-anim="signup"] .art i,
+  .on[data-anim="birthday"] .art i {
+    animation: spark .8s ease-out .25s both;
+  }
+
+  .on .art i:nth-of-type(2) { animation-delay: .35s; }
+  .on .art i:nth-of-type(3) { animation-delay: .45s; }
+
+  @keyframes jump {
+    0% { translate: 0 10px; scale: .6; }
+    60% { translate: 0 -6px; }
+  }
+
+  @keyframes spark {
+    0% { opacity: 0; scale: 0; }
+    40% { opacity: 1; scale: 1.3; }
+    100% { opacity: 0; scale: .6; translate: 0 -8px; }
+  }
+
+  /* Ремонт: ключ «закручує» */
+  .on[data-anim="repair"] .icon {
+    animation: twist 1.2s ease-in-out .2s 2;
+  }
+
+  @keyframes twist {
+    25% { rotate: -35deg; }
+    50% { rotate: 10deg; }
+    75% { rotate: -20deg; }
+  }
+
+  /* Відгук: зірка загоряється й пульсує */
+  .on[data-anim="review"] .icon {
+    animation: starOn .9s ease-out .15s both;
+  }
+
+  @keyframes starOn {
+    0% { fill: transparent; scale: .6; }
+    60% { fill: currentColor; scale: 1.25; }
+    100% { fill: currentColor; scale: 1; }
+  }
+
+  /* Військовим: щит малюється */
+  .on[data-anim="military"] .icon path {
+    stroke-dasharray: 80;
+    animation: draw 1s ease-out both;
+  }
+
+  @keyframes draw {
+    from { stroke-dashoffset: 80; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* День народження: подарунок підстрибує */
+  .on[data-anim="birthday"] .art {
+    animation: bounce .9s cubic-bezier(.3, 1.6, .5, 1) both;
+  }
+
+  @keyframes bounce {
+    0% { translate: 0 -14px; }
+    40% { translate: 0 0; }
+    55% { translate: 0 -5px; }
+    70% { translate: 0 0; }
+  }
+
+  .rating {
+    justify-self: center;
+  }
+}
+
+/* ---------- Широкий екран: розкладено, як на столі, у порядку кроків ---------- */
+@media (min-width: 960px) {
+  .wrap {
+    grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+    align-items: center;
+  }
+
+  .side {
+    display: block;
+    position: relative;
+  }
+
+  .slider {
+    display: none;
+  }
+
+  .scene {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .board {
+    height: 700px;
+  }
+
+  .card {
+    position: absolute;
+    transition: rotate .3s var(--ease), translate .3s var(--ease);
+  }
+
+  /* Кроки йдуть зигзагом згори вниз: 1 ліворуч → 2 праворуч → 3 ліворуч;
+     додаткові знижки — по кутах, щоб не перебивали послідовність */
+  .signup { left: 6%; top: 40px; width: 34%; rotate: -4deg; z-index: 2; }
+  .repair { left: 50%; top: 190px; width: 32%; rotate: 3deg; z-index: 3; }
+  .review { left: 10%; top: 310px; width: 36%; rotate: -2deg; z-index: 4; }
+  .military { left: 56%; top: 430px; width: 30%; rotate: 4deg; z-index: 5; }
+  .birthday { left: 60%; top: 0; width: 27%; rotate: 5deg; z-index: 1; }
+
+  /* Картки компактні: менше повітря, цифр і тексту */
+  .card {
+    gap: 4px;
+    padding: 16px 16px 18px;
+    border-radius: 20px;
+  }
+
+  .cardTop {
+    margin-bottom: 4px;
+  }
+
+  .pct {
+    font-size: clamp(32px, 3.4vw, 44px);
+  }
+
+  .bigText {
+    font-size: clamp(18px, 1.7vw, 22px);
+  }
+
+  .cardLabel {
+    font-size: 12.5px;
+  }
+
+  .cardText {
+    font-size: 13px;
+  }
+
+  .chip,
+  .chipDark,
+  .doneChip,
+  .nextChip {
+    padding: 4px 9px;
+    font-size: 11.5px;
+  }
+
+  .military .pct,
+  .birthday .pct {
+    font-size: clamp(28px, 2.8vw, 36px);
+  }
+
+  .birthday {
+    padding: 14px 14px 16px;
+  }
+
+  .card:hover {
+    rotate: 0deg;
+    translate: 0 -6px;
+    z-index: 8;
+    /* У 3D-сцені картка під курсором ще й виходить уперед */
+    --lift: 60px;
+  }
+
+  .rating {
+    position: absolute;
+    left: 0;
+    bottom: 10px;
+    rotate: -3deg;
+    z-index: 7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide,
+  .on .slidePct,
+  .on .slideBigText,
+  .on .art,
+  .on .art i,
+  .on .icon,
+  .on .icon path,
+  .hand,
+  .in .card,
+  .track,
+  .rider,
+  .barsWrap::before {
+    animation: none;
+  }
+
+  .card,
+  .bar i,
+  .dots i {
+    transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .actions :global(.btn) {
+    flex: 1 1 100%;
+  }
+}

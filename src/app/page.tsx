@@ -11,7 +11,7 @@ import Reveal from "@/components/Reveal";
 import ReviewShowcase from "@/components/ReviewShowcase";
 import WorkSlider from "@/components/WorkSlider";
 import ParcelDecor from "@/components/ParcelDecor";
-import RegisterBonus from "@/components/RegisterBonus";
+import DiscountPath from "@/components/DiscountPath";
 import StatusCheck from "@/components/StatusCheck";
 import { getPublishedReviews, getReviewStats } from "@/db/reviews";
 import { getWorks } from "@/db/works";
@@ -242,6 +242,9 @@ export default async function Home() {
               </li>
             ))}
           </ol>
+
+          {/* Що клієнт отримує в нас — одразу після того, як ми працюємо */}
+          <DiscountPath rating={reviewStats.count > 0 ? reviewStats : null} />
         </div>
       </section>
 
@@ -295,9 +298,6 @@ export default async function Home() {
           </div>
 
           {hasRealReviews && <ReviewShowcase reviews={shownReviews} stats={reviewStats} />}
-
-
-          <RegisterBonus />
         </div>
       </section>
 
