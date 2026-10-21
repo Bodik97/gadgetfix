@@ -1,105 +1,274 @@
-.page {
-  padding: 26px 0 90px;
-  max-width: 760px;
+/* ---------- Шапка — темна смуга, як на решті сторінок ---------- */
+.hero {
+  padding: clamp(22px, 3vw, 36px) 0 clamp(40px, 5vw, 64px);
 }
 
-.head {
-  margin: 22px 0 44px;
+.heroInner {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
 }
 
 .title {
-  margin: 10px 0 14px;
-  font-size: clamp(30px, 5vw, 46px);
-  letter-spacing: -.03em;
-  line-height: 1.05;
+  margin-top: 4px;
+  max-width: 14ch;
   text-wrap: balance;
 }
 
 .lede {
   margin: 0;
+  max-width: 60ch;
   color: var(--text-2);
-  font-size: 17px;
+  font-size: clamp(16px, 1.5vw, 18px);
   line-height: 1.65;
 }
 
-.section {
-  padding-top: 30px;
-  margin-top: 30px;
-  border-top: 1px solid var(--border);
-}
-
-.h2 {
-  margin: 0 0 14px;
-  font-family: var(--font-unbounded), sans-serif;
-  font-size: clamp(19px, 2.4vw, 24px);
-  letter-spacing: -.02em;
-}
-
-.section p {
-  margin: 0 0 12px;
-  color: var(--text-2);
-  font-size: 16px;
-  line-height: 1.7;
-}
-
-.section p:last-child { margin-bottom: 0; }
-
-.note {
-  color: var(--text-3);
-  font-size: 15px;
-}
-
-/* Що збираємо — питання ліворуч, відповідь праворуч */
-.list {
-  margin: 0;
-  display: grid;
-  gap: 1px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  overflow: hidden;
-  background: var(--border);
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 20px;
-  padding: 16px 20px;
-  background: var(--surface);
-}
-
-.row dt {
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.row dd {
-  margin: 0;
-  color: var(--text-2);
-  font-size: 15.5px;
-  line-height: 1.6;
-}
-
-.partners {
-  margin: 14px 0 0;
+.promises {
+  margin: 8px 0 0;
   padding: 0;
   list-style: none;
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.partners li {
-  padding: 11px 16px;
+.promises li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.promises li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ---------- Зміст ліворуч, розділи праворуч ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: start;
+  padding-top: clamp(28px, 4vw, 56px);
+  padding-bottom: 90px;
+}
+
+.toc {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 2px;
+}
+
+.toc a {
+  padding: 9px 14px;
+  border-radius: 12px;
   color: var(--text-2);
+  font-size: 14.5px;
+  text-decoration: none;
+  transition: background .15s, color .15s;
+}
+
+.toc a:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.content {
+  display: grid;
+  gap: 16px;
+  max-width: 820px;
+}
+
+.content section {
+  scroll-margin-top: 90px;
+}
+
+/* ---------- Розділ-картка ---------- */
+.section {
+  padding: clamp(20px, 3vw, 32px);
+}
+
+.section:hover {
+  transform: none;
+}
+
+.plain {
+  padding: 8px 0;
+}
+
+.h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  font-size: clamp(19px, 2.2vw, 24px);
+  letter-spacing: -.02em;
+}
+
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent-text);
+}
+
+.icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.section p,
+.tile p {
+  margin: 0 0 12px;
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.section p:last-child,
+.tile p:last-child {
+  margin-bottom: 0;
+}
+
+.note {
+  color: var(--text-3) !important;
+  font-size: 15px !important;
+}
+
+/* ---------- Що збираємо — плитки ---------- */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  padding: 20px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.tile:hover {
+  transform: none;
+}
+
+.tile h3 {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -.01em;
+}
+
+.tile p {
   font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ---------- Кому доступні — плитки з літерою ---------- */
+.partners {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.partners li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.partners li > span:last-child {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.45;
 }
 
 .partners b {
   color: var(--text);
   font-weight: 600;
+  font-size: 15px;
+}
+
+.letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ---------- Cookie — пункти з крапкою ---------- */
+.facts {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.facts li {
+  position: relative;
+  padding-left: 20px;
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.facts li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: .6em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-text);
+}
+
+.facts b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- Ваші права — акцентна картка з діями ---------- */
+.rights {
+  border-color: var(--border-active);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
 }
 
 .link {
@@ -112,7 +281,7 @@
   justify-content: space-between;
   gap: 18px;
   flex-wrap: wrap;
-  margin-top: 40px;
+  margin-top: 14px;
   padding-top: 22px;
   border-top: 1px solid var(--border);
 }
@@ -123,9 +292,42 @@
   font-size: 15px;
 }
 
+/* ---------- Планшет і телефон: зміст — рядок «чипів» над розділами ---------- */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .toc {
+    position: static;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--gutter));
+    padding: 0 var(--gutter) 4px;
+    scrollbar-width: none;
+  }
+
+  .toc::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toc a {
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    font-size: 14px;
+    padding: 8px 14px;
+  }
+}
+
 @media (max-width: 620px) {
-  .row {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .tiles,
+  .partners {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions :global(.btn) {
+    width: 100%;
   }
 }

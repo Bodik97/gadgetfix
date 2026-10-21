@@ -9,6 +9,7 @@ import HeroStatus from "@/components/HeroStatus";
 import PhoneStrip from "@/components/PhoneStrip";
 import Reveal from "@/components/Reveal";
 import ReviewShowcase from "@/components/ReviewShowcase";
+import ServiceList from "@/components/ServiceList";
 import WorkSlider from "@/components/WorkSlider";
 import ParcelDecor from "@/components/ParcelDecor";
 import DiscountPath from "@/components/DiscountPath";
@@ -175,33 +176,9 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className={styles.serviceGrid}>
-            {topServices.map((s) => {
-              const icon = services.find((x) => x.slug === s.slug)?.icon;
-              return (
-                <Link key={s.slug} href={`/poslugy/${s.slug}`} className={`card ${styles.serviceCard}`}>
-                  <span className={styles.serviceIcon}>
-                    {icon && (
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        style={{ stroke: "var(--accent-text)" }}
-                        strokeWidth="1.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        dangerouslySetInnerHTML={{ __html: icon }}
-                      />
-                    )}
-                  </span>
-
-                  <h3>{s.title}</h3>
-                  <p className={styles.serviceBody}>{s.body}</p>
-                  <span className={styles.serviceMeta}>{s.meta}</span>
-                </Link>
-              );
-            })}
-          </div>
+          <ServiceList
+            items={topServices.map((s) => ({ ...s, icon: services.find((x) => x.slug === s.slug)?.icon }))}
+          />
 
           <p className={styles.blockLink}>
             <Link href="/poslugy">Усі 12 послуг детально</Link>

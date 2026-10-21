@@ -13,6 +13,106 @@ export const metadata: Metadata = {
   alternates: { canonical: "/personalni-dani" },
 };
 
+/** Лінійні значки 24×24 — тим самим штрихом, що й на решті сайту */
+const ICONS = {
+  wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.1L4 16.7 7.3 20l5.3-5.3a4 4 0 0 0 5.1-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  cake: '<path d="M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16c1.5 1 3 1 4.5 0s3-1 4.5 0 3 1 5 0M12 12V9M12 6.5a1.2 1.2 0 0 0 0-2.5"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.8 7L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/>',
+  star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/>',
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  share: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  cookie: '<path d="M12 3a9 9 0 1 0 9 9 4 4 0 0 1-5-4 4 4 0 0 1-4-5z"/><path d="M8.5 11.5h.01M12 16h.01M15.5 13.5h.01M9 15.5h.01"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  building: '<path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M2 21h20M8 7h4M8 11h4M8 15h4"/>',
+} as const;
+
+function Icon({ name }: { name: keyof typeof ICONS }) {
+  return (
+    <span className={styles.icon}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: ICONS[name] }}
+      />
+    </span>
+  );
+}
+
+const SECTIONS = [
+  { id: "khto", label: "Хто обробляє" },
+  { id: "shcho", label: "Що збираємо" },
+  { id: "navishcho", label: "Навіщо" },
+  { id: "komu", label: "Кому доступні" },
+  { id: "skilky", label: "Скільки зберігаємо" },
+  { id: "cookie", label: "Cookie" },
+  { id: "statystyka", label: "Статистика" },
+  { id: "prava", label: "Ваші права" },
+] as const;
+
+const COLLECTED: { icon: keyof typeof ICONS; title: string; body: string }[] = [
+  {
+    icon: "wrench",
+    title: "Запис на ремонт",
+    body: "Імʼя, телефон, за бажанням пошта. Модель, послуга й ваш опис несправності. Місто й відділення пошти — якщо надсилаєте пристрій.",
+  },
+  {
+    icon: "user",
+    title: "Акаунт",
+    body: "Пошта, імʼя й фото з профілю. Пароль і сам вхід ми не бачимо — цим займається Clerk.",
+  },
+  {
+    icon: "cake",
+    title: "Профіль",
+    body: "Телефон і день народження — якщо вкажете самі. Дата потрібна лише для знижки, змінити її не можна, щоб знижку не брали двічі.",
+  },
+  {
+    icon: "chat",
+    title: "Листування з майстром",
+    body: "Текст повідомлень, реакції й фото, які надсилаєте. Фото лежать у закритому сховищі — за прямим посиланням їх не відкрити.",
+  },
+  {
+    icon: "bell",
+    title: "Сповіщення",
+    body: "Якщо підключите Telegram — номер чату, а коли поділитесь номером — і телефон. Якщо ввімкнете push — технічну адресу вашого браузера для сповіщень.",
+  },
+  {
+    icon: "tag",
+    title: "Знижки",
+    body: "Яка знижка застосована до заявки: за реєстрацію, за відгук чи на день народження. Військову знижку майстер ставить на місці.",
+  },
+  {
+    icon: "card",
+    title: "Оплата",
+    body: "Сума, дата оплати й завдаток. Реквізити картки до нас не потрапляють — ми їх не приймаємо й не зберігаємо.",
+  },
+  {
+    icon: "star",
+    title: "Відгук",
+    body: "Імʼя, місто, модель і текст. На сайті зʼявляється лише після того, як ми його схвалимо.",
+  },
+];
+
+const PARTNERS = [
+  { name: "Vercel", what: "сайт і сховище фото" },
+  { name: "Neon", what: "база даних із заявками" },
+  { name: "Clerk", what: "акаунти, вхід і профіль" },
+  { name: "Telegram", what: "сповіщення, якщо ви підключили бота" },
+  { name: "Apple / Google", what: "доставка push-сповіщень, якщо ви їх увімкнули" },
+  { name: "Нова Пошта", what: "лише адреса відділення, коли надсилаєте пристрій" },
+];
+
 /**
  * Сторінка про обробку персональних даних.
  *
@@ -22,170 +122,208 @@ export const metadata: Metadata = {
  * кнопка, яка прибирає заявку разом із листуванням і фото.
  */
 export default function PersonalDataPage() {
+  const phone = site.phones[0];
+
   return (
-    <main className={`container ${styles.page}`}>
-      <BackButton fallback="/" />
-
-      <header className={styles.head}>
-        <div className="kicker">Персональні дані</div>
-        <h1 className={styles.title}>Що ми про вас знаємо</h1>
-        <p className={styles.lede}>
-          Коротко й без юридичної мови: які дані ви нам лишаєте, навіщо вони, скільки лежать
-          і як їх забрати. Сторінка описує те, що система робить насправді.
-        </p>
-      </header>
-
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Хто обробляє дані</h2>
-        <p>
-          {ownerName(site.name)}
-          {owner.registry && <> · {owner.registry}</>}
-          {owner.address && <> · {owner.address}</>}
-        </p>
-        <p>
-          Звʼязок: {site.phones.map((p) => p.label).join(", ")}
-          {owner.email && <> · {owner.email}</>}
-        </p>
+    <>
+      <section className={`band ${styles.hero}`} data-theme="dark">
+        <div className={`container ${styles.heroInner}`}>
+          <BackButton fallback="/" />
+          <div className="kicker">Персональні дані</div>
+          <h1 className={styles.title}>Що ми про вас знаємо</h1>
+          <p className={styles.lede}>
+            Коротко й без юридичної мови: які дані ви нам лишаєте, навіщо вони, скільки лежать
+            і як їх забрати. Сторінка описує те, що система робить насправді.
+          </p>
+          <ul className={styles.promises}>
+            <li>Не продаємо й не передаємо для реклами</li>
+            <li>Без рекламних розсилок</li>
+            <li>Видаляємо на прохання того ж дня</li>
+          </ul>
+        </div>
       </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Що збираємо</h2>
+      <div className={`container ${styles.layout}`}>
+        <nav className={styles.toc} aria-label="Розділи сторінки">
+          {SECTIONS.map((s) => (
+            <a key={s.id} href={`#${s.id}`}>
+              {s.label}
+            </a>
+          ))}
+        </nav>
 
-        <dl className={styles.list}>
-          <div className={styles.row}>
-            <dt>Коли записуєтесь на ремонт</dt>
-            <dd>
-              Імʼя, телефон, за бажанням пошта. Модель пристрою, послуга й те, що ви написали
-              про несправність. Місто й відділення пошти — якщо надсилаєте пристрій.
-            </dd>
-          </div>
+        <div className={styles.content}>
+          <section id="khto" className={`card ${styles.section}`}>
+            <h2 className={styles.h2}>
+              <Icon name="building" />
+              Хто обробляє дані
+            </h2>
+            <p>
+              {ownerName(site.name)}
+              {owner.registry && <> · {owner.registry}</>}
+              {owner.address && <> · {owner.address}</>}
+            </p>
+            <p>
+              Звʼязок: {site.phones.map((p) => p.label).join(", ")}
+              {owner.email && <> · {owner.email}</>}
+            </p>
+          </section>
 
-          <div className={styles.row}>
-            <dt>Коли створюєте акаунт</dt>
-            <dd>
-              Пошта й імʼя з вашого профілю, фото — якщо воно у вас є. Сам вхід і пароль ми не
-              бачимо: цим займається Clerk.
-            </dd>
-          </div>
+          <section id="shcho" className={styles.plain}>
+            <h2 className={styles.h2}>
+              <Icon name="pen" />
+              Що збираємо
+            </h2>
+            <div className={styles.tiles}>
+              {COLLECTED.map((c) => (
+                <div key={c.title} className={`card ${styles.tile}`}>
+                  <Icon name={c.icon} />
+                  <h3>{c.title}</h3>
+                  <p>{c.body}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
-          <div className={styles.row}>
-            <dt>Коли пишете майстру</dt>
-            <dd>
-              Текст повідомлень і фото, які ви надсилаєте. Фото лежать у закритому сховищі —
-              за прямим посиланням їх не відкрити.
-            </dd>
-          </div>
+          <section id="navishcho" className={`card ${styles.section}`}>
+            <h2 className={styles.h2}>
+              <Icon name="target" />
+              Навіщо
+            </h2>
+            <p>
+              Щоб виконати ремонт, про який ви просите: передзвонити, назвати ціну, повідомити про
+              готовність, надіслати пристрій і дотримати гарантію. Без телефону ми не можемо
+              зробити нічого з цього.
+            </p>
+            <p>
+              Пошту, профіль і сповіщення — щоб ви бачили хід ремонту в кабінеті, отримували
+              знижки й не пропускали повідомлень майстра.
+            </p>
+            <p>
+              Ми не надсилаємо рекламних розсилок, не продаємо й не передаємо дані нікому для
+              реклами.
+            </p>
+          </section>
 
-          <div className={styles.row}>
-            <dt>Коли ремонт оплачено</dt>
-            <dd>
-              Сума, дата оплати та завдаток. Реквізити картки до нас не потрапляють — ми їх
-              не приймаємо й не зберігаємо.
-            </dd>
-          </div>
+          <section id="komu" className={`card ${styles.section}`}>
+            <h2 className={styles.h2}>
+              <Icon name="share" />
+              Кому дані стають доступні
+            </h2>
+            <p className={styles.note}>
+              Сайт працює на чужій інфраструктурі, і ці компанії технічно мають доступ до того,
+              що на ній зберігається. Кожна з них зобовʼязана захищати ці дані.
+            </p>
+            <ul className={styles.partners}>
+              {PARTNERS.map((p) => (
+                <li key={p.name}>
+                  <span className={styles.letter} aria-hidden="true">
+                    {p.name[0]}
+                  </span>
+                  <span>
+                    <b>{p.name}</b>
+                    <span>{p.what}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-          <div className={styles.row}>
-            <dt>Коли лишаєте відгук</dt>
-            <dd>
-              Імʼя, місто, модель пристрою й текст. Відгук зʼявляється на сайті лише після
-              того, як ми його схвалимо.
-            </dd>
-          </div>
-        </dl>
-      </section>
+          <section id="skilky" className={`card ${styles.section}`}>
+            <h2 className={styles.h2}>
+              <Icon name="clock" />
+              Скільки зберігаємо
+            </h2>
+            <p>
+              Дані про ремонт — поки триває гарантія ({WARRANTY_MAX}) і ще рік після неї:
+              за цей час зазвичай зʼясовується все, що може зʼясуватись. Далі вони потрібні лише
+              для обліку.
+            </p>
+            <p>
+              Акаунт і профіль — поки ви ними користуєтесь. Підключення Telegram і push зникає,
+              щойно ви їх вимкнете або сервіс повідомить, що адреса вже не діє.
+            </p>
+            <p>Якщо просите видалити раніше — видаляємо, чекати кінця строку не треба.</p>
+          </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Навіщо</h2>
-        <p>
-          Щоб виконати ремонт, про який ви просите: передзвонити, назвати ціну, повідомити про
-          готовність, надіслати пристрій і дотримати гарантію. Без телефону ми не можемо
-          зробити нічого з цього.
-        </p>
-        <p>
-          Ми не надсилаємо рекламних розсилок, не продаємо й не передаємо дані нікому для
-          реклами.
-        </p>
-      </section>
+          <section id="cookie" className={`card ${styles.section}`}>
+            <h2 className={styles.h2}>
+              <Icon name="cookie" />
+              Cookie і памʼять браузера
+            </h2>
+            <ul className={styles.facts}>
+              <li>
+                <b>Вхід в акаунт.</b> Clerk ставить cookie, щоб ви лишались у кабінеті між
+                візитами.
+              </li>
+              <li>
+                <b>Заявка без акаунта.</b> Після запису браузер на добу запамʼятовує номер заявки
+                — щоб, створивши акаунт, ви одразу побачили її в кабінеті.
+              </li>
+              <li>
+                <b>Тема й підказки.</b> Світла чи темна тема й закриті підказки лежать лише у
+                вашому браузері й до нас не надходять.
+              </li>
+            </ul>
+            <p className={styles.note}>Рекламних і сторонніх відстежувальних cookie немає.</p>
+          </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Кому дані стають доступні</h2>
-        <p className={styles.note}>
-          Сайт працює на чужій інфраструктурі, і ці компанії технічно мають доступ до того,
-          що на ній зберігається. Кожна з них зобовʼязана захищати ці дані.
-        </p>
+          <section id="statystyka" className={`card ${styles.section}`}>
+            <h2 className={styles.h2}>
+              <Icon name="chart" />
+              Статистика відвідувань
+            </h2>
+            <p>
+              Ми рахуємо, які сторінки відкривають і на які кнопки натискають, щоб робити сайт
+              зручнішим. Це анонімно: без cookie, без імен і без збереження вашої адреси в мережі.
+              Пов&apos;язати ці записи з конкретною людиною чи заявкою неможливо.
+            </p>
+          </section>
 
-        <ul className={styles.partners}>
-          <li><b>Vercel</b> — сайт і сховище фото</li>
-          <li><b>Neon</b> — база даних із заявками</li>
-          <li><b>Clerk</b> — акаунти й вхід</li>
-          <li><b>Нова Пошта</b> — лише адреса відділення, коли надсилаєте пристрій</li>
-        </ul>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Скільки зберігаємо</h2>
-        <p>
-          Дані про ремонт — поки триває гарантія ({WARRANTY_MAX}) і ще рік після неї:
-          за цей час зазвичай зʼясовується все, що може зʼясуватись. Далі вони потрібні лише
-          для обліку.
-        </p>
-        <p>
-          Але якщо ви просите видалити раніше — видаляємо, і чекати кінця строку не треба.
-        </p>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Ваші права</h2>
-        <p>
-          Ви можете дізнатися, що саме ми про вас зберігаємо, виправити помилку, забрати згоду
-          або попросити все видалити.
-        </p>
-        <p>
-          Для цього зателефонуйте{" "}
-          <a href={site.phones[0].href} className={styles.link}>
-            {site.phones[0].label}
-          </a>
-          {owner.email && (
-            <>
-              {" "}або напишіть на{" "}
-              <a href={`mailto:${owner.email}`} className={styles.link}>
-                {owner.email}
+          <section id="prava" className={`card ${styles.section} ${styles.rights}`}>
+            <h2 className={styles.h2}>
+              <Icon name="shield" />
+              Ваші права
+            </h2>
+            <p>
+              Ви можете дізнатися, що саме ми про вас зберігаємо, виправити помилку, забрати згоду
+              або попросити все видалити. Назвіть номер замовлення — і ми зробимо це того ж дня.
+            </p>
+            <p className={styles.note}>
+              Видалення означає видалення: заявка зникає разом із листуванням і фото, не
+              ховається з очей.
+            </p>
+            <div className={styles.actions}>
+              <a href={phone.href} className="btn btn-accent">
+                Подзвонити {phone.label}
               </a>
-            </>
-          )}
-          . Назвіть номер замовлення — і ми зробимо це того ж дня.
-        </p>
-        <p className={styles.note}>
-          Видалення означає видалення: заявка зникає разом із листуванням і фото, не
-          ховається з очей.
-        </p>
-      </section>
+              {owner.email && (
+                <a href={`mailto:${owner.email}`} className="btn btn-ghost">
+                  {owner.email}
+                </a>
+              )}
+            </div>
+          </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Статистика відвідувань</h2>
-        <p>
-          Ми рахуємо, які сторінки відкривають і на які кнопки натискають, щоб робити сайт
-          зручнішим. Це анонімно: без cookie, без імен і без збереження вашої адреси в мережі.
-          Пов&apos;язати ці записи з конкретною людиною чи заявкою неможливо.
-        </p>
-      </section>
+          <section className={`card ${styles.section}`}>
+            <h2 className={styles.h2}>
+              <Icon name="pen" />
+              Коли лишаєте заявку
+            </h2>
+            <p>
+              Надсилаючи форму, ви погоджуєтесь, що ми оброблятимемо ці дані так, як описано вище.
+              Це потрібно, щоб виконати ремонт.
+            </p>
+          </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.h2}>Коли лишаєте заявку</h2>
-        <p>
-          Надсилаючи форму, ви погоджуєтесь, що ми оброблятимемо ці дані так, як описано вище.
-          Це потрібно, щоб виконати ремонт.
-        </p>
-      </section>
-
-      <footer className={styles.foot}>
-        <p>
-          Питання, на які тут немає відповіді, ставте напряму — {site.phones[0].label}.
-        </p>
-        <Link href="/" className={styles.link}>
-          На головну
-        </Link>
-      </footer>
-    </main>
+          <footer className={styles.foot}>
+            <p>Питання, на які тут немає відповіді, ставте напряму — {phone.label}.</p>
+            <Link href="/" className={styles.link}>
+              На головну
+            </Link>
+          </footer>
+        </div>
+      </div>
+    </>
   );
 }
