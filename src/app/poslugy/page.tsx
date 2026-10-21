@@ -17,7 +17,7 @@ import styles from "./page.module.css";
 
 // Дві найчастіші роботи з цінами з прайсу — для опису в пошуку
 const bookPoints = [
-  "Діагностика безкоштовна",
+  "Діагностика безкоштовна, якщо ремонтуємо в нас",
   "Ціну фіксуємо до початку робіт",
   "Гарантія 2 місяці на аналог, 4 місяці на оригінал",
 ];
@@ -29,7 +29,7 @@ const fromPrices =
 
 export const metadata: Metadata = {
   title: { absolute: `Ремонт iPhone ${site.citiesIn} — послуги й ціни` },
-  description: `${services.length} видів ремонту iPhone, iPad і Apple Watch ${site.citiesIn}${fromPrices}. Безкоштовна діагностика, фіксована ціна, гарантія ${WARRANTY_MAX}.`,
+  description: `${services.length} видів ремонту iPhone, iPad і Apple Watch ${site.citiesIn}${fromPrices}. Безкоштовна діагностика при ремонті, фіксована ціна, гарантія ${WARRANTY_MAX}.`,
   alternates: { canonical: "/poslugy" },
 };
 

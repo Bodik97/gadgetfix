@@ -219,6 +219,8 @@ describe("webhook бота", () => {
   });
 
   it("Start за нашим посиланням закріплює чат за заявкою і підтверджує клієнту", async () => {
+    // Після запису бот перевіряє, чий чат закріплено за заявкою, — тепер цей
+    fake.onSelect(telegramChats, () => [{ chatId: "555" }]);
     const res = await POST(update(`/start ${payloadOf(bot.connectLink(LEAD)!)}`));
     expect(res.status).toBe(200);
 
@@ -227,6 +229,15 @@ describe("webhook бота", () => {
     expect(insert.params).toEqual(expect.arrayContaining([LEAD_SUBJECT, "555"]));
     expect(insert.params).not.toContain("t733150238");
     expect(sent[0].text).toContain("статуси підключено");
+  });
+
+  it("посилання потрапило до чужої людини — підключений чат власника не відбираємо", async () => {
+    // За заявкою вже закріплено інший чат: insert … on conflict do nothing його не чіпає
+    fake.onSelect(telegramChats, () => [{ chatId: "777" }]);
+    const res = await POST(update(`/start ${payloadOf(bot.connectLink(LEAD)!)}`));
+    expect(res.status).toBe(200);
+    expect(fake.writes().some((q) => /on conflict .* do update/i.test(q.sql))).toBe(false);
+    expect(sent[0].text).toContain("вже підключена до іншого Telegram");
   });
 
   /** Посилання старого зразка — «на телефон»: такі роздавав сайт раніше */

@@ -71,7 +71,7 @@ export async function generateMetadata({
 
   return {
     title: { absolute: withPrices.length <= 62 ? withPrices : name },
-    description: `${name}${list ? `: ${list}` : ""}. Діагностика безкоштовна, гарантія ${WARRANTY_MAX}.`,
+    description: `${name}${list ? `: ${list}` : ""}. Безкоштовна діагностика при ремонті, гарантія ${WARRANTY_MAX}.`,
     alternates: { canonical: `/modeli/${model.slug}` },
   };
 }
@@ -163,7 +163,7 @@ export default async function ModelPage({ params }: { params: Promise<{ slug: st
             <div className={styles.heroCopy}>
               <span className={`${styles.badge} nUp`}>
                 <span className="pulse" />
-                Безкоштовна діагностика · гарантія {WARRANTY_MAX}
+                Безкоштовна діагностика при ремонті · гарантія {WARRANTY_MAX}
               </span>
 
               <h1 className={`${styles.h1} nUp nUp-1`}>Ремонт {model.name}</h1>

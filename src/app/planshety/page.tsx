@@ -8,7 +8,7 @@ const section = getSection("ipad");
 
 export const metadata: Metadata = {
   title: `Ремонт iPad ${site.citiesIn} — ціни`,
-  description: `Ремонт iPad ${site.citiesIn}: ціни на заміну скла, акумулятора та роз'єму заряджання для ${section.models.length} моделей. Безкоштовна діагностика, фіксована ціна, гарантія ${WARRANTY_MAX}.`,
+  description: `Ремонт iPad ${site.citiesIn}: ціни на заміну скла, акумулятора та роз'єму заряджання для ${section.models.length} моделей. Безкоштовна діагностика при ремонті, фіксована ціна, гарантія ${WARRANTY_MAX}.`,
   alternates: { canonical: "/planshety" },
 };
 

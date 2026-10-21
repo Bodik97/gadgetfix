@@ -196,11 +196,17 @@ describe("signIn", () => {
   it("чужі спроби на пошту майстра з іншої адреси не зачиняють його самого", async () => {
     // Хтось, знаючи пошту, вичерпав спроби зі свого компʼютера
     m.limits["login:email:a@b.cc:6.6.6.6"] = { ok: false, retryAfter: 600 };
-    // Старий спільний лічильник «на пошту» більше ні на що не впливає
-    m.limits["login:email:a@b.cc"] = { ok: false, retryAfter: 600 };
     m.credentials = 0;
     await expect(signIn("a@b.cc", "ok")).rejects.toThrow("REDIRECT:/admin");
     expect(m.sessions).toEqual([0]);
+  });
+
+  it("перебір пароля з багатьох адрес упирається в загальну межу на пошту", async () => {
+    // Розподілений перебір: кожна адреса окремо в межах, але на пошту сумарно — забагато
+    m.limits["login:email:a@b.cc"] = { ok: false, retryAfter: 600 };
+    m.credentials = 0;
+    expect(await signIn("a@b.cc", "ok")).toBe("Забагато спроб входу. Спробуйте за 10 хв.");
+    expect(m.sessions).toEqual([]);
   });
 
   it("адмінка не налаштована — зрозуміле повідомлення, а не падіння", async () => {

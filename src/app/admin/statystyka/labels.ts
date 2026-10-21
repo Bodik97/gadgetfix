@@ -1,6 +1,6 @@
 /** Назви кнопок із data-track — людською мовою */
 export const CLICK_LABELS: Record<string, string> = {
-  "hero-book": "Головна: «Безкоштовна діагностика»",
+  "hero-book": "Головна: «Записатись на діагностику»",
   "hero-call": "Головна: «Подзвонити»",
   "header-book": "Шапка: «Записатись»",
   "header-call": "Шапка: телефон",

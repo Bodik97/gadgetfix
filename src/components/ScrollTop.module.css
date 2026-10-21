@@ -37,11 +37,10 @@
   outline-offset: 2px;
 }
 
-/* Телефон: кнопка чату стоїть над нижнім меню — піднімаємось і ми */
+/* Телефон: нагору веде нижнє меню й жест — кнопка лише закривала б текст */
 @media (max-width: 860px) {
   .button {
-    right: 17px;
-    bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    display: none;
   }
 }
 

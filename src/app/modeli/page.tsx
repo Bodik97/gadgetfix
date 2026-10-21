@@ -8,7 +8,7 @@ const section = getSection("iphone");
 
 export const metadata: Metadata = {
   title: { absolute: `Ремонт iPhone за моделями ${site.citiesIn} — ціни` },
-  description: `Ремонт iPhone ${site.citiesIn}: ціни на заміну екрана, акумулятора, роз'єму й камери для ${section.models.length} моделей. Діагностика безкоштовна, гарантія ${WARRANTY_MAX}.`,
+  description: `Ремонт iPhone ${site.citiesIn}: ціни на заміну екрана, акумулятора, роз'єму й камери для ${section.models.length} моделей. Безкоштовна діагностика при ремонті, гарантія ${WARRANTY_MAX}.`,
   alternates: { canonical: "/modeli" },
 };
 

@@ -64,7 +64,7 @@ export async function generateMetadata({
   const first = !sum
     ? `${name}.`
     : isBoard(slug)
-      ? `${name}. Діагностика безкоштовна, роботи — ${sum}.`
+      ? `${name}. Діагностика безкоштовна, якщо беремося за ремонт; роботи — ${sum}.`
       : `${name} — ${sum}${isPriced(slug) ? " разом із деталлю" : ""}.`;
   // Гарантію обіцяємо лише там, де вона є в переліку «Що входить у ціну»
   const warranty = detail.included.some((x) => x.startsWith("Гарантія"))

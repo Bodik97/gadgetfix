@@ -10,6 +10,8 @@ const m = vi.hoisted(() => ({
   limit: { ok: true } as { ok: true } | { ok: false; retryAfter: number },
   userId: null as string | null,
   profileEmail: null as string | null,
+  /** Чи підтвердив клієнт пошту кодом — лише така пошта прив'язує заявки */
+  emailVerified: true,
   inserted: [] as Record<string, unknown>[],
   insertFails: false,
   notified: [] as string[],
@@ -30,7 +32,14 @@ vi.mock("@/lib/rateLimit", () => ({
 vi.mock("@clerk/nextjs/server", () => ({
   auth: async () => ({ userId: m.userId }),
   currentUser: async () =>
-    m.profileEmail ? { primaryEmailAddress: { emailAddress: m.profileEmail } } : null,
+    m.profileEmail
+      ? {
+          primaryEmailAddress: {
+            emailAddress: m.profileEmail,
+            verification: { status: m.emailVerified ? "verified" : "unverified" },
+          },
+        }
+      : null,
 }));
 
 vi.mock("@/db", () => ({
@@ -96,6 +105,7 @@ beforeEach(() => {
   m.limit = { ok: true };
   m.userId = null;
   m.profileEmail = null;
+  m.emailVerified = true;
   m.inserted = [];
   m.insertFails = false;
   m.notified = [];
@@ -162,6 +172,14 @@ describe("POST /api/lead: що приймаємо", () => {
     const res = await post({ name: "Олег" });
     expect(res.status).toBe(200);
     expect(m.inserted[0]).toMatchObject({ email: "profile@example.com", clerkUserId: "user_1" });
+  });
+
+  it("непідтверджена пошта профілю не прив'язує заявку — вона могла бути чужою", async () => {
+    m.userId = "user_1";
+    m.profileEmail = "someone@example.com";
+    m.emailVerified = false;
+    await post({ name: "Олег", phone: "0733150238" });
+    expect(m.inserted[0]).toMatchObject({ email: null, clerkUserId: "user_1" });
   });
 
   it("невідоме джерело замінюється на landing", async () => {

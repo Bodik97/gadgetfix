@@ -54,7 +54,7 @@ const stripModels = [
 
 export const metadata: Metadata = {
   title: "GadgetFix — ремонт iPhone у Львові та Новому Роздолі",
-  description: `Ремонт iPhone ${site.citiesIn}: безкоштовна діагностика, фіксована ціна, гарантія ${WARRANTY_MAX}. Екран чи акумулятор — до 2 днів разом із деталлю. Приймаємо й Новою Поштою.`,
+  description: `Ремонт iPhone ${site.citiesIn}: безкоштовна діагностика при ремонті, фіксована ціна, гарантія ${WARRANTY_MAX}. Екран чи акумулятор — до 2 днів разом із деталлю. Приймаємо й Новою Поштою.`,
   alternates: { canonical: "/" },
 };
 
@@ -132,13 +132,13 @@ export default async function Home() {
           <h1 className={`${styles.h1} nUp nUp-1`}>Ремонт iPhone без сюрпризів у ціні</h1>
 
           <p className={`${styles.heroLead} nUp nUp-2`}>
-            Безкоштовна діагностика, потім фіксована ціна — і вона вже не змінюється. На екран чи
+            Діагностика безкоштовна, якщо ремонтуємо в нас, потім фіксована ціна — і вона вже не змінюється. На екран чи
             акумулятор іде до 2 днів разом із замовленням деталі.
           </p>
 
           <div className={`${styles.heroCta} nUp nUp-3`}>
             <Link href="#book" className="btn btn-accent btn-lg btn-hero" data-track="hero-book">
-              Безкоштовна діагностика
+              Записатись на діагностику
             </Link>
             <a href={site.phones[0].href} className="btn btn-ghost btn-lg" data-track="hero-call">
               Подзвонити

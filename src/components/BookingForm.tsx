@@ -40,7 +40,7 @@ function BookingFormInner({
   source,
   select,
   model,
-  submitLabel = "Записатись на безкоштовну діагностику",
+  submitLabel = "Записатись на діагностику",
   initialChoice = "",
   bare,
   simple = false,
