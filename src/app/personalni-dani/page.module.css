@@ -52,6 +52,12 @@
   background: var(--accent);
 }
 
+.revision {
+  margin: 4px 0 0;
+  color: var(--text-3);
+  font-size: 13.5px;
+}
+
 /* ---------- Зміст ліворуч, розділи праворуч ---------- */
 .layout {
   display: grid;
@@ -225,7 +231,11 @@
   font-weight: 600;
 }
 
-/* ---------- Cookie — пункти з крапкою ---------- */
+.after {
+  margin-top: 16px !important;
+}
+
+/* ---------- Пункти з крапкою ---------- */
 .facts {
   margin: 0 0 14px;
   padding: 0;
