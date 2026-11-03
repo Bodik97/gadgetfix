@@ -10,6 +10,14 @@ export const CLICK_LABELS: Record<string, string> = {
   "chat-open": "«Консультація» (бот)",
   "footer-call": "Підвал: телефон",
   "footer-viber": "Підвал: Viber",
+  "bonus-next": "Бонуси: наступний крок до знижки",
+  "bonus-signup": "Бонуси: «Створити кабінет»",
+  "claim-signup": "Після заявки: «Створити кабінет і отримати −5%»",
+  "status-signup": "Статус ремонту: «Створити кабінет»",
+  "tg-connect": "«Отримувати статус у Telegram»",
+  "part-original": "Ціни моделі: перемкнули на «Оригінал»",
+  "part-analog": "Ціни моделі: перемкнули на «Аналог»",
+  "catalog-model": "Каталог: вибрали модель",
 };
 
 export const DEVICE_LABELS: Record<string, string> = { mobile: "Телефон", desktop: "Комп'ютер" };

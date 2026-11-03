@@ -84,7 +84,7 @@ export default function ModelGrid({
 
       <div className={styles.grid}>
         {matched.map((m, i) => (
-          <Link key={m.slug} href={`/modeli/${m.slug}`} className={styles.card} hidden={i >= limit}>
+          <Link key={m.slug} href={`/modeli/${m.slug}`} className={styles.card} hidden={i >= limit} data-track="catalog-model">
             <span className={styles.media}>
               {m.image ? (
                 /* eslint-disable-next-line @next/next/no-img-element */

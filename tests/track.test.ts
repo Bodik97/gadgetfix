@@ -129,3 +129,26 @@ describe("isBot і deviceOf", () => {
     expect(deviceOf("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")).toBe("desktop");
   });
 });
+
+describe("data-track: кожна кнопка має назву в статистиці", () => {
+  // Сервер відкидає кліки з невідомою назвою мовчки, тож кнопка без запису
+  // в CLICK_LABELS просто не потрапляє в статистику. Так загубились
+  // bonus-next, bonus-signup, claim-signup і status-signup.
+  it("усі статичні data-track є в CLICK_LABELS", async () => {
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { CLICK_LABELS } = await import("@/app/admin/statystyka/labels");
+
+    const files = (readdirSync("src", { recursive: true }) as string[])
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => join("src", f));
+
+    const missing: string[] = [];
+    for (const file of files) {
+      for (const [, name] of readFileSync(file, "utf8").matchAll(/data-track="([^"]+)"/g)) {
+        if (!Object.hasOwn(CLICK_LABELS, name)) missing.push(`${file}: ${name}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+});

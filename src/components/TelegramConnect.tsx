@@ -19,7 +19,7 @@ export default function TelegramConnect({
   if (!href) return null;
 
   return (
-    <a href={href} target="_blank" rel="noopener" className={`btn ${quiet ? "btn-ghost" : "btn-accent"} ${className ?? ""}`}>
+    <a href={href} target="_blank" rel="noopener" className={`btn ${quiet ? "btn-ghost" : "btn-accent"} ${className ?? ""}`} data-track="tg-connect">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21 4L3 11l6 2.5" />
         <path d="M21 4l-3 15-9-5.5" />
