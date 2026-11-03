@@ -14,6 +14,12 @@ const partNote = {
   analog: `Якісні аналоги дисплеїв: перевірені постачальники, гарантія 2\u00A0місяці (на\u00A0оригінал\u00A0—\u00A04). Дешевше, кольори трохи інші при максимальній яскравості.`,
 };
 
+// Додається до пояснення лише там, де акумулятор теж має дві ціни
+const batteryNote = {
+  original: "Оригінальний акумулятор: iPhone не показує повідомлення про невідому деталь, стан батареї видно в Налаштуваннях.",
+  analog: "Аналог акумулятора: дешевше, але iPhone показує повідомлення про неоригінальний акумулятор.",
+};
+
 const screenBody = {
   original: {
     faceId: "Оригінальний дисплей, перенесення рідного Face ID, перевірка True Tone.",
@@ -58,9 +64,10 @@ export default function ModelJobs({
   const [part, setPart] = useState<"original" | "analog">("analog");
   const kind = faceId ? "faceId" : "plain";
 
-  // Перемикач має сенс лише там, де деталь буває двох рівнів — тобто де є екран
-  const screen = prices?.["zamina-ekrana"];
-  const tiered = typeof screen === "object";
+  // Перемикач має сенс лише там, де деталь буває двох рівнів: екран чи акумулятор
+  const screenTiered = typeof prices?.["zamina-ekrana"] === "object";
+  const batteryTiered = typeof prices?.["akumuliator"] === "object";
+  const tiered = screenTiered || batteryTiered;
 
   /** Ціна роботи так, як її треба показати: точна сума або «від» */
   function priceOf(slug: string): { text: string; exact: boolean } | null {
@@ -76,7 +83,7 @@ export default function ModelJobs({
   // Роботи без ціни для цієї моделі не показуємо: у годинника немає ні камери,
   // ні роз'єму, і порожній рядок поруч із цінами читався б як «ціну приховали».
   const jobs = [
-    { slug: "zamina-ekrana", title: (m: string) => `Заміна екрана ${m}`, body: tiered ? screenBody[part][kind] : "Нове скло або модуль у зборі, з відновленням герметизації.", time: null },
+    { slug: "zamina-ekrana", title: (m: string) => `Заміна екрана ${m}`, body: screenTiered ? screenBody[part][kind] : "Нове скло або модуль у зборі, з відновленням герметизації.", time: null },
     ...restJobs,
   ].filter((j) => priceOf(j.slug) !== null);
 
@@ -94,6 +101,7 @@ export default function ModelJobs({
               className={part === "original" ? styles.tabActive : styles.tab}
               aria-pressed={part === "original"}
               onClick={() => setPart("original")}
+              data-track="part-original"
             >
               Оригінал
             </button>
@@ -102,6 +110,7 @@ export default function ModelJobs({
               className={part === "analog" ? styles.tabActive : styles.tab}
               aria-pressed={part === "analog"}
               onClick={() => setPart("analog")}
+              data-track="part-analog"
             >
               Аналог
             </button>
@@ -116,7 +125,11 @@ export default function ModelJobs({
             <path d="M12 11v5" />
             <path d="M12 7.5h.01" />
           </svg>
-          <span>{part === "original" ? partNote.original[kind] : partNote.analog}</span>
+          <span>
+            {screenTiered && (part === "original" ? partNote.original[kind] : partNote.analog)}
+            {screenTiered && batteryTiered && " "}
+            {batteryTiered && batteryNote[part]}
+          </span>
         </p>
       )}
 
