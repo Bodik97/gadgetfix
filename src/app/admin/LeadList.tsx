@@ -87,15 +87,6 @@ export default async function LeadList({ kind, params }: { kind: ListKind; param
             <p className={styles.hello}>Завершені ремонти й відмови. Пошук працює і тут.</p>
           )}
         </div>
-        {kind === "active" && (
-          <Link href="/admin/nova" className={`btn btn-accent ${styles.newLead}`}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
-            </svg>
-            Нова заявка
-          </Link>
-        )}
       </div>
 
       <Search query={query} found={found} kind={kind} />

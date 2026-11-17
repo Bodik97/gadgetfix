@@ -55,13 +55,6 @@ export default async function AdminOverview() {
           <h1 className={styles.title}>Огляд</h1>
           <p className={styles.hello}>Вітаємо, {master.name}</p>
         </div>
-        <Link href="/admin/nova" className={`btn btn-accent ${styles.newLead}`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
-          Нова заявка
-        </Link>
       </div>
 
       {/* Сповіщення на цей телефон — без них сигнали видно, лише коли адмінка відкрита */}

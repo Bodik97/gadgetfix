@@ -179,6 +179,12 @@
   transition: width .18s ease;
 }
 
+/* Невисокий екран: пункти не стискаються (інакше зникає «Розділи»),
+   меню просто прокручується */
+.nav > * {
+  flex-shrink: 0;
+}
+
 .collapsed {
   --nav-width: 66px;
   padding: 16px 8px 14px;

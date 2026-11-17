@@ -1216,11 +1216,6 @@
   min-width: 0;
 }
 
-.newLead {
-  min-height: 44px;
-  padding: 10px 18px;
-}
-
 /* ---------- Сповіщення на телефон ---------- */
 .pushOff,
 .pushOn {

@@ -146,6 +146,9 @@ function SignOutIcon() {
 
 const STORAGE_KEY = "gadgetfix-admin-nav";
 
+/** Сторінки зі своїм полем пошуку */
+const HAS_OWN_SEARCH = ["/admin/zayavky", "/admin/arhiv"];
+
 /**
  * Згорнутість меню живе в localStorage, а не в стані React: її треба пам'ятати
  * між заходами, а на сервері цього значення ще немає. useSyncExternalStore
@@ -328,20 +331,24 @@ export default function AdminShell({
 
       <div className={styles.content}>
         <div className={styles.topbar}>
-          {pathname !== "/admin" && (
+          {/* «Назад» лише всередині розділу: на самих розділах його замінює меню */}
+          {!items.some((item) => item.href === pathname) && (
             <BackButton fallback="/admin" className={styles.back} />
           )}
 
           <span className={styles.spacer} />
 
-          <button type="button" className={styles.search} onClick={() => setSearching(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4.3-4.3" />
-            </svg>
-            <span className={styles.searchLabel}>Пошук усюди</span>
-            <kbd className={styles.kbd}>Ctrl K</kbd>
-          </button>
+          {/* У «Заявках» і «Архіві» є свій пошук на сторінці — кнопку не дублюємо (Ctrl+K працює) */}
+          {!HAS_OWN_SEARCH.includes(pathname) && (
+            <button type="button" className={styles.search} onClick={() => setSearching(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4.3-4.3" />
+              </svg>
+              <span className={styles.searchLabel}>Пошук усюди</span>
+              <kbd className={styles.kbd}>Ctrl K</kbd>
+            </button>
+          )}
 
           {actions}
 
