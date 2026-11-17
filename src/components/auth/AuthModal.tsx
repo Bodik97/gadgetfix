@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import AuthShell from "./AuthShell";
 import SignInForm from "./SignInForm";
 import { startsWithSignUp } from "./authStore";
 import styles from "./AuthModal.module.css";
 
+const noop = () => () => {};
+
 export default function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // true лише після гідратації: на сервері й під час гідратації — false
+  const hydrated = useSyncExternalStore(noop, () => true, () => false);
 
   // Нативний <dialog> сам тримає фокус усередині, закривається на Esc
   // і малює підкладку — власний код для цього не потрібен
@@ -18,7 +22,7 @@ export default function AuthModal({ open, onClose }: { open: boolean; onClose: (
 
     if (open && !el.open) el.showModal();
     if (!open && el.open) el.close();
-  }, [open]);
+  }, [open, hydrated]);
 
   // Поки вікно відкрите, сторінка під ним не має прокручуватись
   useEffect(() => {
@@ -32,8 +36,9 @@ export default function AuthModal({ open, onClose }: { open: boolean; onClose: (
 
   // Кнопка входу живе в шапці, а шапка завжди темна (data-theme="dark").
   // Вікно виносимо в body — щоб воно йшло за темою сторінки, а не шапки.
-  // На сервері вікна немає: кнопка зʼявляється лише після завантаження Clerk.
-  if (typeof document === "undefined") return null;
+  // На сервері вікна немає. І під час гідратації теж: на /vhid Clerk уже
+  // вантажиться зі сторінкою, і портал у body розійшовся б із серверним HTML.
+  if (!hydrated) return null;
 
   return createPortal(
     <dialog

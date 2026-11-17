@@ -18,7 +18,8 @@ for (const slug of ["iphone-13", "iphone-16-pro-max"]) {
     await page.goto(`/modeli/${slug}`, { waitUntil: "networkidle" });
     const img = page.locator('img[class*="shotPhoto"]');
     await expect(img).toBeVisible();
-    expect(await img.evaluate(inside)).toBe(true);
+    // Під навантаженням фото ще може догружатись — розмір перевіряємо, доки не встоїться
+    await expect.poll(() => img.evaluate(inside)).toBe(true);
   });
 }
 

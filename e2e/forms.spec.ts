@@ -155,7 +155,7 @@ test("вікно входу відкривається з формою і зак
   await expect(page.locator("#v-email")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Вхід" }).click();
-  const dialog = page.getByRole("dialog", { name: "Вхід або реєстрація" });
+  const dialog = page.getByRole("dialog", { name: "Кабінет клієнта" });
   await expect(dialog.getByLabel("Пошта")).toBeVisible();
 
   await dialog.getByRole("button", { name: "Закрити" }).click();
@@ -167,7 +167,7 @@ test("вікно входу не порушує CSP", async ({ page }) => {
   page.on("console", (m) => /Content Security Policy/i.test(m.text()) && violations.push(m.text()));
   await open(page, "/");
   await page.getByRole("button", { name: "Вхід" }).click();
-  await expect(page.getByRole("dialog", { name: "Вхід або реєстрація" }).getByLabel("Пошта")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Кабінет клієнта" }).getByLabel("Пошта")).toBeVisible();
   await page.waitForLoadState("networkidle");
   expect(violations).toEqual([]);
 });

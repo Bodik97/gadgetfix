@@ -6,14 +6,19 @@ import { lowContrastTexts } from "./helpers/contrast";
  * ще до гідратації, і жоден текст на жодній сторінці не губиться на тлі.
  */
 
-test("перемикач: світла тема, вибір переживає перезавантаження, логотип графітовий", async ({ page }) => {
+test("перемикач: типово світла, вибір темної переживає перезавантаження, логотип графітовий", async ({ page }) => {
   await page.goto("/", { waitUntil: "networkidle" });
   const html = page.locator("html");
-  await expect(html).not.toHaveAttribute("data-theme", "light");
+  // Типова тема — світла (layout.tsx)
+  await expect(html).toHaveAttribute("data-theme", "light");
+
+  await page.getByRole("button", { name: "Світла / темна тема" }).click();
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(html).toHaveAttribute("data-theme", "dark");
 
   await page.getByRole("button", { name: "Світла / темна тема" }).click();
   await expect(html).toHaveAttribute("data-theme", "light");
-
   await page.reload({ waitUntil: "networkidle" });
   await expect(html).toHaveAttribute("data-theme", "light");
   // Шапка темна в обох темах — логотип там без плашки

@@ -16,7 +16,9 @@ test("внутрішні посилання не биті", async ({ request }, 
   const links = new Map<string, string>(); // посилання → де знайдено
   for (const path of pages) {
     const html = await (await request.get(path)).text();
-    for (const [, href] of html.matchAll(/href="(\/[^"#?]*)/g)) {
+    // Із параметрами: /api/reviews/…/image?v=before — це інше фото, ніж без ?v
+    for (const [, raw] of html.matchAll(/href="(\/[^"#]*)/g)) {
+      const href = raw.replaceAll("&amp;", "&");
       if (href.startsWith("/_next") || href.startsWith("//")) continue;
       if (!links.has(href)) links.set(href, path);
     }
