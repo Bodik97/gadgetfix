@@ -879,3 +879,15 @@ textarea.input {
     flex-basis: 100%;
   }
 }
+
+/* Вибір причини паузи — у нижній панелі, на всю її ширину */
+.pausePick {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(214, 158, 28, .08);
+}

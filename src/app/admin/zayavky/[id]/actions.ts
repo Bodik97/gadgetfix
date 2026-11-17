@@ -8,6 +8,7 @@ import { leadItems, leadPhotos, leads, leadSignatures, parts, type Lead } from "
 import { addEvent, getLeadById } from "@/db/events";
 import { releaseDiscount } from "@/db/discounts";
 import { CHECKS, CONDITION, KIT, PROBLEMS } from "@/data/orderOptions";
+import { onlineWarranty } from "@/lib/stage";
 import { isWarrantyTerm } from "@/data/warranty";
 import { currentAdmin } from "@/lib/admin";
 import { notifyClientStatus, offerPrice } from "@/lib/clientBot";
@@ -389,6 +390,7 @@ export async function advance(_prev: string | null, form: FormData): Promise<str
       status,
       assignee: lead.assignee ?? me.email,
       issuedAt: to === "issued" ? new Date() : lead.issuedAt,
+      ...(to === "issued" ? onlineWarranty() : {}),
       updatedAt: new Date(),
     })
     .where(and(eq(leads.id, id), eq(leads.stage, lead.stage)))
@@ -456,12 +458,13 @@ export async function back(form: FormData): Promise<void> {
   refresh(id);
 }
 
-/** Пауза — бурштиновий банер «На паузі · чекаємо деталь» */
-export async function pause(form: FormData): Promise<void> {
+/** Пауза — бурштиновий банер «На паузі · …». Причина обовʼязкова. */
+export async function pause(form: FormData): Promise<string | null> {
   const me = await master();
   const id = field(form, "id");
-  const reason = plainText(field(form, "reason"), LIMITS.short).trim() || "чекаємо деталь";
-  if (!id) return;
+  const reason = plainText(field(form, "reason"), LIMITS.short).trim();
+  if (!id) return null;
+  if (!reason) return "Вкажіть, на що чекаємо.";
   const done = await getDb()
     .update(leads)
     .set({ flag: "paused", pauseReason: reason, updatedAt: new Date() })
@@ -469,6 +472,7 @@ export async function pause(form: FormData): Promise<void> {
     .returning({ id: leads.id });
   if (done.length > 0) await addEvent(id, { text: `Пауза: ${reason}`, actor: me.email });
   refresh(id);
+  return null;
 }
 
 /**

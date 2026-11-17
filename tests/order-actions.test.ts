@@ -45,7 +45,7 @@ vi.mock("@/lib/handover", () => ({
 vi.mock("@/lib/photoPair", () => ({ savePhoto: async () => "leads/x/1" }));
 vi.mock("@/db/discounts", () => ({ releaseDiscount: async () => {} }));
 
-import { addItem, advance, refuse, saveList, savePrepayment } from "@/app/admin/zayavky/[id]/actions";
+import { addItem, advance, pause, refuse, saveList, savePrepayment } from "@/app/admin/zayavky/[id]/actions";
 
 const ID = "11111111-1111-1111-1111-111111111111";
 const form = (fields: Record<string, string | string[]>) => {
@@ -213,5 +213,17 @@ describe("чипи й відмова", () => {
     await refuse(form({ id: ID }));
     expect(updates()[0].params).toEqual(expect.arrayContaining(["refused", "rejected"]));
     expect(m.told).toEqual(["rejected"]);
+  });
+});
+
+describe("пауза", () => {
+  it("без причини — не ставиться", async () => {
+    expect(await pause(form({ id: ID, reason: "  " }))).toMatch(/чекаємо/);
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("з причиною — позначка й причина в заявці", async () => {
+    expect(await pause(form({ id: ID, reason: "чекаємо оплату" }))).toBeNull();
+    expect(updates()[0].params).toEqual(expect.arrayContaining(["paused", "чекаємо оплату"]));
   });
 });

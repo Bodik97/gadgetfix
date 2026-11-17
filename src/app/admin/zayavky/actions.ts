@@ -8,7 +8,7 @@ import { leads, partnerPrices } from "@/db/schema";
 import { addEvent, getLeadById } from "@/db/events";
 import { currentAdmin } from "@/lib/admin";
 import { notifyClientStatus } from "@/lib/clientBot";
-import { nextAction, stageToStatus } from "@/lib/stage";
+import { nextAction, onlineWarranty, stageToStatus } from "@/lib/stage";
 import { pushStatusToClient } from "@/lib/statusPush";
 import { LIMITS, plainText } from "@/lib/validate";
 
@@ -42,6 +42,8 @@ export async function moveStage(formData: FormData): Promise<void> {
       status,
       assignee: action.take && !lead.assignee ? me.email : lead.assignee,
       issuedAt: action.to === "issued" ? now : lead.issuedAt,
+      // Віддали магазину — місяць гарантії, як дає магазин своїм клієнтам
+      ...(action.to === "issued" && lead.channel === "online" ? onlineWarranty(now) : {}),
       updatedAt: now,
     })
     .where(and(eq(leads.id, id), eq(leads.stage, lead.stage)))

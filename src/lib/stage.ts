@@ -1,4 +1,5 @@
 import type { Lead } from "@/db/schema";
+import { ONLINE_WARRANTY_DAYS } from "@/data/orderOptions";
 
 /**
  * Етапи нової адмінки ↔ старий `status`, який бачить клієнт.
@@ -169,3 +170,13 @@ export const BOARD_TITLE: Record<Stage, string> = {
   ready: "Готово",
   issued: "Видано",
 };
+
+/**
+ * Гарантія на телефон магазину «Онлайн»: місяць від дня, коли віддали.
+ * Якщо клієнт магазину повернеться — магазин віддає телефон нам на доопрацювання.
+ */
+export function onlineWarranty(from: Date = new Date()): { warrantyDays: number; warrantyUntil: Date } {
+  const until = new Date(from);
+  until.setDate(until.getDate() + ONLINE_WARRANTY_DAYS);
+  return { warrantyDays: ONLINE_WARRANTY_DAYS, warrantyUntil: until };
+}

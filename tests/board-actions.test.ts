@@ -111,7 +111,10 @@ describe("moveStage", () => {
   it("«Онлайн» → «Віддати»: заявка видана, клієнту магазину не пишемо", async () => {
     fake.onSelect(leads, () => [{ ...BASE, channel: "online", stage: "ready", status: "ready", onlineNo: 5 }]);
     await moveStage(form({ id: BASE.id, to: "issued" }));
-    expect(updates()[0].params).toEqual(expect.arrayContaining(["issued", "done"]));
+    expect(updates()[0].params).toEqual(expect.arrayContaining(["issued", "done", 30]));
+    // Гарантія магазину — місяць від сьогодні
+    const until = updates()[0].params.find((v) => typeof v === "string" && /^\d{4}-/.test(v) && v > new Date(Date.now() + 29 * 864e5).toISOString());
+    expect(until).toBeDefined();
     expect(m.told).toEqual([]);
     expect(m.pushed).toEqual([]);
   });

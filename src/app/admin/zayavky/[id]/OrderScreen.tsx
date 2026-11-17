@@ -3,7 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import Chat from "@/components/Chat";
 import type { Lead, LeadItem } from "@/db/schema";
-import { CHECKS, CONDITION, DUE_HINTS, KIT, PAYMENT_LABEL, PROBLEMS } from "@/data/orderOptions";
+import { CHECKS, CONDITION, DUE_HINTS, KIT, PAUSE_REASONS, PAYMENT_LABEL, PROBLEMS } from "@/data/orderOptions";
 import { WARRANTY_TERMS } from "@/data/warranty";
 import { orderLabel, STAGE_LABEL } from "@/lib/stage";
 import DeleteLead from "../../DeleteLead";
@@ -415,11 +415,7 @@ export default function OrderScreen({
                   ‹ Назад
                 </button>
               )}
-              {lead.flag === null && (
-                <button type="button" className={styles.ghostBtn} onClick={() => call(pause, { reason: "чекаємо деталь" })}>
-                  Пауза
-                </button>
-              )}
+              {lead.flag === null && <PauseButton id={lead.id} />}
               {lead.flag !== "refused" &&
                 (confirmRefuse ? (
                   <button type="button" className={styles.dangerBtn} onClick={() => call(refuse, {})}>
@@ -618,5 +614,73 @@ function Prepayment({ lead }: { lead: Lead }) {
         </p>
       )}
     </form>
+  );
+}
+
+/**
+ * «Пауза» з обовʼязковою причиною: натиснули — зʼявляються варіанти
+ * (або своя причина), без причини заявка на паузу не стане.
+ */
+function PauseButton({ id }: { id: string }) {
+  const [open, setOpen] = useState(false);
+  const [other, setOther] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function pick(reason: string) {
+    const f = new FormData();
+    f.set("id", id);
+    f.set("reason", reason);
+    start(async () => {
+      const res = await pause(f);
+      setError(res);
+      if (!res) setOpen(false);
+    });
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className={styles.ghostBtn} onClick={() => setOpen(true)}>
+        Пауза
+      </button>
+    );
+  }
+
+  return (
+    <div className={styles.pausePick} role="group" aria-label="На що чекаємо">
+      <span className={styles.labelHint}>На що чекаємо?</span>
+      {PAUSE_REASONS.map((r) => (
+        <button key={r} type="button" className={styles.chip} disabled={pending} onClick={() => pick(r)}>
+          {r}
+        </button>
+      ))}
+      <input
+        className={styles.inputSmall}
+        style={{ width: 160 }}
+        placeholder="інше…"
+        value={other}
+        aria-label="Своя причина паузи"
+        onChange={(e) => setOther(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            pick(other);
+          }
+        }}
+      />
+      {other.trim() && (
+        <button type="button" className={styles.softBtn} disabled={pending} onClick={() => pick(other)}>
+          На паузу
+        </button>
+      )}
+      <button type="button" className={styles.iconBtn} aria-label="Скасувати" onClick={() => setOpen(false)}>
+        ×
+      </button>
+      {error && (
+        <span role="alert" className={styles.inlineError}>
+          {error}
+        </span>
+      )}
+    </div>
   );
 }
