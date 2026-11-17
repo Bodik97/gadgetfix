@@ -34,8 +34,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         fresh: counters.fresh + unreadChats,
         toShip: counters.toShip,
         pendingReviews,
+        online: counters.online,
       }}
       master={master.name}
+      owner={master.role === "owner"}
       actions={<LiveRefresh silent />}
       signOut={signOut}
     >

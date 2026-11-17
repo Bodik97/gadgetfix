@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
   admin: false,
+  owner: true,
   user: null as { id: string; primaryEmailAddress: { emailAddress: string } } | null,
   review: undefined as Record<string, unknown> | undefined,
   blob: null as unknown,
@@ -14,7 +15,10 @@ const m = vi.hoisted(() => ({
   dbTouched: 0,
 }));
 
-vi.mock("@/lib/admin", () => ({ isAdmin: async () => m.admin }));
+vi.mock("@/lib/admin", () => ({
+  isAdmin: async () => m.admin,
+  isOwner: async () => m.admin && m.owner,
+}));
 vi.mock("@clerk/nextjs/server", () => ({ currentUser: async () => m.user }));
 vi.mock("@vercel/blob", () => ({ get: async () => m.blob }));
 
@@ -70,6 +74,7 @@ const okBlob = { statusCode: 200, stream: new ReadableStream(), blob: { contentT
 
 beforeEach(() => {
   m.admin = false;
+  m.owner = true;
   m.user = null;
   m.review = undefined;
   m.blob = null;
@@ -115,6 +120,13 @@ describe("GET /admin/groshi/csv", () => {
   it("не майстру — 403, до бази не йдемо", async () => {
     const res = await csv(new Request("http://test/admin/groshi/csv"));
     expect(res.status).toBe(403);
+  });
+
+  it("майстру, який не власник, — 403: Каса лише для власника", async () => {
+    m.admin = true;
+    m.owner = false;
+    expect((await csv(new Request("http://test/admin/groshi/csv?period=month"))).status).toBe(403);
+    expect((await statsCsv(new Request("http://test/admin/statystyka/csv?period=month"))).status).toBe(403);
   });
 
   it("майстру — CSV з BOM, «;» і лапки екрановані, не кешується", async () => {

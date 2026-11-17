@@ -1,22 +1,22 @@
+/* Каркас на всю ширину: меню зліва на всю висоту, праворуч робоча частина */
 .shell {
   display: flex;
   align-items: flex-start;
-  gap: 22px;
-  padding-top: 0;
-  padding-bottom: 70px;
+  min-height: 100dvh;
 }
 
 .content {
   flex: 1;
   min-width: 0;
+  padding-inline: clamp(16px, 2.2vw, 32px);
+  padding-bottom: 70px;
   /* Запобіжник: якщо щось усередині таки ширше за екран, сторінка не
      роз'їжджається вбік. clip, а не hidden — закріплені блоки далі липнуть */
   overflow-x: clip;
 }
 
-/* Робоча панель: хто зайшов і «Назад» ліворуч, оновлення, вихід і меню праворуч.
-   Шапки сайту в адмінці немає — панель сама закріплена згори: кнопки мають
-   бути під рукою на будь-якій глибині списку заявок. */
+/* Робоча панель: «Назад» ліворуч, пошук, оновлення й тема праворуч.
+   Закріплена згори: кнопки мають бути під рукою на будь-якій глибині списку. */
 .topbar {
   position: sticky;
   top: 0;
@@ -34,9 +34,54 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Вміст сторінки — на всю ширину робочої частини */
+.page {
+  min-width: 0;
+}
+
+/* «Пошук усюди · Ctrl K» */
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  min-width: 220px;
+  padding: 0 10px 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+
+.search:hover {
+  border-color: var(--border-active);
+}
+
+.searchLabel {
+  flex: 1;
+  text-align: start;
+}
+
+.kbd {
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font: inherit;
+  font-size: 12px;
+}
+
 .brand {
   display: inline-flex;
-  margin-inline-end: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.collapsed .brand {
+  display: none;
 }
 
 /* Розсуває панель: ліва група — хто зайшов і «Назад», права — дії */
@@ -51,8 +96,8 @@
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  padding: 0 18px;
-  border-radius: var(--r-pill);
+  padding: 0 14px;
+  border-radius: 12px;
   border: 1px solid rgb(var(--fg-rgb) / .22);
   background: transparent;
   color: var(--text);
@@ -74,20 +119,27 @@
   background: var(--surface);
 }
 
-/* Вихід у шухляді — лише на телефоні, на широкому екрані він у панелі */
-.drawerSignOut {
-  display: none;
+/* Низ меню: хто зайшов і вихід */
+.navFoot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px 0;
+  border-top: 1px solid var(--border);
+}
+
+.collapsed .navFoot {
+  flex-direction: column;
 }
 
 /* Хто зайшов: кружечок з першою літерою + імʼя */
 .who {
+  flex: 1;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px 4px 4px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  background: var(--surface);
   color: var(--text-2);
   font-size: 14px;
   font-weight: 500;
@@ -110,39 +162,63 @@
 .nav {
   --nav-width: 224px;
 
+  /* На всю висоту екрана: меню стоїть, гортається лише робоча частина */
   position: sticky;
-  top: 16px;
-  margin-top: 16px;
-  align-self: start;
+  top: 0;
+  align-self: stretch;
+  height: 100dvh;
+  overflow-y: auto;
   width: var(--nav-width);
   flex: none;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  padding: 14px 12px;
-  border-radius: 22px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: var(--card-shadow);
+  padding: 16px 12px 14px;
+  border-right: 1px solid var(--border);
+  background: var(--bg-elevated);
   transition: width .18s ease;
 }
 
 .collapsed {
-  --nav-width: 62px;
-  padding: 14px 8px;
+  --nav-width: 66px;
+  padding: 16px 8px 14px;
 }
 
 .navHead {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 2px 6px 10px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 4px;
+  padding: 0 4px 10px;
+}
+
+/* Лаймова «+ Нова заявка» — найчастіша дія, тому під логотипом */
+.newLead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 13px;
+  border: 1px solid var(--accent-edge, var(--accent));
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.newLead:hover {
+  filter: brightness(1.04);
+}
+
+.collapsed .newLead {
+  padding: 0;
 }
 
 .navTitle {
-  flex: 1;
-  min-width: 0;
+  margin: 14px 0 2px;
+  padding: 0 12px;
   font-size: 11.5px;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -290,41 +366,42 @@
     display: block;
   }
 
-  /* На телефоні ліва верхня позиція — за аватаром, логотип зайвий */
-  .brand {
-    display: none;
-  }
-
   /* На телефоні меню виїжджає збоку і перекриває вміст */
   .nav {
     --nav-width: min(280px, 82vw);
 
     position: fixed;
     inset: 0 auto 0 0;
-    margin-top: 0;
     z-index: 60;
+    height: auto;
     border-radius: 0 22px 22px 0;
     transform: translateX(-102%);
     transition: transform .22s ease;
-    overflow-y: auto;
-    align-content: start;
-    /* --surface напівпрозорий: на широкому екрані він лежить на фоні сторінки,
-       а тут перекриває вміст — тому непрозорий колір */
-    background: var(--bg-elevated);
-    padding-top: 18px;
-    /* Базове правило має align-self: start для колонки поруч із вмістом —
-       для фіксованої шухляди це не дає їй розтягнутись на всю висоту */
-    align-self: stretch;
   }
 
+  /* Згорнутість — поведінка широкого екрана; у шухляді все розгорнуте */
   .collapsed {
     --nav-width: min(280px, 82vw);
-    padding: 14px 12px;
+    padding: 16px 12px 14px;
   }
 
-  .collapsed .navTitle,
-  .collapsed .label {
+  .collapsed .brand,
+  .collapsed .label,
+  .collapsed .whoName,
+  .collapsed .signOutLabel {
+    display: inline;
+  }
+
+  .collapsed .navTitle {
     display: block;
+  }
+
+  .collapsed .navFoot {
+    flex-direction: row;
+  }
+
+  .collapsed .newLead {
+    padding: 0 14px;
   }
 
   .collapsed .link,
@@ -346,7 +423,6 @@
     transform: translateX(0);
   }
 
-  /* Згортання — це поведінка широкого екрана; у шухляді є хрестик */
   .toggle {
     display: none;
   }
@@ -359,23 +435,11 @@
     display: inline-flex;
   }
 
-  .drawerSignOut {
-    display: block;
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-  }
-
-  .drawerSignOut button {
-    width: 100%;
-  }
-
-  /* Аватар, вихід і меню — однакові кружки 44×44: аватар у лівому куті,
-     меню в правому, вихід поруч із ним лише іконкою */
-  .who,
-  .signOut,
+  /* Пошук, тема й меню — однакові квадрати 44×44 */
+  .search,
   .theme,
   .drawerButton {
+    min-width: 44px;
     width: 44px;
     height: 44px;
     min-height: 44px;
@@ -384,20 +448,14 @@
     flex: none;
   }
 
-  .who {
-    border: 0;
-    background: none;
-  }
-
-  .whoMark {
-    width: 44px;
-    height: 44px;
-    font-size: 17px;
-  }
-
-  .whoName,
-  .signOutLabel {
+  .searchLabel,
+  .kbd {
     display: none;
+  }
+
+  /* Круглий, як тема й меню поруч */
+  .search {
+    border-radius: 50%;
   }
 
   .scrim {
@@ -434,4 +492,13 @@
   .back {
     min-height: 44px;
   }
+}
+
+.collapsed .whoName,
+.collapsed .signOutLabel {
+  display: none;
+}
+
+.collapsed .signOut {
+  padding: 0 12px;
 }

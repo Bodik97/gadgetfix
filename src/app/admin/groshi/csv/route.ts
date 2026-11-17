@@ -3,7 +3,7 @@ import { getDb } from "@/db";
 import { getPaidLeads } from "@/db/adminStats";
 import { categoryLabel, getExpenses } from "@/db/expenses";
 import { leads } from "@/db/schema";
-import { isAdmin } from "@/lib/admin";
+import { isOwner } from "@/lib/admin";
 import { resolveRange } from "../period";
 
 /**
@@ -28,7 +28,7 @@ const date = new Intl.DateTimeFormat("uk-UA", { dateStyle: "short", timeZone: "E
  * а кирилиця не перетворювалась на кракозябри.
  */
 export async function GET(request: Request) {
-  if (!(await isAdmin())) return new Response("Немає доступу", { status: 403 });
+  if (!(await isOwner())) return new Response("Немає доступу", { status: 403 });
 
   const params = new URL(request.url).searchParams;
   const range = resolveRange({

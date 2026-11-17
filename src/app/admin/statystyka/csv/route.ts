@@ -1,5 +1,5 @@
 import { getSiteStats } from "@/db/siteStats";
-import { isAdmin } from "@/lib/admin";
+import { isOwner } from "@/lib/admin";
 import { resolveRange } from "../../groshi/period";
 import { CLICK_LABELS, DEVICE_LABELS, DIRECT } from "../labels";
 
@@ -22,7 +22,7 @@ const row = (...cells: (string | number)[]) => cells.map(cell).join(";");
  * а кирилиця не перетворювалась на кракозябри.
  */
 export async function GET(request: Request) {
-  if (!(await isAdmin())) return new Response("Немає доступу", { status: 403 });
+  if (!(await isOwner())) return new Response("Немає доступу", { status: 403 });
 
   const params = new URL(request.url).searchParams;
   const range = resolveRange({

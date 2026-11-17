@@ -10,20 +10,34 @@ export type Counters = {
   total: number;
   fresh: number;
   toShip: number;
+  /** Активні заявки магазину «Онлайн» — ще не віддані й не відмова */
+  online: number;
 };
 
 export async function getCounters(): Promise<Counters> {
-  const [[{ total }], [{ fresh }], [{ toShip }]] = await Promise.all([
-    getDb().select({ total: count() }).from(leads),
-    getDb().select({ fresh: count() }).from(leads).where(eq(leads.status, "new")),
+  // Заявки «Онлайн» мають свій лічильник і в «Заявках» не рахуються
+  const own = eq(leads.channel, "own");
+  const [[{ total }], [{ fresh }], [{ toShip }], [{ online }]] = await Promise.all([
+    getDb().select({ total: count() }).from(leads).where(own),
+    getDb().select({ fresh: count() }).from(leads).where(and(own, eq(leads.status, "new"))),
     getDb()
       .select({ toShip: count() })
       .from(leads)
       // Закрита заявка відправки вже не чекає: пристрій видали в руки або від ремонту відмовились
-      .where(and(eq(leads.deliveryRequested, true), isNull(leads.ttn), notInArray(leads.status, ARCHIVED))),
+      .where(and(own, eq(leads.deliveryRequested, true), isNull(leads.ttn), notInArray(leads.status, ARCHIVED))),
+    getDb()
+      .select({ online: count() })
+      .from(leads)
+      .where(
+        and(
+          eq(leads.channel, "online"),
+          ne(leads.stage, "issued"),
+          or(isNull(leads.flag), ne(leads.flag, "refused")),
+        ),
+      ),
   ]);
 
-  return { total, fresh, toShip };
+  return { total, fresh, toShip, online };
 }
 
 export type Money = {

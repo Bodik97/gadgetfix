@@ -653,6 +653,8 @@ export async function deleteWork(formData: FormData): Promise<void> {
 /** Записати витрату: оренду, рекламу, інструмент — усе, що не деталь конкретного ремонту */
 export async function createExpense(formData: FormData): Promise<string | null> {
   if (!(await isAdmin())) redirect("/admin/vhid");
+  // Каса — лише для власника
+  if (!(await isOwner())) return "Витрати веде власник";
 
   const amount = Math.round(Number(String(formData.get("amount") ?? "").replace(/\s/g, "")));
   if (!Number.isFinite(amount) || amount <= 0) return "Вкажіть суму більшу за нуль.";
@@ -677,6 +679,8 @@ export async function createExpense(formData: FormData): Promise<string | null> 
 
 export async function deleteExpense(formData: FormData): Promise<void> {
   if (!(await isAdmin())) redirect("/admin/vhid");
+  // Каса — лише для власника
+  if (!(await isOwner())) return;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return;

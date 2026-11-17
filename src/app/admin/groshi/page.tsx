@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getMoney, getOutstanding, monthStart } from "@/db/adminStats";
 import { categoryLabel, getExpenses, getExpenseTotal } from "@/db/expenses";
 import { getMoneyJournal } from "@/db/moneyJournal";
-import { isAdmin } from "@/lib/admin";
+import { isAdmin, isOwner } from "@/lib/admin";
 import Expenses from "./Expenses";
 import PeriodFilter from "./PeriodFilter";
 import Journal from "./Journal";
@@ -33,6 +33,8 @@ export default async function MoneyPage({
   searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
   if (!(await isAdmin())) redirect("/admin/vhid");
+  // Каса — лише для власника
+  if (!(await isOwner())) redirect("/admin");
 
   const range = resolveRange(await searchParams);
   const { from, to } = range;

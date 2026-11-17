@@ -6,9 +6,10 @@ import BackButton from "@/components/BackButton";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { usePathname } from "next/navigation";
+import QuickSearch from "./QuickSearch";
 import styles from "./AdminShell.module.css";
 
-export type NavBadges = { fresh: number; toShip: number; pendingReviews: number };
+export type NavBadges = { fresh: number; toShip: number; pendingReviews: number; online: number };
 
 const items = [
   {
@@ -33,6 +34,18 @@ const items = [
         <path d="M4 4.5h16v15H4z" />
         <path d="M8 9h8" />
         <path d="M8 13h5" />
+      </>
+    ),
+  },
+  {
+    href: "/admin/onlain",
+    label: "Онлайн",
+    badge: "online",
+    icon: (
+      <>
+        <path d="M4 9.5L5.5 4h13L20 9.5" />
+        <path d="M4 9.5h16v2a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0z" />
+        <path d="M5.5 13.5V20h13v-6.5" />
       </>
     ),
   },
@@ -97,6 +110,7 @@ const items = [
     href: "/admin/groshi",
     label: "Каса",
     badge: null,
+    ownerOnly: true,
     icon: (
       <>
         <rect x="3" y="6" width="18" height="12" rx="2" />
@@ -108,6 +122,7 @@ const items = [
     href: "/admin/statystyka",
     label: "Статистика",
     badge: null,
+    ownerOnly: true,
     icon: (
       <>
         <path d="M4 20V10" />
@@ -167,6 +182,7 @@ function writeCollapsed(value: boolean) {
 export default function AdminShell({
   badges,
   master,
+  owner,
   actions,
   signOut,
   children,
@@ -174,9 +190,11 @@ export default function AdminShell({
   badges: NavBadges;
   /** Імʼя майстра, який зайшов — щоб було видно, під ким відкрита адмінка */
   master: string;
+  /** Власник бачить Касу й Статистику; майстер — ні */
+  owner: boolean;
   /** Живе оновлення — приходить із серверного layout */
   actions: React.ReactNode;
-  /** Server action виходу: кнопка є і в панелі, і в шухляді на телефоні */
+  /** Server action виходу: кнопка є і в меню, і в шухляді на телефоні */
   signOut: () => Promise<void>;
   children: React.ReactNode;
 }) {
@@ -185,11 +203,13 @@ export default function AdminShell({
   const collapsed = useSyncExternalStore(subscribe, readCollapsed, () => false);
   // Шухляда на телефоні — окремий стан, вона завжди починається закритою
   const [drawer, setDrawer] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   const toggle = useCallback(() => writeCollapsed(!collapsed), [collapsed]);
+  const shown = items.filter((item) => owner || !("ownerOnly" in item));
 
   return (
-    <div className={`container ${styles.shell}`}>
+    <div className={styles.shell}>
       {drawer && (
         <button
           type="button"
@@ -199,13 +219,16 @@ export default function AdminShell({
         />
       )}
 
+      {/* Меню на всю висоту екрана: логотип, «Нова заявка», розділи, хто зайшов */}
       <nav
         id="admin-nav"
         className={`${styles.nav} ${collapsed ? styles.collapsed : ""} ${drawer ? styles.open : ""}`}
         aria-label="Розділи адміністрування"
       >
         <div className={styles.navHead}>
-          <span className={styles.navTitle}>Розділи</span>
+          <span className={styles.brand}>
+            <Logo />
+          </span>
 
           <button
             type="button"
@@ -235,8 +258,20 @@ export default function AdminShell({
           </button>
         </div>
 
+        <Link
+          href="/admin/nova"
+          className={styles.newLead}
+          title={collapsed ? "Нова заявка" : undefined}
+          onClick={() => setDrawer(false)}
+        >
+          <span aria-hidden="true">+</span>
+          <span className={styles.label}>Нова заявка</span>
+        </Link>
+
+        <p className={styles.navTitle}>Розділи</p>
+
         <ul className={styles.list}>
-          {items.map((item) => {
+          {shown.map((item) => {
             const active =
               item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
             const n = item.badge ? badges[item.badge] : 0;
@@ -273,22 +308,8 @@ export default function AdminShell({
           })}
         </ul>
 
-        {/* У шухляді на телефоні вихід — помітною кнопкою під розділами */}
-        <form action={signOut} className={styles.drawerSignOut}>
-          <button type="submit" className="btn btn-accent">
-            <SignOutIcon />
-            Вийти
-          </button>
-        </form>
-      </nav>
-
-      <div className={styles.content}>
-        <div className={styles.topbar}>
-          {/* Шапки сайту в адмінці немає — логотип на широкому екрані живе тут */}
-          <span className={styles.brand}>
-            <Logo />
-          </span>
-
+        {/* Унизу — хто зайшов і вихід */}
+        <div className={styles.navFoot}>
           <span className={styles.who} title={`Ви увійшли як ${master}`}>
             <span className={styles.whoMark} aria-hidden="true">
               {master.slice(0, 1).toUpperCase()}
@@ -296,22 +317,35 @@ export default function AdminShell({
             <span className={styles.whoName}>{master}</span>
           </span>
 
+          <form action={signOut}>
+            <button type="submit" className={styles.signOut} title="Вийти">
+              <SignOutIcon />
+              <span className={styles.signOutLabel}>Вийти</span>
+            </button>
+          </form>
+        </div>
+      </nav>
+
+      <div className={styles.content}>
+        <div className={styles.topbar}>
           {pathname !== "/admin" && (
             <BackButton fallback="/admin" className={styles.back} />
           )}
 
           <span className={styles.spacer} />
 
+          <button type="button" className={styles.search} onClick={() => setSearching(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+            <span className={styles.searchLabel}>Пошук усюди</span>
+            <kbd className={styles.kbd}>Ctrl K</kbd>
+          </button>
+
           {actions}
 
           <ThemeToggle className={styles.theme} />
-
-          <form action={signOut}>
-            <button type="submit" className={styles.signOut} aria-label="Вийти">
-              <SignOutIcon />
-              <span className={styles.signOutLabel}>Вийти</span>
-            </button>
-          </form>
 
           {/* Кнопка шухляди видима лише на вузькому екрані — у правому куті */}
           <button
@@ -330,8 +364,10 @@ export default function AdminShell({
           </button>
         </div>
 
-        {children}
+        <div className={styles.page}>{children}</div>
       </div>
+
+      <QuickSearch open={searching} onOpenChange={setSearching} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSiteStats, type SiteStats } from "@/db/siteStats";
-import { isAdmin } from "@/lib/admin";
+import { isAdmin, isOwner } from "@/lib/admin";
 import PeriodFilter from "../groshi/PeriodFilter";
 import { resolveRange } from "../groshi/period";
 import { CLICK_LABELS, DEVICE_LABELS, DIRECT } from "./labels";
@@ -26,6 +26,8 @@ export default async function SiteStatsPage({
   searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
   if (!(await isAdmin())) redirect("/admin/vhid");
+  // Статистика — лише для власника
+  if (!(await isOwner())) redirect("/admin");
 
   const range = resolveRange(await searchParams);
 
