@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fake } from "./helpers/fakeDb";
 import { claims } from "./helpers/claimingDb";
-import { devices, leadEvents, leadMessages, leads, reviews, works } from "@/db/schema";
+import { devices, leadEvents, leadMessages, leadPhotos, leads, leadSignatures, reviews, works } from "@/db/schema";
 
 /**
  * Дії адмінки — ними змінюються заявки, гроші, відгуки й склад. Server action
@@ -816,9 +816,16 @@ describe("витрати й склад", () => {
 describe("deleteLead", () => {
   it("прибирає фото зі сховища, потім заявку", async () => {
     fake.onSelect(leadMessages, () => [{ imagePath: "chat/l1/a" }, { imagePath: null }, { imagePath: "chat/l1/b" }]);
-    await actions.deleteLead(form({ id: LEAD.id }));
+    await expect(actions.deleteLead(form({ id: LEAD.id }))).rejects.toThrow("REDIRECT:/admin/zayavky");
     expect(m.deleted).toEqual(["chat/l1/a", "chat/l1/b"]);
     expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "leads" where "leads"."id" = $1']);
+  });
+
+  it("прибирає й фото пристрою та підписи", async () => {
+    fake.onSelect(leadPhotos, () => [{ path: "leads/l1/front" }]);
+    fake.onSelect(leadSignatures, () => [{ path: "leads/l1/sign/a" }]);
+    await expect(actions.deleteLead(form({ id: LEAD.id }))).rejects.toThrow("REDIRECT:/admin/zayavky");
+    expect(m.deleted).toEqual(["leads/l1/front", "leads/l1/sign/a"]);
   });
 
   it("майстер (не власник) видалити не може — нічого не стирається", async () => {
@@ -832,7 +839,7 @@ describe("deleteLead", () => {
   it("збій сховища не лишає заявку невидаленою", async () => {
     m.delFails = true;
     fake.onSelect(leadMessages, () => [{ imagePath: "chat/l1/a" }]);
-    await actions.deleteLead(form({ id: LEAD.id }));
+    await expect(actions.deleteLead(form({ id: LEAD.id }))).rejects.toThrow("REDIRECT:/admin/zayavky");
     expect(fake.writes()[0].sql).toMatch(/^delete from "leads"/);
   });
 });

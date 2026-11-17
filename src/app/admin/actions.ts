@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { del, put } from "@vercel/blob";
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { devices, leadMessages, leads, pushSubscriptions, reviews, works, type Lead } from "@/db/schema";
+import { devices, leadMessages, leadPhotos, leads, leadSignatures, pushSubscriptions, reviews, works, type Lead } from "@/db/schema";
 import { STATUS_OPTIONS } from "@/db/leads";
 import { guessWarrantyDays, isWarrantyTerm, warrantyEnd } from "@/data/warranty";
 import { addEvent, getHandoverDate, getLeadById, registerDevice } from "@/db/events";
@@ -755,10 +755,13 @@ export async function deleteLead(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const photos = await getDb()
-    .select({ path: leadMessages.imagePath })
-    .from(leadMessages)
-    .where(eq(leadMessages.leadId, id));
+  // Фото з чату, фото пристрою й підписи — усе з приватного сховища
+  const [chat, device, signs] = await Promise.all([
+    getDb().select({ path: leadMessages.imagePath }).from(leadMessages).where(eq(leadMessages.leadId, id)),
+    getDb().select({ path: leadPhotos.path }).from(leadPhotos).where(eq(leadPhotos.leadId, id)),
+    getDb().select({ path: leadSignatures.path }).from(leadSignatures).where(eq(leadSignatures.leadId, id)),
+  ]);
+  const photos = [...chat, ...device, ...signs];
 
   for (const { path } of photos) {
     if (!path) continue;
@@ -768,6 +771,7 @@ export async function deleteLead(formData: FormData): Promise<void> {
 
   await getDb().delete(leads).where(eq(leads.id, id));
 
-  revalidatePath("/admin/zayavky");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
+  // Сторінки заявки більше немає — повертаємось до списку
+  redirect("/admin/zayavky");
 }
