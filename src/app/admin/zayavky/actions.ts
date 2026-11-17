@@ -10,7 +10,7 @@ import { currentAdmin } from "@/lib/admin";
 import { notifyClientStatus, offerPrice } from "@/lib/clientBot";
 import { nextAction, onlineWarranty, stageToStatus } from "@/lib/stage";
 import { pushStatusToClient } from "@/lib/statusPush";
-import { LIMITS, plainText } from "@/lib/validate";
+import { isUuid, LIMITS, plainText, readExternalNo } from "@/lib/validate";
 import { parseBatch } from "@/lib/onlineBatch";
 
 /**
@@ -26,7 +26,7 @@ export async function moveStage(formData: FormData): Promise<void> {
 
   const id = String(formData.get("id") ?? "");
   const to = String(formData.get("to") ?? "");
-  const lead = id ? await getLeadById(id) : undefined;
+  const lead = isUuid(id) ? await getLeadById(id) : undefined;
   if (!lead) return;
 
   const action = nextAction(lead);
@@ -72,7 +72,7 @@ export async function resumeLead(formData: FormData): Promise<void> {
   if (!me) redirect("/admin/vhid");
 
   const id = String(formData.get("id") ?? "");
-  if (!id) return;
+  if (!isUuid(id)) return;
 
   const done = await getDb()
     .update(leads)
@@ -93,13 +93,13 @@ export async function createOnlineLead(_prev: string | null, formData: FormData)
   const me = await currentAdmin();
   if (!me) redirect("/admin/vhid");
 
-  const externalNo = plainText(String(formData.get("externalNo") ?? ""), LIMITS.short).trim();
+  const externalNo = readExternalNo(String(formData.get("externalNo") ?? ""));
   const priceId = String(formData.get("priceId") ?? "");
   const note = plainText(String(formData.get("note") ?? ""), LIMITS.problem, true).trim() || null;
 
-  if (!externalNo) return "Впишіть № квитанції магазину.";
+  if (!externalNo) return "Впишіть № квитанції магазину — цифрами, наприклад М-4486.";
 
-  const [item] = priceId
+  const [item] = isUuid(priceId)
     ? await getDb().select().from(partnerPrices).where(eq(partnerPrices.id, priceId)).limit(1)
     : [];
   if (!item || !item.active) return "Виберіть роботу з прайсу магазину.";
@@ -184,7 +184,7 @@ export async function remindPrice(formData: FormData): Promise<void> {
   if (!me) redirect("/admin/vhid");
 
   const id = String(formData.get("id") ?? "");
-  const lead = id ? await getLeadById(id) : undefined;
+  const lead = isUuid(id) ? await getLeadById(id) : undefined;
   if (!lead || lead.channel !== "own" || lead.stage !== "approval" || lead.flag) return;
 
   const sent = await offerPrice(lead);

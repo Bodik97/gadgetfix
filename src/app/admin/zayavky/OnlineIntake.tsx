@@ -60,7 +60,7 @@ function SingleIntake({ prices, onBatch }: { prices: PartnerPrice[]; onBatch: ()
       </p>
       <div className={styles.intakeField}>
         <label htmlFor="on-ext">№ магазину</label>
-        <input id="on-ext" name="externalNo" type="text" placeholder="М-4486" required autoComplete="off" />
+        <input id="on-ext" name="externalNo" type="text" placeholder="М-4486" required maxLength={12} autoComplete="off" />
       </div>
       <div className={styles.intakeWide}>
         <label htmlFor="on-work">Робота з прайсу магазину</label>
@@ -74,7 +74,7 @@ function SingleIntake({ prices, onBatch }: { prices: PartnerPrice[]; onBatch: ()
       </div>
       <div className={styles.intakeWide}>
         <label htmlFor="on-note">Примітка</label>
-        <input id="on-note" name="note" type="text" placeholder="необов'язково" autoComplete="off" />
+        <input id="on-note" name="note" type="text" placeholder="необов'язково" maxLength={500} autoComplete="off" />
       </div>
       <button type="submit" className={styles.intakeAdd} disabled={pending}>
         Додати · {price.toLocaleString("uk-UA")} ₴
@@ -114,6 +114,7 @@ function BatchIntake({ onSingle }: { onSingle: () => void }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={"М-4486 Redmi 13C АКБ\nМ-4487 Samsung A36 дисплей, тріснуте скло"}
+          maxLength={5000}
           className={styles.batchText}
         />
       </div>

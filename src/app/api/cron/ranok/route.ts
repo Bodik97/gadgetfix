@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { getToday } from "@/db/today";
 import { sendPush } from "@/lib/push";
 
@@ -11,7 +12,10 @@ import { sendPush } from "@/lib/push";
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
+  const given = Buffer.from(req.headers.get("authorization") ?? "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  // Порівняння за сталий час — щоб секрет не вгадували за швидкістю відповіді
+  if (!secret || given.length !== expected.length || !timingSafeEqual(given, expected)) {
     return new Response("Немає доступу", { status: 401 });
   }
 

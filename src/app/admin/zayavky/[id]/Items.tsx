@@ -105,13 +105,15 @@ export default function Items({
           )}
           <input
             name="title"
+            required
+            maxLength={80}
             className={styles.input}
             placeholder={kind === "work" ? "Заміна роз'єму заряджання" : "Роз'єм iPhone 13 Pro"}
             aria-label={kind === "work" ? "Робота" : "Деталь"}
           />
           <div className={styles.row2}>
-            <input name="price" className={styles.input} inputMode="numeric" placeholder="Ціна клієнту, ₴" aria-label="Ціна клієнту" />
-            <input name="cost" className={styles.input} inputMode="numeric" placeholder="Собівартість, ₴" aria-label="Собівартість" />
+            <input name="price" className={styles.input} inputMode="numeric" pattern="[0-9 ]*" maxLength={9} placeholder="Ціна клієнту, ₴" aria-label="Ціна клієнту" />
+            <input name="cost" className={styles.input} inputMode="numeric" pattern="[0-9 ]*" maxLength={9} placeholder="Собівартість, ₴" aria-label="Собівартість" />
           </div>
           <button type="submit" className={styles.softBtn} disabled={pending}>
             + Додати

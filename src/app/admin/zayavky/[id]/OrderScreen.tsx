@@ -597,6 +597,8 @@ function Prepayment({ lead }: { lead: Lead }) {
           id="f-prepay"
           name="amount"
           inputMode="numeric"
+          pattern="[0-9 ]*"
+          maxLength={9}
           className={styles.inputSmall}
           defaultValue={has ? String(lead.prepayment) : ""}
           placeholder="0"

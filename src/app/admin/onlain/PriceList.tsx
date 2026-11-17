@@ -39,10 +39,10 @@ function PriceRow({ price: p }: { price: PartnerPrice }) {
     <div className={p.active ? styles.priceRow : styles.priceRowOff}>
       <form action={action} className={styles.priceForm}>
         <input type="hidden" name="id" value={p.id} />
-        <input name="model" defaultValue={p.model} className={styles.input} aria-label="Модель" disabled={!p.active} />
-        <input name="work" defaultValue={p.work} className={styles.input} aria-label="Робота" disabled={!p.active} />
-        <input name="price" defaultValue={p.price} inputMode="numeric" className={styles.input} aria-label="Ціна магазину, ₴" disabled={!p.active} />
-        <input name="cost" defaultValue={p.cost ?? ""} inputMode="numeric" placeholder="—" className={styles.input} aria-label="Нам деталь коштує, ₴" disabled={!p.active} />
+        <input name="model" maxLength={80} defaultValue={p.model} className={styles.input} aria-label="Модель" disabled={!p.active} />
+        <input name="work" maxLength={80} defaultValue={p.work} className={styles.input} aria-label="Робота" disabled={!p.active} />
+        <input name="price" maxLength={9} pattern="[0-9 ]*" defaultValue={p.price} inputMode="numeric" className={styles.input} aria-label="Ціна магазину, ₴" disabled={!p.active} />
+        <input name="cost" maxLength={9} pattern="[0-9 ]*" defaultValue={p.cost ?? ""} inputMode="numeric" placeholder="—" className={styles.input} aria-label="Нам деталь коштує, ₴" disabled={!p.active} />
         {p.active && (
           <button type="submit" className={styles.soft} disabled={pending}>
             Зберегти
@@ -74,10 +74,10 @@ function AddRow() {
   return (
     <div className={styles.priceAdd}>
       <form id="price-add" action={action} className={styles.priceForm}>
-        <input name="model" placeholder="Модель" className={styles.input} aria-label="Модель" />
-        <input name="work" placeholder="Робота" className={styles.input} aria-label="Робота" />
-        <input name="price" placeholder="Ціна, ₴" inputMode="numeric" className={styles.input} aria-label="Ціна магазину, ₴" />
-        <input name="cost" placeholder="Деталь, ₴" inputMode="numeric" className={styles.input} aria-label="Нам деталь коштує, ₴" />
+        <input name="model" maxLength={80} placeholder="Модель" className={styles.input} aria-label="Модель" />
+        <input name="work" maxLength={80} placeholder="Робота" className={styles.input} aria-label="Робота" />
+        <input name="price" maxLength={9} pattern="[0-9 ]*" placeholder="Ціна, ₴" inputMode="numeric" className={styles.input} aria-label="Ціна магазину, ₴" />
+        <input name="cost" maxLength={9} pattern="[0-9 ]*" placeholder="Деталь, ₴" inputMode="numeric" className={styles.input} aria-label="Нам деталь коштує, ₴" />
         <button type="submit" className={styles.main} disabled={pending}>
           + Додати
         </button>

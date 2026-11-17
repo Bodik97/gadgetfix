@@ -23,6 +23,8 @@ export default function PaidForm({ month, amount }: { month: string; amount: num
         id="fee"
         name="fee"
         inputMode="numeric"
+        pattern="[0-9 ]*"
+        maxLength={9}
         placeholder="0"
         value={fee}
         onChange={(e) => {

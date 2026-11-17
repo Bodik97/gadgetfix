@@ -7,7 +7,7 @@ import { getDb } from "@/db";
 import { leads, partnerPrices, partnerSettlements } from "@/db/schema";
 import { getMonthLeads, getSettlement, isMonthKey, monthStartKyiv } from "@/db/online";
 import { currentAdmin, isOwner } from "@/lib/admin";
-import { LIMITS, plainText } from "@/lib/validate";
+import { isUuid, LIMITS, plainText, readUah } from "@/lib/validate";
 
 /** Прайс магазину веде будь-який майстер; розрахунок (гроші) — лише власник */
 
@@ -19,19 +19,11 @@ async function master() {
 
 const field = (f: FormData, k: string) => String(f.get(k) ?? "");
 
-/** Ціле число гривень або null для порожнього; undefined — щось не те */
-function uah(raw: string): number | null | undefined {
-  const v = raw.replace(/\s/g, "");
-  if (v === "") return null;
-  const n = Number(v);
-  return Number.isInteger(n) && n >= 0 && n <= 1_000_000 ? n : undefined;
-}
-
 function readPrice(f: FormData): { model: string; work: string; price: number; cost: number | null } | string {
   const model = plainText(field(f, "model"), LIMITS.short).trim();
   const work = plainText(field(f, "work"), LIMITS.short).trim();
-  const price = uah(field(f, "price"));
-  const cost = uah(field(f, "cost"));
+  const price = readUah(field(f, "price"));
+  const cost = readUah(field(f, "cost"));
   if (!model) return "Впишіть модель.";
   if (!work) return "Впишіть роботу.";
   if (price === null || price === undefined || price === 0) return "Ціна — ціле число гривень, більше нуля.";
@@ -57,7 +49,7 @@ export async function updatePrice(_prev: string | null, f: FormData): Promise<st
   const id = field(f, "id");
   const p = readPrice(f);
   if (typeof p === "string") return p;
-  if (!id) return null;
+  if (!isUuid(id)) return null;
   await getDb().update(partnerPrices).set(p).where(eq(partnerPrices.id, id));
   revalidatePath("/admin", "layout");
   return null;
@@ -68,7 +60,7 @@ export async function togglePrice(f: FormData): Promise<void> {
   await master();
   const id = field(f, "id");
   const active = field(f, "active") === "1";
-  if (!id) return;
+  if (!isUuid(id)) return;
   await getDb().update(partnerPrices).set({ active }).where(eq(partnerPrices.id, id));
   revalidatePath("/admin", "layout");
 }
@@ -83,7 +75,7 @@ export async function markPaid(_prev: string | null, f: FormData): Promise<strin
 
   const month = field(f, "month");
   if (!isMonthKey(month)) return null;
-  const fee = uah(field(f, "fee"));
+  const fee = readUah(field(f, "fee"));
   if (fee === undefined) return "Утримання — ціле число гривень.";
 
   if (await getSettlement(month)) return "Цей місяць уже закрито.";

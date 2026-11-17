@@ -52,7 +52,7 @@ vi.mock("workflow/api", () => ({
 }));
 vi.mock("@/workflows/remind-price", () => ({ remindPriceLater: () => {} }));
 
-import { addItem, advance, pause, refuse, saveList, savePrepayment } from "@/app/admin/zayavky/[id]/actions";
+import { addItem, advance, pause, refuse, saveList, savePrepayment, saveText, uploadPhoto } from "@/app/admin/zayavky/[id]/actions";
 
 const ID = "11111111-1111-1111-1111-111111111111";
 const form = (fields: Record<string, string | string[]>) => {
@@ -236,5 +236,37 @@ describe("пауза", () => {
   it("з причиною — позначка й причина в заявці", async () => {
     expect(await pause(form({ id: ID, reason: "чекаємо оплату" }))).toBeNull();
     expect(updates()[0].params).toEqual(expect.arrayContaining(["paused", "чекаємо оплату"]));
+  });
+});
+
+describe("перевірка вводу в діях", () => {
+  it("кривий id — жодного запиту до бази", async () => {
+    expect(await advance(null, form({ id: "1' or '1'='1" }))).toMatch(/не знайдено/);
+    await saveList(form({ id: "abc", field: "problems", value: ["Екран"] }));
+    expect(fake.queries).toEqual([]);
+  });
+
+  it("ціна «1e3» чи «-5» — не додається", async () => {
+    fake.onSelect(leads, () => [LEAD]);
+    expect(await addItem(form({ id: ID, kind: "work", title: "Екран", price: "1e3" }))).toMatch(/ціле/);
+    expect(await addItem(form({ id: ID, kind: "work", title: "Екран", price: "-5" }))).toMatch(/ціле/);
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("робота без ціни — просить ціну", async () => {
+    fake.onSelect(leads, () => [LEAD]);
+    expect(await addItem(form({ id: ID, kind: "work", title: "Екран", price: "" }))).toMatch(/ціну/);
+  });
+
+  it("IMEI з літерами — підказка, не зберігається", async () => {
+    expect(await saveText(form({ id: ID, field: "imei", value: "35AB" }))).toMatch(/IMEI/);
+    expect(fake.writes()).toEqual([]);
+  });
+
+  it("HTML під виглядом фото — у сховище не потрапляє", async () => {
+    const f = form({ id: ID, slot: "front" });
+    f.set("file", new File(["<html><script>alert(1)</script></html>"], "x.png", { type: "image/png" }));
+    expect(await uploadPhoto(f)).toMatch(/лише фото/);
+    expect(fake.writes()).toEqual([]);
   });
 });

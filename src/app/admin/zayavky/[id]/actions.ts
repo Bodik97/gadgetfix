@@ -18,7 +18,7 @@ import { STAGE_ORDER, stageToStatus } from "@/lib/stage";
 import { pushStatusToClient } from "@/lib/statusPush";
 import { start } from "workflow/api";
 import { remindPriceLater } from "@/workflows/remind-price";
-import { LIMITS, plainText } from "@/lib/validate";
+import { isUuid, LIMITS, plainText, readImei, readUah, sniffImage } from "@/lib/validate";
 
 /**
  * Дії сторінки заявки. Кожне поле зберігається одразу (як у старій картці),
@@ -33,6 +33,11 @@ async function master() {
 }
 
 const field = (form: FormData, key: string) => String(form.get(key) ?? "");
+/** id заявки з форми — лише справжній UUID, інакше порожньо (і дія нічого не робить) */
+const idOf = (form: FormData, key = "id") => {
+  const v = field(form, key);
+  return isUuid(v) ? v : "";
+};
 
 function refresh(id: string) {
   revalidatePath(`/admin/zayavky/${id}`);
@@ -44,7 +49,7 @@ const LISTS = { problems: PROBLEMS, condition: CONDITION, kit: KIT } as const;
 
 export async function saveList(form: FormData): Promise<void> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const name = field(form, "field") as keyof typeof LISTS;
   const allowed: readonly string[] | undefined = LISTS[name];
   if (!id || !allowed) return;
@@ -66,25 +71,31 @@ const TEXTS = {
   city: LIMITS.short,
 } as const;
 
-export async function saveText(form: FormData): Promise<void> {
+export async function saveText(form: FormData): Promise<string | null> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const name = field(form, "field") as keyof typeof TEXTS;
   const max = TEXTS[name];
-  if (!id || !max) return;
+  if (!id || !max) return null;
 
-  const value = plainText(field(form, "value"), max, name === "diagnosis" || name === "masterNote").trim() || null;
+  let value = plainText(field(form, "value"), max, name === "diagnosis" || name === "masterNote").trim() || null;
+  if (name === "imei" && value) {
+    const imei = readImei(value);
+    if (imei === undefined) return "IMEI — 15 цифр (набери *#06# на телефоні).";
+    value = imei;
+  }
   await getDb()
     .update(leads)
     .set({ [name]: value, updatedAt: new Date() })
     .where(eq(leads.id, id));
   refresh(id);
+  return null;
 }
 
 /** Точка: Львів, Новий Розділ або інше місто (тоді назва — у city) */
 export async function saveLocation(form: FormData): Promise<void> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const value = field(form, "value");
   if (!id || !["lviv", "novyi-rozdil", "other", ""].includes(value)) return;
   await getDb()
@@ -97,7 +108,7 @@ export async function saveLocation(form: FormData): Promise<void> {
 /** Термін «Готово до»: дата з поля або підказка «+N днів» */
 export async function saveDue(form: FormData): Promise<void> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const raw = field(form, "value");
   if (!id) return;
 
@@ -129,7 +140,7 @@ function addWorkingDays(from: Date, days: number): Date {
 
 export async function saveWarranty(form: FormData): Promise<void> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const days = Number(field(form, "days"));
   if (!id || !isWarrantyTerm(days)) return;
   await getDb().update(leads).set({ warrantyDays: days, updatedAt: new Date() }).where(eq(leads.id, id));
@@ -138,7 +149,7 @@ export async function saveWarranty(form: FormData): Promise<void> {
 
 export async function savePayment(form: FormData): Promise<void> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const value = field(form, "value");
   if (!id || !["cash", "card", "transfer"].includes(value)) return;
   await getDb()
@@ -154,15 +165,14 @@ export async function savePayment(form: FormData): Promise<void> {
  */
 export async function savePrepayment(form: FormData): Promise<string | null> {
   await master();
-  const id = field(form, "id");
-  const raw = field(form, "amount").replace(/\s/g, "");
+  const id = idOf(form);
+  const amount = readUah(field(form, "amount"));
   if (!id) return null;
+  if (amount === undefined || amount === 0) return "Передоплата — ціле число гривень.";
 
-  if (raw === "") {
+  if (amount === null) {
     await getDb().update(leads).set({ prepayment: null, prepaidAt: null, updatedAt: new Date() }).where(eq(leads.id, id));
   } else {
-    const amount = Number(raw);
-    if (!Number.isInteger(amount) || amount <= 0 || amount > 1_000_000) return "Передоплата — ціле число гривень.";
     await getDb()
       .update(leads)
       .set({ prepayment: amount, prepaidAt: new Date(), updatedAt: new Date() })
@@ -174,22 +184,27 @@ export async function savePrepayment(form: FormData): Promise<string | null> {
 
 // ── Фото й підпис ────────────────────────────────────────────────────
 
-const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+/** Більше на одну заявку не треба — і сховище не засмітить випадковий цикл */
+const MAX_PHOTOS = 20;
 
 export async function uploadPhoto(form: FormData): Promise<string | null> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const slot = field(form, "slot");
   const file = form.get("file");
   if (!id || !["front", "back", "frame", "other"].includes(slot)) return null;
   if (!(file instanceof File) || file.size === 0) return "Оберіть фото.";
-  if (!PHOTO_TYPES.includes(file.type)) return "Можна лише фото.";
   if (file.size > 6 * 1024 * 1024) return "Фото завелике — до 6 МБ.";
+  // Тип — з самого файлу, а не з того, що назвав браузер
+  const type = await sniffImage(file);
+  if (!type) return "Можна лише фото (JPG, PNG, WebP, HEIC).";
 
   const lead = await getLeadById(id);
   if (!lead) return null;
+  const [{ n }] = await getDb().select({ n: count() }).from(leadPhotos).where(eq(leadPhotos.leadId, id));
+  if (n >= MAX_PHOTOS) return `У заявці вже ${MAX_PHOTOS} фото — досить.`;
 
-  const path = await savePhoto(`leads/${id}`, file);
+  const path = await savePhoto(`leads/${id}`, new File([file], "photo", { type }));
   await getDb()
     .insert(leadPhotos)
     .values({ leadId: id, slot: slot as "front", path, stage: lead.stage });
@@ -200,12 +215,13 @@ export async function uploadPhoto(form: FormData): Promise<string | null> {
 /** Підпис пальцем — PNG з полотна. Новий підпис того ж виду замінює старий. */
 export async function saveSignature(form: FormData): Promise<string | null> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const kind = field(form, "kind");
   const file = form.get("file");
   if (!id || (kind !== "intake" && kind !== "handover")) return null;
-  if (!(file instanceof File) || file.type !== "image/png" || file.size === 0) return "Підпис не зберігся — спробуйте ще раз.";
+  if (!(file instanceof File) || file.size === 0) return "Підпис не зберігся — спробуйте ще раз.";
   if (file.size > 1024 * 1024) return "Підпис завеликий.";
+  if ((await sniffImage(file)) !== "image/png") return "Підпис не зберігся — спробуйте ще раз.";
 
   const path = await savePhoto(`leads/${id}/sign`, file);
   await getDb()
@@ -253,19 +269,21 @@ async function moneyLocked(id: string): Promise<boolean> {
 
 export async function addItem(form: FormData): Promise<string | null> {
   await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const kind = field(form, "kind") === "part" ? "part" : "work";
   const title = plainText(field(form, "title"), LIMITS.short).trim();
-  const price = Number(field(form, "price").replace(/\s/g, "") || "0");
-  const costRaw = field(form, "cost").replace(/\s/g, "");
-  const cost = costRaw === "" ? null : Number(costRaw);
-  const partId = field(form, "partId") || null;
+  const price = readUah(field(form, "price"));
+  const cost = readUah(field(form, "cost"));
+  const rawPart = field(form, "partId");
+  const partId = isUuid(rawPart) ? rawPart : null;
+  if (rawPart && !partId) return "Такої деталі на складі немає.";
 
   if (!id) return null;
   if (await moneyLocked(id)) return "Заявку вже оплачено — суму не змінити.";
   if (!title) return kind === "work" ? "Впишіть, яку роботу робимо." : "Впишіть деталь.";
-  if (!Number.isInteger(price) || price < 0 || price > 1_000_000) return "Ціна — ціле число гривень.";
-  if (cost !== null && (!Number.isInteger(cost) || cost < 0 || cost > 1_000_000)) return "Собівартість — ціле число гривень.";
+  if (price === undefined) return "Ціна — ціле число гривень.";
+  if (cost === undefined) return "Собівартість — ціле число гривень.";
+  if (kind === "work" && !price) return "Вкажіть ціну роботи для клієнта.";
 
   // Деталь зі складу: собівартість — з закупівлі, якщо не вписали свою
   let unitCost = cost;
@@ -275,7 +293,7 @@ export async function addItem(form: FormData): Promise<string | null> {
     unitCost = cost ?? part.unitCost;
   }
 
-  await getDb().insert(leadItems).values({ leadId: id, kind, title, price, cost: unitCost, partId });
+  await getDb().insert(leadItems).values({ leadId: id, kind, title, price: price ?? 0, cost: unitCost, partId });
   await recountMoney(id);
   refresh(id);
   return null;
@@ -283,8 +301,8 @@ export async function addItem(form: FormData): Promise<string | null> {
 
 export async function removeItem(form: FormData): Promise<void> {
   await master();
-  const id = field(form, "id");
-  const itemId = field(form, "itemId");
+  const id = idOf(form);
+  const itemId = idOf(form, "itemId");
   if (!id || !itemId || (await moneyLocked(id))) return;
 
   const [item] = await getDb()
@@ -356,7 +374,7 @@ function nextStage(lead: Lead): Lead["stage"] | null {
  */
 export async function advance(_prev: string | null, form: FormData): Promise<string | null> {
   const me = await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const lead = id ? await getLeadById(id) : undefined;
   if (!lead) return "Заявку не знайдено — можливо, її видалили.";
   if (lead.flag === "refused") return "Клієнт відмовився — спершу «Повернути».";
@@ -454,7 +472,7 @@ async function writeOffParts(id: string) {
 /** ‹ Назад — на попередній етап, без повідомлень клієнту (майстер виправляє свій крок) */
 export async function back(form: FormData): Promise<void> {
   const me = await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const lead = id ? await getLeadById(id) : undefined;
   if (!lead || lead.stage === "new" || lead.stage === "issued") return;
 
@@ -472,7 +490,7 @@ export async function back(form: FormData): Promise<void> {
 /** Пауза — бурштиновий банер «На паузі · …». Причина обовʼязкова. */
 export async function pause(form: FormData): Promise<string | null> {
   const me = await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const reason = plainText(field(form, "reason"), LIMITS.short).trim();
   if (!id) return null;
   if (!reason) return "Вкажіть, на що чекаємо.";
@@ -492,7 +510,7 @@ export async function pause(form: FormData): Promise<string | null> {
  */
 export async function refuse(form: FormData): Promise<void> {
   const me = await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const lead = id ? await getLeadById(id) : undefined;
   if (!lead || lead.flag === "refused" || lead.stage === "issued") return;
 
@@ -512,7 +530,7 @@ export async function refuse(form: FormData): Promise<void> {
 /** «Повернути» після відмови — заявка знову активна на тому ж етапі */
 export async function unrefuse(form: FormData): Promise<void> {
   const me = await master();
-  const id = field(form, "id");
+  const id = idOf(form);
   const lead = id ? await getLeadById(id) : undefined;
   if (!lead || lead.flag !== "refused") return;
 

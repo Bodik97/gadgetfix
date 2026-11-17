@@ -75,13 +75,17 @@ export function TextField({
   multiline?: boolean;
 }) {
   const [saved, setSaved] = useState(value ?? "");
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const inputId = `f-${field}`;
 
   function save(text: string) {
-    if (text.trim() === saved.trim()) return;
-    setSaved(text);
-    start(() => saveText(form(id, [["field", field], ["value", text]])));
+    if (text.trim() === saved.trim() && !error) return;
+    start(async () => {
+      const res = await saveText(form(id, [["field", field], ["value", text]]));
+      setError(res);
+      if (!res) setSaved(text);
+    });
   }
 
   return (
@@ -96,6 +100,7 @@ export function TextField({
           id={inputId}
           className={styles.input}
           rows={3}
+          maxLength={500}
           defaultValue={saved}
           placeholder={placeholder}
           onBlur={(e) => save(e.target.value)}
@@ -111,7 +116,14 @@ export function TextField({
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
+          aria-invalid={error ? true : undefined}
+          maxLength={field === "imei" ? 20 : 80}
         />
+      )}
+      {error && (
+        <p role="alert" className={styles.inlineError}>
+          {error}
+        </p>
       )}
     </div>
   );
