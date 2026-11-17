@@ -192,6 +192,9 @@
 
 .intakeTitle {
   flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
   font-size: 11px;
   font-weight: 700;
@@ -253,6 +256,56 @@
   margin: 0;
   color: var(--late-text);
   font-weight: 600;
+}
+
+.intakeOk {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.intakeMode {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--lime-rgb) / .45);
+  background: var(--bg-elevated);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.modeBtn,
+.modeOn {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modeOn {
+  background: rgb(var(--lime-rgb) / .2);
+  color: var(--accent-text);
+  cursor: default;
+}
+
+.batchText {
+  min-height: 96px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  resize: vertical;
 }
 
 .intakeEmpty {

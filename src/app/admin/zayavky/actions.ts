@@ -2,15 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { leads, partnerPrices } from "@/db/schema";
+import { leads, partnerPrices, type PartnerPrice } from "@/db/schema";
 import { addEvent, getLeadById } from "@/db/events";
 import { currentAdmin } from "@/lib/admin";
 import { notifyClientStatus } from "@/lib/clientBot";
 import { nextAction, onlineWarranty, stageToStatus } from "@/lib/stage";
 import { pushStatusToClient } from "@/lib/statusPush";
 import { LIMITS, plainText } from "@/lib/validate";
+import { parseBatch } from "@/lib/onlineBatch";
 
 /**
  * Кнопка наступної дії на дошці: «Взяти собі», «Погодив», «Готово», «Віддати».
@@ -102,7 +103,26 @@ export async function createOnlineLead(_prev: string | null, formData: FormData)
     ? await getDb().select().from(partnerPrices).where(eq(partnerPrices.id, priceId)).limit(1)
     : [];
   if (!item || !item.active) return "Виберіть роботу з прайсу магазину.";
+  if (await externalTaken(externalNo)) return `${externalNo} уже прийнято — він є серед активних заявок.`;
 
+  await insertOnlineLead(item, externalNo, note);
+
+  revalidatePath("/admin", "layout");
+  return null;
+}
+
+/** № квитанції магазину вже є серед активних заявок — другий раз той самий телефон не приймаємо */
+async function externalTaken(externalNo: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ id: leads.id })
+    .from(leads)
+    .where(and(eq(leads.channel, "online"), eq(leads.externalNo, externalNo), ne(leads.stage, "issued")))
+    .limit(1);
+  return Boolean(row);
+}
+
+/** Заявка магазину: ціна й собівартість — з прайсу, номер О-… — з окремої послідовності */
+async function insertOnlineLead(item: PartnerPrice, externalNo: string, note: string | null) {
   await getDb()
     .insert(leads)
     .values({
@@ -117,7 +137,40 @@ export async function createOnlineLead(_prev: string | null, formData: FormData)
       partsCost: item.cost,
       source: "manual",
     });
+}
 
-  revalidatePath("/admin", "layout");
-  return null;
+export type BatchResult = { created: number; failed: { line: string; reason: string }[] };
+
+/**
+ * Прийом пачкою: вставили список із повідомлення магазину — кожен впізнаний
+ * рядок стає заявкою, невпізнані повертаються списком, щоб додати їх вручну.
+ */
+export async function createOnlineBatch(_prev: BatchResult | null, formData: FormData): Promise<BatchResult> {
+  const me = await currentAdmin();
+  if (!me) redirect("/admin/vhid");
+
+  const text = String(formData.get("text") ?? "").slice(0, 10_000);
+  const prices = await getDb().select().from(partnerPrices).where(eq(partnerPrices.active, true));
+  const lines = parseBatch(text, prices);
+
+  let created = 0;
+  const failed: BatchResult["failed"] = [];
+  const seen = new Set<string>();
+  for (const l of lines) {
+    if (!l.ok) {
+      failed.push({ line: l.line, reason: l.reason });
+      continue;
+    }
+    if (seen.has(l.externalNo) || (await externalTaken(l.externalNo))) {
+      failed.push({ line: l.line, reason: "цей № уже прийнято" });
+      continue;
+    }
+    seen.add(l.externalNo);
+    const item = prices.find((p) => p.id === l.priceId)!;
+    await insertOnlineLead(item, l.externalNo, l.note && plainText(l.note, LIMITS.problem).trim());
+    created++;
+  }
+
+  if (created > 0) revalidatePath("/admin", "layout");
+  return { created, failed };
 }

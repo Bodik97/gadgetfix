@@ -151,6 +151,13 @@ describe("createOnlineLead", () => {
     expect(fake.writes()).toEqual([]);
   });
 
+  it("той самий № магазину вже в роботі — вдруге не приймаємо", async () => {
+    fake.onSelect(partnerPrices, () => [PRICE]);
+    fake.onSelect(leads, () => [{ id: "x" }]);
+    expect(await createOnlineLead(null, form({ externalNo: "М-4486", priceId: PRICE.id }))).toMatch(/уже прийнято/);
+    expect(fake.writes()).toEqual([]);
+  });
+
   it("ціна й собівартість — з прайсу магазину, а не з форми", async () => {
     fake.onSelect(partnerPrices, () => [PRICE]);
     const res = await createOnlineLead(

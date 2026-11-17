@@ -566,7 +566,10 @@ export const partnerSettlements = pgTable(
     /** Перший день місяця, за який рахуємо */
     periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
     ordersCount: integer("orders_count").notNull(),
+    /** Сума за прайсом магазину за всі віддані телефони, ₴ */
     amount: integer("amount").notNull(),
+    /** Скільки магазин утримав собі «за клієнта», ₴. Нам приходить amount − fee. */
+    fee: integer("fee").notNull().default(0),
     /** Коли магазин оплатив. NULL — ще винен. */
     paidAt: timestamp("paid_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
