@@ -46,6 +46,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
+      # Тестові акаунти адмінки — нові на кожен запуск, живуть лише в цьому прогоні.
+      # База — тестова гілка ci, тож e2e адмінки (E2E_ADMIN=1) може в неї писати.
+      - name: Тестові акаунти адмінки
+        run: |
+          {
+            echo "E2E_ADMIN=1"
+            echo "ADMIN_SESSION_SECRET=$(openssl rand -hex 32)"
+            echo "ADMIN_EMAIL=e2e-owner@example.com"
+            echo "ADMIN_PASSWORD=$(openssl rand -hex 16)"
+            echo "ADMIN_NAME=Власник"
+            echo "ADMIN_TOTP_SECRET=$(python3 -c 'import base64,os;print(base64.b32encode(os.urandom(20)).decode())')"
+            echo "ADMIN_EMAIL_2=e2e-master@example.com"
+            echo "ADMIN_PASSWORD_2=$(openssl rand -hex 16)"
+            echo "ADMIN_NAME_2=Майстер"
+          } >> "$GITHUB_ENV"
       # Збірку робить сам Playwright (webServer у playwright.config.ts)
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
