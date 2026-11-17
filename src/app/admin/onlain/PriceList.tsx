@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { PartnerPrice } from "@/db/schema";
 import { addPrice, togglePrice, updatePrice } from "./actions";
+import Hint from "../Hint";
 import styles from "./onlain.module.css";
 
 /**
@@ -21,7 +22,9 @@ export default function PriceList({ prices }: { prices: PartnerPrice[] }) {
         <span>Модель</span>
         <span>Робота</span>
         <span>Ціна магазину</span>
-        <span>Нам деталь</span>
+        <span>
+          Нам деталь <Hint id="partnerCost" label="Нам деталь" />
+        </span>
         <span />
         <span />
       </div>

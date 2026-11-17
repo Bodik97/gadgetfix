@@ -15,6 +15,7 @@ import { currentTeam } from "@/lib/admin";
 import { orderLabel } from "@/lib/stage";
 import PaidForm from "./PaidForm";
 import PriceList from "./PriceList";
+import Hint from "../Hint";
 import styles from "./onlain.module.css";
 
 export const metadata: Metadata = {
@@ -136,9 +137,12 @@ async function MoneyTab({ month }: { month: string }) {
 
       <div className={styles.actions}>
         {rows.length > 0 && (
-          <a href={`/admin/onlain/akt?month=${month}`} target="_blank" rel="noopener" className={styles.ghost}>
-            Акт для друку / PDF
-          </a>
+          <>
+            <a href={`/admin/onlain/akt?month=${month}`} target="_blank" rel="noopener" className={styles.ghost}>
+              Акт для друку / PDF
+            </a>
+            <Hint id="act" label="Акт" />
+          </>
         )}
         {!settlement && rows.length > 0 && <PaidForm month={month} amount={amount} />}
       </div>

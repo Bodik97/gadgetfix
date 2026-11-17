@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { markPaid } from "./actions";
+import Hint from "../Hint";
 import styles from "./onlain.module.css";
 
 const uah = (n: number) => `${n.toLocaleString("uk-UA")} ₴`;
@@ -19,6 +20,7 @@ export default function PaidForm({ month, amount }: { month: string; amount: num
       <label htmlFor="fee" className={styles.paidLabel}>
         Магазин утримав «за клієнтів», ₴
       </label>
+      <Hint id="fee" label="Утримання" />
       <input
         id="fee"
         name="fee"

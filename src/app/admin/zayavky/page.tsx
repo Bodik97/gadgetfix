@@ -9,6 +9,7 @@ import Board from "./Board";
 import OrderTable from "./OrderTable";
 import OnlineIntake from "./OnlineIntake";
 import { boardHref, type BoardParams } from "./params";
+import Hint from "../Hint";
 import styles from "./board.module.css";
 
 export const metadata: Metadata = {
@@ -58,7 +59,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   return (
     <section className={styles.page}>
       <header className={styles.head}>
-        <h1 className={styles.title}>Заявки</h1>
+        <h1 className={styles.title}>
+          Заявки <Hint id="boardAction" label="Кнопки на картках" />
+        </h1>
         <span className={styles.summary}>
           {params.q
             ? `Знайдено: ${rows.length}`
@@ -101,6 +104,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
 
       <div className={styles.filters}>
 
+        <Hint id="points" label="Точки" />
         <span className={styles.segment} role="group" aria-label="Точка">
           {POINTS.map((p) => (
             <Link
@@ -134,6 +138,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         >
           Прострочені · {lateCount}
         </Link>
+        <Hint id="late" label="Прострочені" />
       </div>
 
       {params.point === "online" && !params.q && <OnlineIntake prices={prices} />}

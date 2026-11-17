@@ -12,6 +12,8 @@ import { advance, back, pause, refuse, saveDue, saveLocation, savePayment, saveP
 import { ChipSet, CopyText, OneOf, TextField } from "./Fields";
 import Items, { type StockPart } from "./Items";
 import { PhotoSlots, SignaturePad, type PhotoInfo } from "./Media";
+import Hint from "../../Hint";
+import type { HintKey } from "@/data/hints";
 import styles from "./order.module.css";
 
 type Stage = Lead["stage"];
@@ -213,6 +215,7 @@ export default function OrderScreen({
           <section className={styles.card} aria-labelledby="step-title">
             <h2 id="step-title" className={styles.cardTitle}>
               {step.title}
+              <Hint id={stepHint(step.stage, lead.channel)} label={step.title} />
             </h2>
 
             {step.stage === "new" && (
@@ -225,7 +228,7 @@ export default function OrderScreen({
                     </>
                   )}
                   <TextField id={lead.id} field="model" value={lead.model} label="Модель" placeholder="iPhone 13 Pro · 256 ГБ" />
-                  <TextField id={lead.id} field="imei" value={lead.imei} label="IMEI" hint="необовʼязково" placeholder="*#06#" />
+                  <TextField id={lead.id} field="imei" value={lead.imei} label="IMEI" hint="необовʼязково" placeholder="*#06#" help="imei" />
                   {lead.channel === "own" && (
                     <>
                       <p className={styles.label}>Точка</p>
@@ -255,10 +258,12 @@ export default function OrderScreen({
                     <>
                       <p className={styles.label}>
                         Фото до ремонту <span className={styles.required}>· обовʼязково</span>
+                        <Hint id="photos" label="Фото" />
                       </p>
                       <PhotoSlots id={lead.id} photos={photos} />
                       <p className={styles.label}>
                         Підпис клієнта <span className={styles.required}>· обовʼязково</span>
+                        <Hint id="signature" label="Підпис" />
                       </p>
                       <SignaturePad id={lead.id} kind="intake" signed={signed.intake} />
                     </>
@@ -274,11 +279,12 @@ export default function OrderScreen({
               <div className={styles.grid2}>
                 <div className={styles.col}>
                   <TextField id={lead.id} field="diagnosis" value={lead.diagnosis} label="Що знайшли" multiline placeholder="Зношений роз'єм заряджання" />
-                  <TextField id={lead.id} field="masterNote" value={lead.masterNote} label="Нотатка для своїх" hint="клієнт не бачить" multiline />
+                  <TextField id={lead.id} field="masterNote" value={lead.masterNote} label="Нотатка для своїх" hint="клієнт не бачить" multiline help="masterNote" />
                 </div>
                 <div className={styles.col}>
                   <p className={styles.label}>
                     Роботи і деталі <span className={styles.required}>· хоча б одна робота</span>
+                    <Hint id="items" label="Роботи і деталі" />
                   </p>
                   <Items id={lead.id} items={items} stock={stock} locked={lead.paidAt !== null} />
                 </div>
@@ -338,7 +344,7 @@ export default function OrderScreen({
                   </div>
                 )}
                 <div className={styles.col}>
-                  <TextField id={lead.id} field="masterNote" value={lead.masterNote} label="Нотатка для своїх" hint="клієнт не бачить" multiline />
+                  <TextField id={lead.id} field="masterNote" value={lead.masterNote} label="Нотатка для своїх" hint="клієнт не бачить" multiline help="masterNote" />
                 </div>
               </div>
             )}
@@ -350,6 +356,7 @@ export default function OrderScreen({
                     <>
                       <p className={styles.label}>
                         Перевірка перед видачею <span className={styles.required}>· усі пункти</span>
+                        <Hint id="checks" label="Перевірка" />
                       </p>
                       <div className={styles.checks}>
                         {CHECKS.map((c) => (
@@ -375,6 +382,7 @@ export default function OrderScreen({
                   <div className={styles.col}>
                     <p className={styles.label}>
                       Оплата · <b>{uah(toPay)}</b> до сплати
+                      <Hint id="payment" label="Оплата" />
                     </p>
                     <OneOf
                       label="Спосіб оплати"
@@ -384,6 +392,7 @@ export default function OrderScreen({
                     />
                     <p className={styles.label}>
                       Підпис при видачі <span className={styles.required}>· обовʼязково</span>
+                      <Hint id="signature" label="Підпис" />
                     </p>
                     <SignaturePad id={lead.id} kind="handover" signed={signed.handover} />
                   </div>
@@ -433,6 +442,7 @@ export default function OrderScreen({
               ) : (
                 <span className={styles.barHint}>{notifyHint(lead, telegram)}</span>
               )}
+              <Hint id="mainButton" label="Головна кнопка" />
               <button type="submit" className={styles.mainBtn} disabled={pending}>
                 {steps[currentIndex]?.next ?? "Далі"} →
               </button>
@@ -496,7 +506,9 @@ export default function OrderScreen({
           </div>
 
           <div className={styles.panel}>
-            <p className={styles.panelTitle}>Друк</p>
+            <p className={styles.panelTitle}>
+              Друк <Hint id="sticker" label="Наклейка" />
+            </p>
             <div className={styles.printRow}>
               <a href={`/admin/zayavky/${lead.id}/naklejka`} target="_blank" rel="noopener" className={styles.ghostBtn}>
                 Наклейка
@@ -547,7 +559,7 @@ function DueField({ lead, onSave }: { lead: Lead; onSave: (v: string) => void })
   return (
     <div className={styles.field}>
       <label htmlFor="f-due" className={styles.label}>
-        Готово до
+        Готово до <Hint id="due" label="Термін" />
       </label>
       <input
         id="f-due"
@@ -571,7 +583,9 @@ function DueField({ lead, onSave }: { lead: Lead; onSave: (v: string) => void })
 function WarrantyPick({ lead, onPick }: { lead: Lead; onPick: (days: number) => void }) {
   return (
     <div className={styles.field}>
-      <p className={styles.label}>Гарантія</p>
+      <p className={styles.label}>
+        Гарантія <Hint id="warranty" label="Гарантія" />
+      </p>
       <OneOf
         label="Гарантія"
         options={WARRANTY_TERMS.map((t) => ({ value: String(t.days), label: `${t.label} — ${t.scope}` }))}
@@ -591,6 +605,7 @@ function Prepayment({ lead }: { lead: Lead }) {
       <input type="hidden" name="id" value={lead.id} />
       <label htmlFor="f-prepay" className={styles.moneyLabel}>
         Передоплата{has ? ` · ${day.format(lead.prepaidAt!)}` : ""}
+        <Hint id="prepayment" label="Передоплата" />
       </label>
       <div className={styles.prepayRow}>
         <input
@@ -650,7 +665,9 @@ function PauseButton({ id }: { id: string }) {
 
   return (
     <div className={styles.pausePick} role="group" aria-label="На що чекаємо">
-      <span className={styles.labelHint}>На що чекаємо?</span>
+      <span className={styles.labelHint}>
+        На що чекаємо? <Hint id="pause" label="Пауза" />
+      </span>
       {PAUSE_REASONS.map((r) => (
         <button key={r} type="button" className={styles.chip} disabled={pending} onClick={() => pick(r)}>
           {r}
@@ -685,4 +702,11 @@ function PauseButton({ id }: { id: string }) {
       )}
     </div>
   );
+}
+
+/** Підказка «що зробити зараз» для кроку */
+function stepHint(stage: Stage, channel: Lead["channel"]): HintKey {
+  if (channel === "online" && stage === "new") return "step_new_online";
+  if (channel === "online" && stage === "ready") return "step_ready_online";
+  return `step_${stage === "issued" ? "ready" : stage}` as HintKey;
 }

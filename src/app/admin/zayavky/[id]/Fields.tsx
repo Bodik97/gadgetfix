@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { saveList, saveText } from "./actions";
+import Hint from "../../Hint";
+import type { HintKey } from "@/data/hints";
 import styles from "./order.module.css";
 
 /**
@@ -65,6 +67,7 @@ export function TextField({
   hint,
   placeholder,
   multiline = false,
+  help,
 }: {
   id: string;
   field: "imei" | "diagnosis" | "masterNote" | "model" | "city";
@@ -73,6 +76,8 @@ export function TextField({
   hint?: string;
   placeholder?: string;
   multiline?: boolean;
+  /** Значок «?» з підказкою біля назви поля */
+  help?: HintKey;
 }) {
   const [saved, setSaved] = useState(value ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +99,7 @@ export function TextField({
         {label}
         {hint && <span className={styles.labelHint}> · {hint}</span>}
         {pending && <span className={styles.saving}> · зберігаю…</span>}
+        {help && <Hint id={help} label={label} />}
       </label>
       {multiline ? (
         <textarea

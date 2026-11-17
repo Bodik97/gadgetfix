@@ -6,6 +6,7 @@ import { currentTeam } from "@/lib/admin";
 import { orderLabel, STAGE_LABEL } from "@/lib/stage";
 import PushToggle from "./PushToggle";
 import { moveStage, remindPrice } from "./zayavky/actions";
+import Hint from "./Hint";
 import styles from "./today.module.css";
 
 export const metadata: Metadata = {
@@ -60,7 +61,7 @@ export default async function AdminOverview() {
       <div className={styles.grid}>
         <section className={styles.actions} aria-labelledby="need-title">
           <h2 id="need-title" className={styles.h2}>
-            Потрібна дія
+            Потрібна дія <Hint id="needAction" label="Потрібна дія" />
           </h2>
           {rows.length === 0 ? (
             <p className={styles.empty}>Усе під контролем — нічого не горить.</p>

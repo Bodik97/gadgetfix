@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import type { PartnerPrice } from "@/db/schema";
 import type { BatchResult } from "./actions";
 import { createOnlineBatch, createOnlineLead } from "./actions";
+import Hint from "../Hint";
 import styles from "./board.module.css";
 
 /**
@@ -57,6 +58,7 @@ function SingleIntake({ prices, onBatch }: { prices: PartnerPrice[]; onBatch: ()
     <form ref={form} action={action} className={styles.intake}>
       <p className={styles.intakeTitle}>
         Швидкий прийом <Mode batch={false} onPick={onBatch} />
+        <Hint id="intake" label="Швидкий прийом" />
       </p>
       <div className={styles.intakeField}>
         <label htmlFor="on-ext">№ магазину</label>
@@ -104,6 +106,7 @@ function BatchIntake({ onSingle }: { onSingle: () => void }) {
     <form action={action} className={styles.intake}>
       <p className={styles.intakeTitle}>
         Швидкий прийом <Mode batch onPick={onSingle} />
+        <Hint id="intake" label="Швидкий прийом" />
       </p>
       <div className={styles.intakeWide}>
         <label htmlFor="on-batch">Список від магазину — по телефону в рядку: № магазину, модель, робота</label>

@@ -147,6 +147,9 @@
 
 .priceHead {
   margin-top: 8px;
+  /* Підказки «?» в шапці — поверх рядків */
+  position: relative;
+  z-index: 2;
   padding: 0 4px;
   font-size: 12px;
   font-weight: 600;

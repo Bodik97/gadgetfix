@@ -1,0 +1,63 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+  /* Текст підказки — звичайний, навіть якщо значок у заголовку великими літерами */
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 500;
+}
+
+/* Маленький кружок, але зона натиску — 32 px, щоб влучити пальцем */
+.q,
+.qOn {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(var(--fg-rgb) / .28);
+  background: var(--bg-elevated);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.q::after,
+.qOn::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.q:hover {
+  border-color: var(--border-active);
+  color: var(--accent-text);
+}
+
+.qOn {
+  border-color: var(--border-active);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Положення й ширину ставить компонент — від значка, у межах екрана */
+.tip {
+  position: fixed;
+  z-index: 70;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .14);
+  font-size: 13.5px;
+  line-height: 1.45;
+  white-space: normal;
+  text-align: left;
+}
