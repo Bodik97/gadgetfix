@@ -1,5 +1,5 @@
 import { expect as baseExpect, test, type Page } from "@playwright/test";
-import { base32Decode, counterAt, hotp } from "../src/lib/totp";
+import { MASTER, OWNER, signInAdmin as signIn } from "./helpers/adminLogin";
 
 /**
  * Нова адмінка від входу до видачі — справжній браузер, справжня збірка.
@@ -18,8 +18,6 @@ const enabled = process.env.E2E_ADMIN === "1";
 const RUN = `E2E${Date.now().toString(36).toUpperCase()}`;
 /** № квитанції магазину — свій для кожного запуску */
 const SHOP_NO = String(Date.now()).slice(-7);
-const OWNER = { email: process.env.ADMIN_EMAIL ?? "", password: process.env.ADMIN_PASSWORD ?? "", totp: process.env.ADMIN_TOTP_SECRET };
-const MASTER = { email: process.env.ADMIN_EMAIL_2 ?? "", password: process.env.ADMIN_PASSWORD_2 ?? "", totp: process.env.ADMIN_TOTP_SECRET_2 };
 const CAN_UPLOAD = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 test.describe.configure({ mode: "serial" });
@@ -29,20 +27,6 @@ test.beforeEach(({}, info) => {
   test.skip(info.project.name !== "desktop", "Лише на компʼютерному проєкті");
   test.setTimeout(120_000);
 });
-
-/** Пароль і, якщо налаштовано, одноразовий код з того самого секрету, що на сервері */
-async function signIn(page: Page, who: typeof OWNER) {
-  await page.goto("/admin/vhid");
-  await page.fill("#a-email", who.email);
-  await page.fill("#a-password", who.password);
-  await page.click('button[type="submit"]');
-  if (who.totp) {
-    await page.waitForURL(/krok=kod/);
-    await page.fill("#a-code", hotp(base32Decode(who.totp), counterAt(Date.now())));
-    await page.click('button[type="submit"]');
-  }
-  await page.waitForURL((u) => u.pathname === "/admin");
-}
 
 /**
  * Одна сесія власника на весь сценарій: вхід — лише раз. Інакше кілька

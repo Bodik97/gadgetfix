@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { lowContrastTexts } from "./helpers/contrast";
+import { OWNER, signInAdmin } from "./helpers/adminLogin";
 
 /**
  * Світла й темна тема: перемикач працює й запамʼятовує вибір, тема стоїть
@@ -64,11 +65,7 @@ test("контраст у світлій темі — адмінка", async ({ 
   test.skip(!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD, "немає облікових даних майстра");
   test.setTimeout(120_000);
   await page.addInitScript(() => localStorage.setItem("gf-theme", "light"));
-  await page.goto("/admin/vhid");
-  await page.locator('input[name="email"]').fill(process.env.ADMIN_EMAIL!);
-  await page.locator('input[name="password"]').fill(process.env.ADMIN_PASSWORD!);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(/\/admin$/);
+  await signInAdmin(page, OWNER);
 
   const problems: string[] = [];
   for (const path of ["/admin", "/admin/zayavky", "/admin/arhiv", "/admin/sklad", "/admin/kliyenty", "/admin/vidhuky", "/admin/groshi", "/admin/nova"]) {
