@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { isAdmin } from "@/lib/admin";
+import { isAdmin, pendingIndex } from "@/lib/admin";
+import CodeForm from "./CodeForm";
 import SignInForm from "./SignInForm";
 import styles from "./page.module.css";
 
@@ -9,15 +10,16 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminSignInPage() {
+export default async function AdminSignInPage({ searchParams }: { searchParams: Promise<{ krok?: string }> }) {
   if (await isAdmin()) redirect("/admin");
+  // Другий крок — лише якщо пароль справді вже правильний (підписана cookie на 5 хв)
+  const code = (await searchParams).krok === "kod" && (await pendingIndex()) !== null;
 
   return (
     <section className={styles.wrap}>
       <div className={styles.card}>
-        <div className="kicker">Адміністрування</div>
-        <h1 className={styles.title}>Вхід для майстра</h1>
-        <SignInForm />
+        <h1 className={styles.title}>{code ? "Код підтвердження" : "Вхід для майстра"}</h1>
+        {code ? <CodeForm /> : <SignInForm />}
       </div>
     </section>
   );

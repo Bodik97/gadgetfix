@@ -24,7 +24,7 @@ import { dropPhotos, readPair, savePhoto } from "@/lib/photoPair";
 import { LIMITS, plainText, validName } from "@/lib/validate";
 import { start } from "workflow/api";
 import { watchParcel } from "@/workflows/watch-parcel";
-import { checkCredentials, createSession, currentAdmin, destroySession, isAdmin, isOwner } from "@/lib/admin";
+import { checkCode, checkCredentials, clearPending, createPending, createSession, currentAdmin, destroySession, isAdmin, isOwner, needsCode, pendingIndex } from "@/lib/admin";
 
 /** Адреса, з якої прийшов запит — за нею теж рахуємо спроби входу */
 async function clientAddress(): Promise<string> {
@@ -92,7 +92,46 @@ export async function signIn(_prev: string | null, formData: FormData): Promise<
   // Успіх знімає лічильник, щоб майстер не лишався заблокованим
   // через власні помилки перед вдалим входом
   await release(emailKey);
+
+  // Є одноразові коди — пароль лише перший крок
+  if (needsCode(master)) {
+    await createPending(master);
+    redirect("/admin/vhid?krok=kod");
+  }
+
   await createSession(master);
+  redirect("/admin");
+}
+
+/**
+ * Другий крок входу: 6 цифр із додатка. Спроб — 5 за 15 хвилин на акаунт;
+ * той самий код вдруге не приймаємо (його могли підгледіти).
+ */
+export async function verifyCode(_prev: string | null, formData: FormData): Promise<string | null> {
+  const index = await pendingIndex();
+  if (index === null) return "Час на код минув — увійдіть ще раз з паролем.";
+
+  const code = String(formData.get("code") ?? "").replace(/\s/g, "");
+  const ip = await clientAddress();
+
+  const tries = await rateLimit(`login:code:${index}`, 5, LOGIN_WINDOW);
+  if (!tries.ok) return `Забагато спроб. Спробуйте за ${waitLabel(tries.retryAfter)}.`;
+  const byIp = await rateLimit(`login:code-ip:${ip}`, BY_IP, LOGIN_WINDOW);
+  if (!byIp.ok) return `Забагато спроб. Спробуйте за ${waitLabel(byIp.retryAfter)}.`;
+
+  const counter = checkCode(index, code);
+  if (counter === null) {
+    await new Promise((r) => setTimeout(r, 500));
+    return "Код не підходить. Перевірте, що час на телефоні правильний.";
+  }
+
+  // Один код — один вхід: позначка живе дві хвилини, довше за будь-який дійсний код
+  const fresh = await rateLimit(`login:code-used:${index}:${counter}`, 1, 2 * 60_000);
+  if (!fresh.ok) return "Цей код уже використано — дочекайтесь наступного.";
+
+  await release(`login:code:${index}`);
+  await clearPending();
+  await createSession(index);
   redirect("/admin");
 }
 

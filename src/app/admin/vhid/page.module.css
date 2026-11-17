@@ -40,3 +40,24 @@
   opacity: .6;
   cursor: progress;
 }
+
+.hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Код — великими цифрами з проміжками, щоб звіряти з телефоном */
+.code {
+  font-size: 24px;
+  letter-spacing: .4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.back {
+  justify-self: center;
+  font-size: 14px;
+  color: var(--text-2);
+}

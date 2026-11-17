@@ -16,6 +16,10 @@ const m = vi.hoisted(() => ({
   released: [] as string[],
   credentials: null as number | null | "throw",
   sessions: [] as number[],
+  needsCode: false,
+  pending: null as number | null,
+  code: null as number | null,
+  pendings: [] as number[],
   uploaded: [] as string[],
   deleted: [] as string[],
   delFails: false,
@@ -86,6 +90,13 @@ vi.mock("@/lib/admin", () => ({
     m.sessions.push(i);
   },
   destroySession: async () => {},
+  needsCode: () => m.needsCode,
+  createPending: async (i: number) => {
+    m.pendings.push(i);
+  },
+  pendingIndex: async () => m.pending,
+  clearPending: async () => {},
+  checkCode: () => m.code,
 }));
 
 import * as actions from "@/app/admin/actions";
@@ -125,6 +136,10 @@ beforeEach(() => {
   m.released = [];
   m.credentials = null;
   m.sessions = [];
+  m.needsCode = false;
+  m.pending = null;
+  m.code = null;
+  m.pendings = [];
   m.uploaded = [];
   m.deleted = [];
   m.delFails = false;
@@ -136,7 +151,8 @@ beforeEach(() => {
 });
 
 describe("без входу майстра жодна дія не змінює базу", () => {
-  const guarded = Object.entries(actions).filter(([name]) => !["signIn", "signOut"].includes(name));
+  // signIn і verifyCode — це сам вхід, вони за визначенням для тих, хто ще не увійшов
+  const guarded = Object.entries(actions).filter(([name]) => !["signIn", "signOut", "verifyCode"].includes(name));
 
   it("перевірені всі дії адмінки", () => {
     // Нова дія без перевірки має потрапити сюди, а не прослизнути повз
@@ -841,5 +857,53 @@ describe("deleteLead", () => {
     fake.onSelect(leadMessages, () => [{ imagePath: "chat/l1/a" }]);
     await expect(actions.deleteLead(form({ id: LEAD.id }))).rejects.toThrow("REDIRECT:/admin/zayavky");
     expect(fake.writes()[0].sql).toMatch(/^delete from "leads"/);
+  });
+});
+
+describe("вхід з одноразовим кодом", () => {
+  it("пароль правильний, але потрібен код — сесії ще немає, переходимо на крок коду", async () => {
+    m.credentials = 0;
+    m.needsCode = true;
+    await expect(actions.signIn(null, form({ email: "b@gadgetfix.ua", password: "x" }))).rejects.toThrow(
+      "REDIRECT:/admin/vhid?krok=kod",
+    );
+    expect(m.sessions).toEqual([]);
+    expect(m.pendings).toEqual([0]);
+  });
+
+  it("код без пройденого пароля — не пускає", async () => {
+    m.pending = null;
+    expect(await actions.verifyCode(null, form({ code: "123456" }))).toMatch(/увійдіть ще раз/);
+    expect(m.sessions).toEqual([]);
+  });
+
+  it("неправильний код — без сесії", async () => {
+    m.pending = 1;
+    m.code = null;
+    expect(await actions.verifyCode(null, form({ code: "000000" }))).toMatch(/не підходить/);
+    expect(m.sessions).toEqual([]);
+  });
+
+  it("правильний код — сесія саме цього майстра", async () => {
+    m.pending = 1;
+    m.code = 56_666_666;
+    await expect(actions.verifyCode(null, form({ code: "123456" }))).rejects.toThrow("REDIRECT:/admin");
+    expect(m.sessions).toEqual([1]);
+  });
+
+  it("той самий код удруге — ні (його могли підгледіти)", async () => {
+    m.pending = 1;
+    m.code = 56_666_666;
+    m.limits["login:code-used:1:56666666"] = { ok: false, retryAfter: 100 };
+    expect(await actions.verifyCode(null, form({ code: "123456" }))).toMatch(/уже використано/);
+    expect(m.sessions).toEqual([]);
+  });
+
+  it("забагато спроб коду — блок до перевірки", async () => {
+    m.pending = 1;
+    m.code = 56_666_666;
+    m.limits["login:code:1"] = { ok: false, retryAfter: 600 };
+    expect(await actions.verifyCode(null, form({ code: "123456" }))).toMatch(/Забагато/);
+    expect(m.sessions).toEqual([]);
   });
 });
