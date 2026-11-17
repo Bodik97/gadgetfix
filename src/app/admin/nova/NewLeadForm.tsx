@@ -8,7 +8,7 @@ import { createLead } from "../actions";
 import styles from "./page.module.css";
 
 /** Три поля й галочка — заводиться за пів хвилини, поки клієнт на лінії */
-export default function NewLeadForm() {
+export default function NewLeadForm({ model }: { model?: string }) {
   const [error, action, pending] = useActionState(createLead, null);
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
@@ -37,7 +37,7 @@ export default function NewLeadForm() {
 
       <div className={styles.row}>
         <label htmlFor="nl-model">Пристрій</label>
-        <input id="nl-model" name="model" className="field" placeholder="Напр. iPhone 13" maxLength={LIMITS.short} />
+        <input id="nl-model" name="model" className="field" placeholder="Напр. iPhone 13" maxLength={LIMITS.short} defaultValue={model} />
       </div>
 
       <div className={styles.row}>
