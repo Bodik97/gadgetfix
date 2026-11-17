@@ -24,7 +24,7 @@ import { dropPhotos, readPair, savePhoto } from "@/lib/photoPair";
 import { LIMITS, plainText, validName } from "@/lib/validate";
 import { start } from "workflow/api";
 import { watchParcel } from "@/workflows/watch-parcel";
-import { checkCredentials, createSession, currentAdmin, destroySession, isAdmin } from "@/lib/admin";
+import { checkCredentials, createSession, currentAdmin, destroySession, isAdmin, isOwner } from "@/lib/admin";
 
 /** Адреса, з якої прийшов запит — за нею теж рахуємо спроби входу */
 async function clientAddress(): Promise<string> {
@@ -745,6 +745,8 @@ export async function deletePart(formData: FormData): Promise<void> {
  */
 export async function deleteLead(formData: FormData): Promise<void> {
   if (!(await isAdmin())) redirect("/admin/vhid");
+  // Видаляє лише власник; майстер може редагувати, але не стирати
+  if (!(await isOwner())) return;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return;

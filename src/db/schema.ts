@@ -3,6 +3,7 @@ import {
   index,
   integer,
   pgEnum,
+  pgSequence,
   pgTable,
   text,
   timestamp,
@@ -33,6 +34,34 @@ export const leadStatus = pgEnum("lead_status", [
  * дня народження. Одна на заявку.
  */
 export const leadDiscount = pgEnum("lead_discount", ["signup", "review", "birthday"]);
+
+/**
+ * Етапи ремонту в новій адмінці (docs/admin-handoff/HANDOFF.md, розділ 4).
+ * Клієнт їх не бачить: для кабінету й бота вони перекладаються в старий
+ * `status` (src/lib/stage.ts), тому обидва поля живуть поруч.
+ */
+export const leadStage = pgEnum("lead_stage", [
+  "new",
+  "diagnostics",
+  "approval",
+  "in_progress",
+  "ready",
+  "issued",
+]);
+
+/** Позначка поверх етапу: заявка на паузі (чекаємо деталь) або клієнт відмовився */
+export const leadFlag = pgEnum("lead_flag", ["paused", "refused"]);
+
+/** own — наші клієнти; online — телефони від магазину-партнера «Онлайн» */
+export const leadChannel = pgEnum("lead_channel", ["own", "online"]);
+
+/** Де телефон: точка прийому або Нова Пошта */
+export const leadLocation = pgEnum("lead_location", ["lviv", "novyi-rozdil", "nova-poshta"]);
+
+export const paymentMethod = pgEnum("payment_method", ["cash", "card", "transfer"]);
+
+/** Окрема нумерація для «Онлайн»: О-1, О-2… — не перетинається з №1001… */
+export const onlineNoSeq = pgSequence("online_no_seq", { startWith: 1 });
 
 export const leads = pgTable(
   "leads",
@@ -121,6 +150,41 @@ export const leads = pgTable(
     clientTypingAt: timestamp("client_typing_at", { withTimezone: true }),
     masterTypingAt: timestamp("master_typing_at", { withTimezone: true }),
 
+    // ── Нова адмінка ──────────────────────────────────────────────────
+
+    channel: leadChannel("channel").notNull().default("own"),
+    /** Номер О-… для заявок «Онлайн» (з online_no_seq). NULL для своїх. */
+    onlineNo: integer("online_no"),
+    /** Номер квитанції магазину-партнера: «М-4486» */
+    externalNo: text("external_no"),
+    /** Хто платить за заявку «Онлайн»: NULL — ще не включено в розрахунок */
+    settlementId: uuid("settlement_id").references(() => partnerSettlements.id, {
+      onDelete: "set null",
+    }),
+
+    location: leadLocation("location"),
+    stage: leadStage("stage").notNull().default("new"),
+    flag: leadFlag("flag"),
+    /** Чому пауза: «чекаємо деталь» */
+    pauseReason: text("pause_reason"),
+    /** До коли обіцяли зробити. Прострочено = dueAt < зараз і ще не видано. */
+    dueAt: timestamp("due_at", { withTimezone: true }),
+
+    /** Пристрій. Паролі й коди розблокування НЕ зберігаємо. */
+    imei: text("imei"),
+    condition: text("condition").array().notNull().default([]),
+    kit: text("kit").array().notNull().default([]),
+    /** Що сталося — кілька чипів при прийомі */
+    problems: text("problems").array().notNull().default([]),
+    /** Що знайшли на діагностиці */
+    diagnosis: text("diagnosis"),
+    /** Нотатка для своїх — клієнт не бачить */
+    masterNote: text("master_note"),
+
+    paymentMethod: paymentMethod("payment_method"),
+    /** Коли віддали клієнту (або магазину для «Онлайн») */
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+
     source: leadSource("source").notNull(),
     status: leadStatus("status").notNull().default("new"),
 
@@ -136,6 +200,9 @@ export const leads = pgTable(
     index("leads_email_idx").on(t.email),
     // Перевірка статусу шукає заявку саме за цим номером
     uniqueIndex("leads_order_no_idx").on(t.orderNo),
+    // Дошка й «Онлайн» вибирають за каналом і етапом
+    index("leads_channel_stage_idx").on(t.channel, t.stage),
+    uniqueIndex("leads_online_no_idx").on(t.onlineNo),
   ],
 );
 
@@ -239,6 +306,11 @@ export const leadEvents = pgTable(
 
     /** Подію створив майстер вручну, чи вона з'явилась автоматично при зміні статусу */
     byMaster: boolean("by_master").notNull().default(false),
+
+    /** Пошта майстра, який зробив дію (історія в адмінці). NULL — автоматично або до нової адмінки. */
+    actor: text("actor"),
+    /** Етап, на який перейшла заявка цією подією (нова адмінка) */
+    stage: leadStage("stage"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -388,6 +460,117 @@ export const parts = pgTable(
 );
 
 export type Part = typeof parts.$inferSelect;
+
+export const leadItemKind = pgEnum("lead_item_kind", ["work", "part"]);
+
+/**
+ * Роботи й деталі в заявці — замість однієї `price`. Сума для клієнта =
+ * сума price усіх рядків; cost бачить лише майстер (собівартість деталі).
+ */
+export const leadItems = pgTable(
+  "lead_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    kind: leadItemKind("kind").notNull(),
+    title: text("title").notNull(),
+    /** Скільки платить клієнт за рядок, ₴. Деталь «входить у роботу» — 0. */
+    price: integer("price").notNull().default(0),
+    /** Собівартість, ₴ — лише для себе */
+    cost: integer("cost"),
+    /** Деталь зі складу; NULL — купили під замовлення */
+    partId: uuid("part_id").references(() => parts.id, { onDelete: "set null" }),
+    /** Коли списали зі складу — щоб не списати двічі */
+    writtenOffAt: timestamp("written_off_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("lead_items_lead_idx").on(t.leadId)],
+);
+
+export type LeadItem = typeof leadItems.$inferSelect;
+
+/**
+ * Прайс магазину-партнера «Онлайн». Окремий від нашого (src/data/prices.ts):
+ * ціна вже включає нашу деталь, cost — скільки та деталь коштує нам.
+ */
+export const partnerPrices = pgTable(
+  "partner_prices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    model: text("model").notNull(),
+    work: text("work").notNull(),
+    price: integer("price").notNull(),
+    cost: integer("cost"),
+    /** Прибрані позиції лишаються для старих заявок, але не пропонуються */
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("partner_prices_model_idx").on(t.model)],
+);
+
+export type PartnerPrice = typeof partnerPrices.$inferSelect;
+
+export const photoSlot = pgEnum("photo_slot", ["front", "back", "frame", "other"]);
+
+/** Фото пристрою при прийомі/видачі — у приватному Vercel Blob, зберігаємо шлях */
+export const leadPhotos = pgTable(
+  "lead_photos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    slot: photoSlot("slot").notNull(),
+    path: text("path").notNull(),
+    stage: leadStage("stage").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("lead_photos_lead_idx").on(t.leadId)],
+);
+
+export type LeadPhoto = typeof leadPhotos.$inferSelect;
+
+export const signatureKind = pgEnum("signature_kind", ["intake", "handover"]);
+
+/** Підпис клієнта пальцем: при прийомі й при видачі. Картинка в приватному Blob. */
+export const leadSignatures = pgTable(
+  "lead_signatures",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    kind: signatureKind("kind").notNull(),
+    path: text("path").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("lead_signatures_lead_kind_idx").on(t.leadId, t.kind)],
+);
+
+export type LeadSignature = typeof leadSignatures.$inferSelect;
+
+/**
+ * Розрахунок з магазином «Онлайн» за місяць: скільки віддали і на яку суму.
+ * Заявки потрапляють у розрахунок через leads.settlement_id.
+ */
+export const partnerSettlements = pgTable(
+  "partner_settlements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** Перший день місяця, за який рахуємо */
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    ordersCount: integer("orders_count").notNull(),
+    amount: integer("amount").notNull(),
+    /** Коли магазин оплатив. NULL — ще винен. */
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("partner_settlements_period_idx").on(t.periodStart)],
+);
+
+export type PartnerSettlement = typeof partnerSettlements.$inferSelect;
 
 /**
  * Лічильник звернень — для всього, що треба обмежувати за частотою:

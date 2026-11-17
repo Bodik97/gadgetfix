@@ -11,6 +11,7 @@ import { devices, leadEvents, leadMessages, leads, reviews, works } from "@/db/s
 
 const m = vi.hoisted(() => ({
   admin: true,
+  owner: true,
   limits: {} as Record<string, { ok: true } | { ok: false; retryAfter: number }>,
   released: [] as string[],
   credentials: null as number | null | "throw",
@@ -75,6 +76,7 @@ vi.mock("@/lib/rateLimit", () => ({
 
 vi.mock("@/lib/admin", () => ({
   isAdmin: async () => m.admin,
+  isOwner: async () => m.admin && m.owner,
   currentAdmin: async () => (m.admin ? { name: "Богдан", email: "b@gadgetfix.ua" } : null),
   checkCredentials: () => {
     if (m.credentials === "throw") throw new Error("no env");
@@ -118,6 +120,7 @@ const writesText = () => fake.writes().map((q) => `${q.sql} ${JSON.stringify(q.p
 beforeEach(() => {
   fake.reset();
   m.admin = true;
+  m.owner = true;
   m.limits = {};
   m.released = [];
   m.credentials = null;
@@ -812,6 +815,14 @@ describe("deleteLead", () => {
     await actions.deleteLead(form({ id: LEAD.id }));
     expect(m.deleted).toEqual(["chat/l1/a", "chat/l1/b"]);
     expect(fake.writes().map((q) => q.sql)).toEqual(['delete from "leads" where "leads"."id" = $1']);
+  });
+
+  it("майстер (не власник) видалити не може — нічого не стирається", async () => {
+    m.owner = false;
+    fake.onSelect(leadMessages, () => [{ imagePath: "chat/l1/a" }]);
+    await actions.deleteLead(form({ id: LEAD.id }));
+    expect(m.deleted).toEqual([]);
+    expect(fake.writes()).toEqual([]);
   });
 
   it("збій сховища не лишає заявку невидаленою", async () => {

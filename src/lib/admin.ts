@@ -31,8 +31,8 @@ type Account = { email: string; password: string; name: string };
  * ADMIN_EMAIL / ADMIN_PASSWORD — перший, ADMIN_EMAIL_2 / ADMIN_PASSWORD_2 — другий.
  * Другий необовʼязковий: якщо змінних немає, працює один акаунт.
  *
- * ADMIN_NAME / ADMIN_NAME_2 потрібні лише для привітання в адмінці — права
- * в обох майстрів однакові.
+ * ADMIN_NAME / ADMIN_NAME_2 — імена для адмінки. Перший акаунт — власник
+ * (див. AdminRole), решта — майстри.
  */
 function accounts(): Account[] {
   const list = [
@@ -70,11 +70,16 @@ export function adminDirectory(): { email: string; name: string }[] {
 }
 
 /** Хто зайшов і як звати кожного майстра за поштою — для позначок «бере: …» */
-export async function currentTeam(): Promise<{ me: string; names: Record<string, string> } | null> {
+export async function currentTeam(): Promise<{
+  me: string;
+  owner: boolean;
+  names: Record<string, string>;
+} | null> {
   const me = await currentAdmin();
   if (!me) return null;
   return {
     me: me.email,
+    owner: me.role === "owner",
     names: Object.fromEntries(adminDirectory().map((a) => [a.email, a.name])),
   };
 }
@@ -153,13 +158,21 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 /**
- * Хто саме зайшов — потрібно лише для привітання.
- * Права на заявки, гроші й відгуки в обох майстрів однакові.
+ * owner — власник (перший акаунт, ADMIN_EMAIL): видаляє заявки, бачить Касу
+ * й Статистику. master — решта майстрів: веде заявки, але не видаляє.
  */
-export async function currentAdmin(): Promise<{ name: string; email: string } | null> {
+export type AdminRole = "owner" | "master";
+
+/** Хто саме зайшов і з якими правами */
+export async function currentAdmin(): Promise<{ name: string; email: string; role: AdminRole } | null> {
   const i = await session();
   if (i === null) return null;
 
   const a = accounts()[i];
-  return a ? { name: a.name, email: a.email } : null;
+  return a ? { name: a.name, email: a.email, role: i === 0 ? "owner" : "master" } : null;
+}
+
+/** true лише для власника — для видалення та грошових звітів */
+export async function isOwner(): Promise<boolean> {
+  return (await session()) === 0;
 }

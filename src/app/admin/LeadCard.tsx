@@ -17,7 +17,7 @@ import { applyReviewDiscount } from "./actions";
 import styles from "./page.module.css";
 
 /** Хто зараз в адмінці і як звати кожного майстра за поштою */
-export type Team = { me: string; names: Record<string, string> };
+export type Team = { me: string; owner: boolean; names: Record<string, string> };
 
 const sourceLabel: Record<string, string> = {
   landing: "головна",
@@ -282,7 +282,8 @@ export default function LeadCard({
             </a>
           )}
 
-          <DeleteLead id={r.id} orderNo={r.orderNo} />
+          {/* Видаляє лише власник */}
+          {team.owner && <DeleteLead id={r.id} orderNo={r.orderNo} />}
         </div>
       </div>
     </LeadCardFrame>
