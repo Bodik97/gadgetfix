@@ -64,6 +64,11 @@ export function createFakeDb() {
       const name = (table as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")];
       inserts.push({ match: new RegExp(`^insert into "${name}"`), respond });
     },
+    /** Що повертає update … returning у цю таблицю */
+    onUpdate(table: Table, respond: Responder) {
+      const name = (table as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")];
+      inserts.push({ match: new RegExp(`^update "${name}"`), respond });
+    },
     /** Запити, що змінюють дані: insert / update / delete */
     writes() {
       return queries.filter((q) => /^(insert|update|delete)/i.test(q.sql));

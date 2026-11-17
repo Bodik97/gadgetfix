@@ -1,0 +1,640 @@
+/* «Заявки» за макетом docs/admin-handoff/design/Board.dc.html.
+   Кольори — токени сайту (світла тема = палітра з ТЗ), семантичні
+   «прострочено» й «очікування» — з ТЗ, розділ 1. */
+
+.page {
+  --late-line: #C4321E;
+  --late-text: #9A2A16;
+  --late-bg: #FFF7F5;
+  --wait-line: #D69E1C;
+  --wait-text: #6E4E00;
+  --wait-bg: rgba(214, 158, 28, .16);
+  --muted: rgb(var(--fg-rgb) / .62);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* На широкому екрані сторінка не гортається — гортаються колонки.
+     69 px — закріплена робоча панель з відступом під нею */
+  height: calc(100dvh - 86px);
+  min-height: 520px;
+}
+
+/* Темна тема: ті самі сигнали, але без світлих плашок */
+:global(:root:not([data-theme="light"])) .page {
+  --late-text: #F28C78;
+  --late-bg: rgba(196, 50, 30, .12);
+  --wait-text: #E9B84E;
+}
+
+.head {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  line-height: 1.1;
+}
+
+.summary {
+  color: var(--text-2);
+}
+
+.tabs {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.tab,
+.tabOn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text-2);
+}
+
+.tabOn {
+  background: rgb(var(--lime-rgb) / .14);
+  color: var(--accent-text);
+}
+
+/* ---------- Фільтри ---------- */
+
+.filters {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Пошук — у рядку заголовка, між підсумком і «Дошка / Список» */
+.searchForm {
+  flex: 0 1 300px;
+  min-width: 180px;
+  margin-left: auto;
+}
+
+.searchInput {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--field-border);
+  border-radius: 14px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.segment {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.seg,
+.segOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.segOn {
+  background: rgb(var(--lime-rgb) / .14);
+  color: var(--accent-text);
+}
+
+.segCount {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgb(var(--fg-rgb) / .07);
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip,
+.chipOn,
+.chipLate,
+.chipLateOn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 1px solid var(--field-border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.chipOn {
+  border-color: var(--border-active);
+  background: rgb(var(--lime-rgb) / .14);
+  color: var(--accent-text);
+}
+
+/* Є прострочені — кнопка вже червона, навіть не натиснута */
+.chipLate {
+  color: var(--late-text);
+}
+
+.chipLateOn {
+  border-color: var(--late-line);
+  background: rgba(196, 50, 30, .08);
+  color: var(--late-text);
+}
+
+/* ---------- Швидкий прийом «Онлайн» ---------- */
+
+.intake {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgb(var(--lime-rgb) / .45);
+  background: rgb(var(--lime-rgb) / .08);
+}
+
+.intakeTitle {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.intakeField,
+.intakeWide {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.intakeField {
+  flex: 0 0 140px;
+}
+
+.intakeWide {
+  flex: 1 1 220px;
+}
+
+.intakeField input,
+.intakeWide input,
+.intakeWide select {
+  height: 44px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.intakeAdd {
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--accent-edge, var(--accent));
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.intakeAdd:disabled {
+  opacity: .6;
+}
+
+.intakeError {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--late-text);
+  font-weight: 600;
+}
+
+.intakeEmpty {
+  flex: none;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  color: var(--text-2);
+}
+
+/* ---------- Дошка ---------- */
+
+.board,
+.boardShort {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(176px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.boardShort {
+  grid-template-columns: repeat(3, minmax(176px, 1fr));
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 20px;
+  background: rgb(var(--fg-rgb) / .035);
+}
+
+.colHead {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 14px 8px;
+}
+
+.colTitle {
+  margin: 0;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.colCount {
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.colSum {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.colBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 8px 10px;
+}
+
+.card,
+.cardLate {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--wait-line);
+}
+
+.card[data-stage="new"] {
+  border-left-color: rgb(var(--fg-rgb) / .2);
+}
+
+.card[data-stage="ready"] {
+  border-left-color: var(--accent);
+}
+
+.cardLate {
+  background: var(--late-bg);
+  border-color: rgba(196, 50, 30, .45);
+  border-left-color: var(--late-line);
+}
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px 8px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Номер заявки — лаймова пігулка (ТЗ, розділ 1) */
+.no {
+  flex: none;
+  padding: 1px 8px;
+  border: 1px solid rgb(var(--lime-rgb) / .3);
+  border-radius: 999px;
+  background: rgb(var(--lime-rgb) / .14);
+  color: var(--accent-text);
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.where {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.due,
+.dueLate {
+  margin-left: auto;
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dueLate {
+  color: var(--late-text);
+}
+
+.device {
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.problem {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.paused {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--wait-bg);
+  color: var(--wait-text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.cardFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 8px 14px;
+}
+
+/* Не стискається — якщо кнопка не влазить, вона переходить на новий рядок */
+.price {
+  flex: 1 0 auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.whoOwner,
+.whoMaster,
+.whoNone {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  box-sizing: border-box;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.whoOwner {
+  background: #ADC739;
+  color: #111311;
+}
+
+.whoMaster {
+  background: #111311;
+  color: #ADC739;
+}
+
+.whoNone {
+  border: 1px dashed rgb(var(--fg-rgb) / .3);
+}
+
+/* Червоний — на майстра чекає повідомлення */
+.unread {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--on-danger);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.act,
+.actMain {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-active);
+  background: rgb(var(--lime-rgb) / .08);
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.actMain {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.empty {
+  margin: 8px 6px;
+  color: var(--muted);
+}
+
+/* ---------- Список ---------- */
+
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 8px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 16px;
+}
+
+.table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.rowLate {
+  background: var(--late-bg);
+}
+
+.rowDevice {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.rowDevice span {
+  color: var(--text-2);
+}
+
+.sumCell {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stageTag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--wait-bg);
+  color: var(--wait-text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stageTag[data-stage="new"] {
+  background: rgb(var(--fg-rgb) / .06);
+  color: var(--text-2);
+}
+
+.stageTag[data-stage="ready"],
+.stageTag[data-stage="issued"] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.stageTag[data-flag="refused"] {
+  background: rgba(196, 50, 30, .12);
+  color: var(--late-text);
+}
+
+.nothing {
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  text-align: center;
+  color: var(--text-2);
+}
+
+/* Телефон і планшет: сторінка гортається звичайно, колонки — вбік */
+@media (max-width: 900px) {
+  .page {
+    height: auto;
+    min-height: 0;
+  }
+
+  .board {
+    grid-template-columns: repeat(5, 260px);
+  }
+
+  .boardShort {
+    grid-template-columns: repeat(3, 260px);
+  }
+
+  .board,
+  .boardShort {
+    padding-bottom: 8px;
+  }
+
+  .column {
+    max-height: 70dvh;
+  }
+
+  .searchForm {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}

@@ -101,7 +101,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           <dt>Ремонт</dt>
           <dd>
             {lead ? (
-              <Link href={`/admin/zayavky?q=${lead.orderNo}&open=${lead.id}`} className={styles.link}>
+              <Link href={`/admin/zayavky/${lead.id}`} className={styles.link}>
                 №&#8202;{lead.orderNo} · {lead.model ?? lead.service ?? "Ремонт"} · {describeStatus(lead.status).label}
               </Link>
             ) : (

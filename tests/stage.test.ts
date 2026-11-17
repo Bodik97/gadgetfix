@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guessLocation, isOverdue, orderLabel, stageToStatus, statusToStage } from "@/lib/stage";
+import { guessLocation, isOverdue, nextAction, orderLabel, stageToStatus, statusToStage } from "@/lib/stage";
 
 /**
  * Нова адмінка працює з етапами, а клієнт і далі бачить старий статус.
@@ -71,5 +71,28 @@ describe("orderLabel", () => {
   it("свої — №, «Онлайн» — О-", () => {
     expect(orderLabel({ channel: "own", orderNo: 1092, onlineNo: null })).toBe("№1092");
     expect(orderLabel({ channel: "online", orderNo: 1100, onlineNo: 218 })).toBe("О-218");
+  });
+});
+
+describe("nextAction — кнопка на дошці", () => {
+  it("свої: Взяти собі → (ціна в заявці) → Погодив → Готово → (видача в заявці)", () => {
+    expect(nextAction({ channel: "own", stage: "new", flag: null })).toMatchObject({ kind: "move", to: "diagnostics", take: true });
+    expect(nextAction({ channel: "own", stage: "diagnostics", flag: null })).toMatchObject({ kind: "open" });
+    expect(nextAction({ channel: "own", stage: "approval", flag: null })).toMatchObject({ kind: "move", to: "in_progress" });
+    expect(nextAction({ channel: "own", stage: "in_progress", flag: null })).toMatchObject({ kind: "move", to: "ready" });
+    // Видати з дошки не можна: потрібні чек-лист і підпис
+    expect(nextAction({ channel: "own", stage: "ready", flag: null })).toMatchObject({ kind: "open" });
+  });
+
+  it("«Онлайн»: Взяти → Готово → Віддати, без погодження", () => {
+    expect(nextAction({ channel: "online", stage: "new", flag: null })).toMatchObject({ to: "in_progress", take: true });
+    expect(nextAction({ channel: "online", stage: "in_progress", flag: null })).toMatchObject({ to: "ready" });
+    expect(nextAction({ channel: "online", stage: "ready", flag: null })).toMatchObject({ to: "issued" });
+  });
+
+  it("пауза — «Продовжити»; відмова і видані — без кнопки", () => {
+    expect(nextAction({ channel: "own", stage: "in_progress", flag: "paused" })).toMatchObject({ kind: "resume" });
+    expect(nextAction({ channel: "own", stage: "approval", flag: "refused" })).toBeNull();
+    expect(nextAction({ channel: "online", stage: "issued", flag: null })).toBeNull();
   });
 });

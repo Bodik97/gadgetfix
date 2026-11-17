@@ -31,7 +31,8 @@ export async function closeOrder(lead: Lead, note?: string): Promise<Lead> {
 
   const claimed = await getDb()
     .update(leads)
-    .set({ status: "done", warrantyUntil, updatedAt: new Date() })
+    // Етап дошки теж «Видано» — хоч би хто закрив: майстер, бот чи Нова Пошта
+    .set({ status: "done", stage: "issued", flag: null, issuedAt: lead.issuedAt ?? new Date(), warrantyUntil, updatedAt: new Date() })
     .where(and(eq(leads.id, lead.id), ne(leads.status, "done")))
     .returning({ id: leads.id });
 

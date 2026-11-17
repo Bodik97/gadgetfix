@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 import QuickSearch from "./QuickSearch";
 import styles from "./AdminShell.module.css";
 
-export type NavBadges = { fresh: number; toShip: number; pendingReviews: number; online: number };
+export type NavBadges = { fresh: number; toShip: number; pendingReviews: number };
 
 const items = [
   {
@@ -40,7 +40,8 @@ const items = [
   {
     href: "/admin/onlain",
     label: "Онлайн",
-    badge: "online",
+    // Лічильник заявок магазину — на фільтрі в «Заявках»; тут прайс і розрахунок
+    badge: null,
     icon: (
       <>
         <path d="M4 9.5L5.5 4h13L20 9.5" />

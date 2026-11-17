@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { getDb } from "./index";
 import { devices, leadEvents, leads, type Device, type Lead, type LeadEvent } from "./schema";
 
@@ -12,26 +12,59 @@ const STATUS_EVENT: Record<Lead["status"], string> = {
   rejected: "Заявку закрито",
 };
 
+/**
+ * Хроніка для клієнта (кабінет, перевірка статусу, бот). Внутрішні кроки
+ * адмінки — «Діагностика», «Погодження» без зміни статусу — клієнту не
+ * показуємо: у них є етап, але немає статусу.
+ */
 export async function getEvents(leadId: string): Promise<LeadEvent[]> {
   return getDb()
     .select()
     .from(leadEvents)
-    .where(eq(leadEvents.leadId, leadId))
+    .where(
+      and(
+        eq(leadEvents.leadId, leadId),
+        or(isNull(leadEvents.stage), isNotNull(leadEvents.status)),
+      ),
+    )
     .orderBy(asc(leadEvents.createdAt));
 }
 
-/** Додає подію в хроніку. text порожній — беремо стандартний текст статусу. */
+/** Що пишемо в історію адмінки, коли заявка переходить на етап без зміни статусу */
+const STAGE_EVENT: Record<Lead["stage"], string> = {
+  new: "Заявку прийнято",
+  diagnostics: "Діагностика",
+  approval: "Ціну надіслано на погодження",
+  in_progress: "Узяли в роботу",
+  ready: "Ремонт готовий",
+  issued: "Видано",
+};
+
+/**
+ * Додає подію в хроніку. text порожній — беремо стандартний текст статусу
+ * (або етапу, якщо статус не змінився — тоді подія лише для адмінки).
+ */
 export async function addEvent(
   leadId: string,
-  opts: { text?: string; status?: Lead["status"]; byMaster?: boolean },
+  opts: {
+    text?: string;
+    status?: Lead["status"];
+    stage?: Lead["stage"];
+    actor?: string;
+    byMaster?: boolean;
+  },
 ): Promise<void> {
-  const text = opts.text?.trim() || (opts.status ? STATUS_EVENT[opts.status] : "");
+  const text =
+    opts.text?.trim() ||
+    (opts.status ? STATUS_EVENT[opts.status] : opts.stage ? STAGE_EVENT[opts.stage] : "");
   if (!text) return;
 
   await getDb().insert(leadEvents).values({
     leadId,
     text: text.slice(0, 300),
     status: opts.status ?? null,
+    stage: opts.stage ?? null,
+    actor: opts.actor ?? null,
     byMaster: opts.byMaster ?? false,
   });
 }

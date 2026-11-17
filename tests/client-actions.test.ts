@@ -131,7 +131,7 @@ describe("requestDelivery", () => {
     expect(await request({ id: "l1", address: "  Львів, <відділення> 5  " })).toEqual({ ok: true });
 
     expect(m.pushed).toEqual([
-      { title: "№1054 · просить надіслати поштою", body: "Олег · Львів, <відділення> 5", url: "/admin/zayavky?q=1054&open=l1", tag: "delivery-l1" },
+      { title: "№1054 · просить надіслати поштою", body: "Олег · Львів, <відділення> 5", url: "/admin/zayavky/l1", tag: "delivery-l1" },
     ]);
     expect(m.notified[0]).toContain("№1054 · Олег");
     expect(m.notified[0]).toContain("Львів, &lt;відділення&gt; 5");

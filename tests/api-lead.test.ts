@@ -139,7 +139,7 @@ describe("POST /api/lead: що приймаємо", () => {
     expect(m.pushed[0]).toEqual({
       title: "Нова заявка №42",
       body: "Олег · iPhone 13 · +380733150238",
-      url: "/admin/zayavky?q=42&open=lead-42",
+      url: "/admin/zayavky/lead-42",
       tag: "lead-lead-42",
     });
     expect(m.escalated).toEqual(["lead-42"]);

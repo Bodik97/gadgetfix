@@ -107,3 +107,65 @@ export function orderLabel(lead: Pick<Lead, "channel" | "orderNo" | "onlineNo">)
     ? `О-${lead.onlineNo}`
     : `№${lead.orderNo}`;
 }
+
+/**
+ * Наступна дія для кнопки на дошці. Між етапами — одна кнопка, без відкриття заявки.
+ *
+ * - move: перевести на етап `to` одразу з дошки;
+ * - open: дія потребує полів (ціна, чек-лист і підпис при видачі) — відкриваємо заявку;
+ * - resume: зняти паузу.
+ *
+ * «Онлайн» іде коротким шляхом: ціна вже з прайсу магазину, погоджувати нічого,
+ * фото й підпис не потрібні — Взяти → Готово → Віддати.
+ */
+export type NextAction =
+  | { kind: "move"; label: string; to: Stage; take?: boolean }
+  | { kind: "open"; label: string }
+  | { kind: "resume"; label: string };
+
+export function nextAction(lead: Pick<Lead, "stage" | "flag" | "channel">): NextAction | null {
+  if (lead.flag === "refused") return null;
+  if (lead.flag === "paused") return { kind: "resume", label: "Продовжити" };
+
+  if (lead.channel === "online") {
+    switch (lead.stage) {
+      case "new":
+      case "diagnostics":
+      case "approval":
+        return { kind: "move", label: "Взяти", to: "in_progress", take: true };
+      case "in_progress":
+        return { kind: "move", label: "Готово", to: "ready" };
+      case "ready":
+        return { kind: "move", label: "Віддати", to: "issued" };
+      case "issued":
+        return null;
+    }
+  }
+
+  switch (lead.stage) {
+    case "new":
+      return { kind: "move", label: "Взяти собі", to: "diagnostics", take: true };
+    case "diagnostics":
+      return { kind: "open", label: "Ціну →" };
+    case "approval":
+      return { kind: "move", label: "Погодив", to: "in_progress" };
+    case "in_progress":
+      return { kind: "move", label: "Готово", to: "ready" };
+    case "ready":
+      return { kind: "open", label: "Видати →" };
+    case "issued":
+      return null;
+  }
+}
+
+/** Колонки дошки — без «Видано»: видані йдуть в архів */
+export const BOARD_STAGES: readonly Stage[] = ["new", "diagnostics", "approval", "in_progress", "ready"];
+
+export const BOARD_TITLE: Record<Stage, string> = {
+  new: "Нові",
+  diagnostics: "Діагностика",
+  approval: "Погодження",
+  in_progress: "У роботі",
+  ready: "Готово",
+  issued: "Видано",
+};

@@ -169,7 +169,7 @@ describe("ескалація: stillWaiting і нагадування", () => {
     expect(JSON.parse(m.sent[0].body)).toEqual({
       title: "Заявка №1054 чекає 5 хв",
       body: "Олег · iPhone 13 — ніхто ще не взяв",
-      url: "/admin/zayavky?q=1054&open=l1",
+      url: "/admin/zayavky/l1",
       tag: "lead-l1",
     });
   });

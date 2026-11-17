@@ -228,7 +228,8 @@ describe("setStatus", () => {
     fake.onSelect(leads, () => [LEAD]);
     await actions.setStatus(form({ id: LEAD.id, status: "in_progress" }));
     const w = writesText();
-    expect(w[0]).toMatch(/^update "leads" set "status" = \$1/);
+    // Разом зі статусом — етап дошки, щоб вони не розходились
+    expect(w[0]).toMatch(/^update "leads" set "stage" = \$1, "flag" = \$2, "status" = \$3/);
     expect(w[0]).toContain('"in_progress"');
     expect(w[1]).toMatch(/^insert into "lead_events"/);
     expect(w).toHaveLength(2);
@@ -420,10 +421,10 @@ describe("createLead — заявка, яку заводить майстер", 
     expect(fake.writes()).toEqual([]);
   });
 
-  it("джерело «вручну», заявка за тим, хто створив, далі — відкрити її розгорнутою", async () => {
+  it("джерело «вручну», заявка за тим, хто створив, далі — відкрити її сторінку", async () => {
     fake.onInsert(leads, () => [{ id: "new-id", orderNo: 1077 }]);
     await expect(create({ name: " Олег ", phone: "073 315 02 38", model: "iPhone 13" })).rejects.toThrow(
-      "REDIRECT:/admin/zayavky?q=1077&open=new-id",
+      "REDIRECT:/admin/zayavky/new-id",
     );
     const [q] = fake.writes();
     expect(q.sql).toMatch(/^insert into "leads"/);
@@ -489,7 +490,9 @@ describe("addNote і setTtn", () => {
     await actions.setTtn(form({ id: LEAD.id, ttn: ` ${TTN} ` }));
     const w = writesText();
     // «Відправлено» стає лише незакрита заявка — умова в самому запиті
-    expect(w[0]).toMatch(/^update "leads" set "ttn" = \$1, "status" = case when "leads"\."status" in \(\$2, \$3, \$4\) then 'shipped' else "leads"\."status" end/);
+    expect(w[0]).toMatch(/^update "leads" set "ttn" = \$1, .*"status" = case when "leads"\."status" in \(\$\d, \$\d, \$\d\) then 'shipped' else "leads"\."status" end/);
+    // Відправили — на дошці «Видано», тією ж умовою
+    expect(w[0]).toMatch(/"stage" = case when "leads"\."status" in \(\$\d, \$\d, \$\d\) then 'issued' else "leads"\."stage" end/);
     expect(fake.writes()[0].params.slice(0, 4)).toEqual([TTN, "new", "in_progress", "ready"]);
     expect(w[1]).toContain(`накладна ${TTN}`);
     expect(m.told).toEqual(["shipped"]);
@@ -529,7 +532,8 @@ describe("addNote і setTtn", () => {
     fake.onSelect(leads, () => [{ ...LEAD, status: "shipped", ttn: TTN }]);
     await actions.setTtn(form({ id: LEAD.id, ttn: "" }));
     const w = writesText();
-    expect(w[0]).toMatch(/^update "leads" set "ttn" = \$1, "status" = case when "leads"\."status" = 'shipped' then 'ready' else "leads"\."status" end/);
+    expect(w[0]).toMatch(/^update "leads" set "ttn" = \$1, .*"status" = case when "leads"\."status" = 'shipped' then 'ready' else "leads"\."status" end/);
+    expect(w[0]).toMatch(/"stage" = case when "leads"\."status" = 'shipped' then 'ready' else "leads"\."stage" end/);
     expect(fake.writes()[0].params[0]).toBeNull();
     expect(w[1]).toMatch(/^insert into "lead_events"/);
     expect(w[1]).toContain('"ready"');

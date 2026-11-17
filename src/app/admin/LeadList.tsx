@@ -1,14 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { unreadByLead } from "@/db/messages";
-import { getEventsFor } from "@/db/adminStats";
 import { ARCHIVED, findLeads, STATUS_OPTIONS } from "@/db/leads";
-import { getOrderCounts, phoneKey } from "@/db/clients";
-import { getPriceHints, hintKey } from "@/db/priceHistory";
-import { getReviewDiscounts } from "@/db/reviews";
 import { currentTeam } from "@/lib/admin";
-import { clientBotReady, linkedLeads } from "@/lib/clientBot";
-import LeadCard from "./LeadCard";
+import LeadCards from "./LeadCards";
 import Search, { adminHref, type ListKind, type Query } from "./Search";
 import styles from "./page.module.css";
 
@@ -54,26 +48,6 @@ export default async function LeadList({ kind, params }: { kind: ListKind; param
   });
 
   const pages = Math.max(1, Math.ceil(found / PER_PAGE));
-  const ids = rows.map((r) => r.id);
-  const [eventsByLead, unread, orderCounts, priceHints, withBot, discounts] = await Promise.all([
-    getEventsFor(ids),
-    unreadByLead(ids, "client"),
-    getOrderCounts(rows.map((r) => r.phone)),
-    getPriceHints(),
-    linkedLeads(rows),
-    getReviewDiscounts(),
-  ]);
-
-  // Невикористану знижку показуємо на відкритих заявках клієнта, використану — там, де її врахували
-  const discountFor = (r: (typeof rows)[number]) => {
-    const applied = discounts.find((d) => d.discountLeadId === r.id);
-    if (applied) return { reviewId: applied.id, applied: true };
-    if (ARCHIVED.includes(r.status) || !r.clerkUserId) return null;
-    const open = discounts.find((d) => !d.discountLeadId && d.clerkUserId === r.clerkUserId);
-    return open ? { reviewId: open.id, applied: false } : null;
-  };
-  const botReady = clientBotReady();
-
   const filtered = Boolean(params.q || status || shipping);
 
   return (
@@ -101,26 +75,7 @@ export default async function LeadList({ kind, params }: { kind: ListKind; param
               : "Заявок у роботі немає."}
         </div>
       ) : (
-        <div className={styles.cards}>
-          {rows.map((r) => (
-            <LeadCard
-              key={r.id}
-              lead={r}
-              events={eventsByLead.get(r.id) ?? []}
-              unread={unread.get(r.id) ?? 0}
-              defaultOpen={r.id === params.open}
-              team={team}
-              telegram={botReady ? withBot.has(r.id) : null}
-              discount={discountFor(r)}
-              orders={orderCounts.get(phoneKey(r.phone) ?? "") ?? 1}
-              /* Заявки без ціни не входять у власну статистику, тож підказка
-                 завжди про інші ремонти. Там, де ціна вже стоїть, вона зайва. */
-              priceHint={
-                r.price === null ? (priceHints.get(hintKey(r.model, r.service) ?? "") ?? null) : null
-              }
-            />
-          ))}
-        </div>
+        <LeadCards rows={rows} team={team} openId={params.open} />
       )}
 
       {pages > 1 && (

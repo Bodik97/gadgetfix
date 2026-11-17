@@ -10,14 +10,12 @@ export type Counters = {
   total: number;
   fresh: number;
   toShip: number;
-  /** Активні заявки магазину «Онлайн» — ще не віддані й не відмова */
-  online: number;
 };
 
 export async function getCounters(): Promise<Counters> {
-  // Заявки «Онлайн» мають свій лічильник і в «Заявках» не рахуються
+  // Лічильники — про своїх клієнтів; магазин «Онлайн» видно на фільтрі в «Заявках»
   const own = eq(leads.channel, "own");
-  const [[{ total }], [{ fresh }], [{ toShip }], [{ online }]] = await Promise.all([
+  const [[{ total }], [{ fresh }], [{ toShip }]] = await Promise.all([
     getDb().select({ total: count() }).from(leads).where(own),
     getDb().select({ fresh: count() }).from(leads).where(and(own, eq(leads.status, "new"))),
     getDb()
@@ -25,19 +23,9 @@ export async function getCounters(): Promise<Counters> {
       .from(leads)
       // Закрита заявка відправки вже не чекає: пристрій видали в руки або від ремонту відмовились
       .where(and(own, eq(leads.deliveryRequested, true), isNull(leads.ttn), notInArray(leads.status, ARCHIVED))),
-    getDb()
-      .select({ online: count() })
-      .from(leads)
-      .where(
-        and(
-          eq(leads.channel, "online"),
-          ne(leads.stage, "issued"),
-          or(isNull(leads.flag), ne(leads.flag, "refused")),
-        ),
-      ),
   ]);
 
-  return { total, fresh, toShip, online };
+  return { total, fresh, toShip };
 }
 
 export type Money = {

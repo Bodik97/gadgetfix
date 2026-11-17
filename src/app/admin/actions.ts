@@ -11,14 +11,14 @@ import { STATUS_OPTIONS } from "@/db/leads";
 import { guessWarrantyDays, isWarrantyTerm, warrantyEnd } from "@/data/warranty";
 import { addEvent, getHandoverDate, getLeadById, registerDevice } from "@/db/events";
 import { releaseDiscount } from "@/db/discounts";
-import { sendClientPush } from "@/lib/clientPush";
-import { describeStatus } from "@/data/leadStatus";
 import { addExpense, EXPENSE_CATEGORIES, removeExpense } from "@/db/expenses";
 import { addPart, removePart, shiftPartQty } from "@/db/parts";
 import { rateLimit, release } from "@/lib/rateLimit";
 import { sendPush } from "@/lib/push";
 import { notifyClientStatus, offerPrice } from "@/lib/clientBot";
 import { closeOrder } from "@/lib/handover";
+import { pushStatusToClient } from "@/lib/statusPush";
+import { statusToStage } from "@/lib/stage";
 import { normalizeUaPhone } from "@/lib/phone";
 import { dropPhotos, readPair, savePhoto } from "@/lib/photoPair";
 import { LIMITS, plainText, validName } from "@/lib/validate";
@@ -123,7 +123,10 @@ export async function setStatus(formData: FormData): Promise<void> {
     // Пристрій у клієнта — заявка закривається, і з цього дня рахується гарантія
     await closeOrder(before);
   } else {
-    await getDb().update(leads).set({ status: next, updatedAt: new Date() }).where(eq(leads.id, id));
+    // Етап дошки — за статусом, щоб дошка й кабінет клієнта не розходились.
+    // Відмова лише ставить позначку: етап лишається, з якого відмовились
+    const stage = next === "rejected" ? { flag: "refused" as const } : { stage: statusToStage(next).stage, flag: null };
+    await getDb().update(leads).set({ status: next, ...stage, updatedAt: new Date() }).where(eq(leads.id, id));
 
     // Відмова не має «з'їдати» знижку клієнта
     if (next === "rejected") await releaseDiscount(before);
@@ -136,15 +139,7 @@ export async function setStatus(formData: FormData): Promise<void> {
   }
 
   // І push на телефон, якщо клієнт його увімкнув у кабінеті
-  if (before.clerkUserId) {
-    const s = describeStatus(next);
-    await sendClientPush(before.clerkUserId, {
-      title: `№${before.orderNo}: ${s.label}`,
-      body: s.hint,
-      url: "/moi-remonty",
-      tag: `status-${id}`,
-    }).catch((e) => console.error("[status] push клієнту:", e));
-  }
+  await pushStatusToClient(before, next);
 
   revalidatePath("/admin");
   revalidatePath("/moi-remonty");
@@ -261,7 +256,7 @@ export async function createLead(_prev: string | null, formData: FormData): Prom
     .returning({ id: leads.id, orderNo: leads.orderNo });
 
   revalidatePath("/admin");
-  redirect(`/admin/zayavky?q=${row.orderNo}&open=${row.id}`);
+  redirect(`/admin/zayavky/${row.id}`);
 }
 
 /** Підписка браузера на push — те, що віддає PushSubscription.toJSON() */
@@ -343,7 +338,12 @@ export async function setTtn(formData: FormData): Promise<void> {
     ? sql<Lead["status"]>`case when ${inArray(leads.status, SHIPPABLE)} then 'shipped' else ${leads.status} end`
     : sql<Lead["status"]>`case when ${leads.status} = 'shipped' then 'ready' else ${leads.status} end`;
 
-  await getDb().update(leads).set({ ttn, status, updatedAt: new Date() }).where(eq(leads.id, id));
+  // Етап — тією ж умовою: відправили — видано; скасували накладну — знову «Готово»
+  const stage = ttn
+    ? sql<Lead["stage"]>`case when ${inArray(leads.status, SHIPPABLE)} then 'issued' else ${leads.stage} end`
+    : sql<Lead["stage"]>`case when ${leads.status} = 'shipped' then 'ready' else ${leads.stage} end`;
+
+  await getDb().update(leads).set({ ttn, status, stage, updatedAt: new Date() }).where(eq(leads.id, id));
 
   if (!ttn) {
     if (before.status === "shipped") await addEvent(id, { text: "Накладну скасовано — пристрій ще в сервісі", status: "ready" });
