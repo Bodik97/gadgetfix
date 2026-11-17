@@ -16,6 +16,8 @@ import { closeOrder } from "@/lib/handover";
 import { savePhoto } from "@/lib/photoPair";
 import { STAGE_ORDER, stageToStatus } from "@/lib/stage";
 import { pushStatusToClient } from "@/lib/statusPush";
+import { start } from "workflow/api";
+import { remindPriceLater } from "@/workflows/remind-price";
 import { LIMITS, plainText } from "@/lib/validate";
 
 /**
@@ -411,8 +413,17 @@ export async function advance(_prev: string | null, form: FormData): Promise<str
     await addEvent(id, { stage: to, actor: me.email });
   }
 
-  // «Надіслати ціну» — клієнт отримує її в Telegram з кнопкою «Погоджуюсь»
-  if (to === "approval" && lead.channel === "own") await offerPrice(after);
+  // «Надіслати ціну» — клієнт отримує її в Telegram з кнопкою «Погоджуюсь»,
+  // а якщо мовчатиме добу — нагадування (Workflow спить і прокидається сам)
+  if (to === "approval" && lead.channel === "own") {
+    await offerPrice(after);
+    try {
+      await start(remindPriceLater, [id, after.price ?? 0]);
+    } catch (e) {
+      // Нагадування — зручність: без нього ціна однаково надіслана
+      console.error("[advance] нагадування не заплановано:", e);
+    }
+  }
 
   refresh(id);
   return null;

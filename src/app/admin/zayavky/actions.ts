@@ -7,7 +7,7 @@ import { getDb } from "@/db";
 import { leads, partnerPrices, type PartnerPrice } from "@/db/schema";
 import { addEvent, getLeadById } from "@/db/events";
 import { currentAdmin } from "@/lib/admin";
-import { notifyClientStatus } from "@/lib/clientBot";
+import { notifyClientStatus, offerPrice } from "@/lib/clientBot";
 import { nextAction, onlineWarranty, stageToStatus } from "@/lib/stage";
 import { pushStatusToClient } from "@/lib/statusPush";
 import { LIMITS, plainText } from "@/lib/validate";
@@ -173,4 +173,24 @@ export async function createOnlineBatch(_prev: BatchResult | null, formData: For
 
   if (created > 0) revalidatePath("/admin", "layout");
   return { created, failed };
+}
+
+/**
+ * «Нагадати» з «Огляду»: клієнт мовчить про ціну — надсилаємо її в Telegram
+ * ще раз, з тими самими кнопками «Погоджуюсь / Передзвоніть мені».
+ */
+export async function remindPrice(formData: FormData): Promise<void> {
+  const me = await currentAdmin();
+  if (!me) redirect("/admin/vhid");
+
+  const id = String(formData.get("id") ?? "");
+  const lead = id ? await getLeadById(id) : undefined;
+  if (!lead || lead.channel !== "own" || lead.stage !== "approval" || lead.flag) return;
+
+  const sent = await offerPrice(lead);
+  await addEvent(id, {
+    text: sent ? "Нагадали клієнту про ціну в Telegram" : "Клієнт без Telegram — нагадати треба дзвінком",
+    actor: me.email,
+  });
+  revalidatePath("/admin", "layout");
 }

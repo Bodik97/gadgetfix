@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getBoardLeads, getPartnerPrices, getPointCounts, isPoint, POINTS, type Point } from "@/db/board";
+import { getBoardLeads, getPartnerPrices, getPointCounts, isOnly, isPoint, ONLY_LABEL, POINTS, type Point } from "@/db/board";
 import { unreadByLead } from "@/db/messages";
 import { currentTeam } from "@/lib/admin";
 import { BOARD_STAGES, isOverdue } from "@/lib/stage";
@@ -34,6 +34,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     q: raw.q?.trim() || undefined,
     mine: raw.mine === "1",
     late: raw.late === "1",
+    only: isOnly(raw.only) ? raw.only : undefined,
   };
 
   const [rows, counts, prices] = await Promise.all([
@@ -42,6 +43,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       q: params.q,
       mine: params.mine ? team.me : undefined,
       lateOnly: params.late,
+      only: params.only,
     }),
     getPointCounts(),
     params.point === "online" ? getPartnerPrices() : Promise.resolve([]),
@@ -120,6 +122,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         >
           Мої
         </Link>
+        {params.only && (
+          <Link href={boardHref(params, { only: undefined })} className={styles.chipOn} aria-label="Зняти фільтр">
+            {ONLY_LABEL[params.only]} ×
+          </Link>
+        )}
         <Link
           href={boardHref(params, { late: !params.late })}
           className={params.late ? styles.chipLateOn : lateCount > 0 ? styles.chipLate : styles.chip}

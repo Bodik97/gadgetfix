@@ -13,6 +13,7 @@ const m = vi.hoisted(() => ({
   told: [] as string[],
   offered: 0,
   closed: 0,
+  scheduled: [] as unknown[][],
 }));
 
 vi.mock("@/db", () => ({ getDb: () => fake.db }));
@@ -44,6 +45,12 @@ vi.mock("@/lib/handover", () => ({
 }));
 vi.mock("@/lib/photoPair", () => ({ savePhoto: async () => "leads/x/1" }));
 vi.mock("@/db/discounts", () => ({ releaseDiscount: async () => {} }));
+vi.mock("workflow/api", () => ({
+  start: async (_wf: unknown, args: unknown[]) => {
+    m.scheduled.push(args);
+  },
+}));
+vi.mock("@/workflows/remind-price", () => ({ remindPriceLater: () => {} }));
 
 import { addItem, advance, pause, refuse, saveList, savePrepayment } from "@/app/admin/zayavky/[id]/actions";
 
@@ -94,6 +101,7 @@ beforeEach(() => {
   m.told = [];
   m.offered = 0;
   m.closed = 0;
+  m.scheduled = [];
   fake.onUpdate(leads, () => [fullRow()]);
 });
 
@@ -139,6 +147,9 @@ describe("advance — головна кнопка", () => {
     expect(await advance(null, form({ id: ID }))).toBeNull();
     expect(updates()[0].params).toEqual(expect.arrayContaining(["approval"]));
     expect(m.offered).toBe(1);
+    // Мовчатиме добу — буде нагадування
+    expect(m.scheduled).toHaveLength(1);
+    expect(m.scheduled[0][0]).toBe(ID);
   });
 
   it("«Видати» без усіх пунктів перевірки — не видає", async () => {

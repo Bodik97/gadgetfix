@@ -1,0 +1,312 @@
+/* «Огляд» за docs/admin-handoff/design/Today.dc.html */
+
+.page {
+  --late-text: #9A2A16;
+  --wait-text: #6E4E00;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 40px;
+}
+
+:global(:root:not([data-theme="light"])) .page {
+  --late-text: #F28C78;
+  --wait-text: #E9B84E;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+.hello {
+  color: var(--text-2);
+}
+
+/* Чотири плитки — кожна веде на відфільтровані заявки */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tile,
+.tileRed,
+.tileLime,
+.tileAmber {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.tileRed {
+  background: rgba(196, 50, 30, .08);
+  border-color: rgba(196, 50, 30, .38);
+}
+
+.tileLime {
+  background: rgb(var(--lime-rgb) / .10);
+  border-color: rgb(var(--lime-rgb) / .45);
+}
+
+.tileAmber {
+  background: rgba(214, 158, 28, .08);
+  border-color: rgba(214, 158, 28, .38);
+}
+
+.tileN {
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.h2 {
+  margin: 0 0 10px;
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 96 | 1fr | 160 | 190 — колонки вирівняні між рядками (ТЗ 3.1) */
+.row,
+.rowRed {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 160px 190px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 18px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.rowRed {
+  border-color: rgba(196, 50, 30, .38);
+}
+
+.row form,
+.rowRed form {
+  display: contents;
+}
+
+.no {
+  justify-self: start;
+  padding: 1px 8px;
+  border: 1px solid rgb(var(--lime-rgb) / .3);
+  border-radius: 999px;
+  background: rgb(var(--lime-rgb) / .14);
+  color: var(--accent-text);
+  font-family: var(--font-unbounded), sans-serif;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.muted {
+  color: rgb(var(--fg-rgb) / .62);
+}
+
+.tag_red,
+.tag_amber,
+.tag_lime,
+.tag_gray {
+  justify-self: center;
+  text-align: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.tag_red {
+  background: rgba(196, 50, 30, .12);
+  color: var(--late-text);
+}
+
+.tag_amber {
+  background: rgba(214, 158, 28, .16);
+  color: var(--wait-text);
+}
+
+.tag_lime {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.tag_gray {
+  background: rgb(var(--fg-rgb) / .06);
+  color: var(--text-2);
+}
+
+.btnSoft,
+.btnMain {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--border-active);
+  background: rgb(var(--lime-rgb) / .08);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btnMain {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.empty {
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  text-align: center;
+  color: var(--text-2);
+}
+
+.more {
+  align-self: flex-start;
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+/* Хто чим зайнятий */
+
+.busy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.person .muted {
+  margin: 0;
+}
+
+.personHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatarOwner,
+.avatarMaster {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: #ADC739;
+  color: #111311;
+}
+
+.avatarMaster {
+  background: #111311;
+  color: #ADC739;
+}
+
+.personName {
+  flex: 1;
+  font-weight: 700;
+}
+
+.personN {
+  font-family: var(--font-unbounded), sans-serif;
+}
+
+.personRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .row,
+  .rowRed {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .row > :nth-child(3),
+  .rowRed > :nth-child(3) {
+    justify-self: start;
+  }
+
+  .btnSoft,
+  .btnMain {
+    grid-column: 1 / -1;
+  }
+}

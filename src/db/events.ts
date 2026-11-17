@@ -13,9 +13,11 @@ const STATUS_EVENT: Record<Lead["status"], string> = {
 };
 
 /**
- * Хроніка для клієнта (кабінет, перевірка статусу, бот). Внутрішні кроки
- * адмінки — «Діагностика», «Погодження» без зміни статусу — клієнту не
- * показуємо: у них є етап, але немає статусу.
+ * Хроніка для клієнта (кабінет, перевірка статусу, бот). Внутрішнє адмінки
+ * клієнту не показуємо: кроки «Діагностика», «Погодження» без зміни статусу
+ * (є етап, немає статусу) і службові записи майстра — пауза, нагадування,
+ * крок назад (є actor, немає статусу). Зміни статусу й нотатки «для клієнта»
+ * (старі записи без actor і етапу) — показуємо.
  */
 export async function getEvents(leadId: string): Promise<LeadEvent[]> {
   return getDb()
@@ -24,7 +26,7 @@ export async function getEvents(leadId: string): Promise<LeadEvent[]> {
     .where(
       and(
         eq(leadEvents.leadId, leadId),
-        or(isNull(leadEvents.stage), isNotNull(leadEvents.status)),
+        or(isNotNull(leadEvents.status), and(isNull(leadEvents.stage), isNull(leadEvents.actor))),
       ),
     )
     .orderBy(asc(leadEvents.createdAt));

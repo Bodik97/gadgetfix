@@ -60,7 +60,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     .map((e) => ({
       at: e.createdAt.toISOString(),
       text: e.text,
-      who: e.actor ? (team.names[e.actor] ?? null) : e.byMaster ? "майстер" : null,
+      who: e.actor === "auto" ? "автоматично" : e.actor ? (team.names[e.actor] ?? null) : e.byMaster ? "майстер" : null,
     }));
 
   return (

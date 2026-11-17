@@ -58,7 +58,21 @@ function textWhere(q: string): SQL | undefined {
     ilike(leads.problem, like),
     ilike(leads.service, like),
     ilike(leads.externalNo, like),
+    ilike(leads.imei, like),
   );
+}
+
+/** Вузькі вибірки для плиток «Огляду»: готові до видачі, чекають відповіді, на паузі */
+export type Only = "ready" | "approval" | "paused";
+export const isOnly = (v: unknown): v is Only => v === "ready" || v === "approval" || v === "paused";
+export const ONLY_LABEL: Record<Only, string> = {
+  ready: "Видати",
+  approval: "Чекають відповіді",
+  paused: "На паузі",
+};
+
+function onlyWhere(only: Only): SQL {
+  return only === "paused" ? eq(leads.flag, "paused") : and(eq(leads.stage, only), isNull(leads.flag))!;
 }
 
 export type BoardFilter = {
@@ -67,6 +81,7 @@ export type BoardFilter = {
   /** Пошта майстра для «Мої» */
   mine?: string;
   lateOnly?: boolean;
+  only?: Only;
 };
 
 /**
@@ -80,6 +95,7 @@ export async function getBoardLeads(f: BoardFilter): Promise<Lead[]> {
     pointWhere(f.point),
     f.mine ? eq(leads.assignee, f.mine) : undefined,
     f.lateOnly ? sql`${leads.dueAt} < now()` : undefined,
+    f.only ? onlyWhere(f.only) : undefined,
   ].filter(Boolean) as SQL[];
 
   return getDb()
