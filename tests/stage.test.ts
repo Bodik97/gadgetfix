@@ -41,20 +41,14 @@ describe("statusToStage — перенесення старих заявок", (
 
 describe("guessLocation", () => {
   const emails = { novyiRozdil: "bohdan@x.ua", lviv: "andrian@x.ua" };
-  const base = { source: "manual" as const, deliveryRequested: false, assignee: null };
-
-  it("поштою — Нова Пошта, навіть якщо брав майстер", () => {
-    expect(guessLocation({ ...base, source: "mail-in", assignee: "andrian@x.ua" }, emails)).toBe("nova-poshta");
-    expect(guessLocation({ ...base, deliveryRequested: true }, emails)).toBe("nova-poshta");
-  });
 
   it("за майстром: Богдан — Новий Розділ, Андріан — Львів", () => {
-    expect(guessLocation({ ...base, assignee: "Bohdan@X.ua" }, emails)).toBe("novyi-rozdil");
-    expect(guessLocation({ ...base, assignee: "andrian@x.ua" }, emails)).toBe("lviv");
+    expect(guessLocation({ assignee: "Bohdan@X.ua" }, emails)).toBe("novyi-rozdil");
+    expect(guessLocation({ assignee: "andrian@x.ua" }, emails)).toBe("lviv");
   });
 
   it("ніхто не брав — невідомо, а не вигадана точка", () => {
-    expect(guessLocation(base, emails)).toBeNull();
+    expect(guessLocation({ assignee: null }, emails)).toBeNull();
   });
 });
 

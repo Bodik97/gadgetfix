@@ -73,14 +73,14 @@ export function statusToStage(status: Status): { stage: Stage; flag: Flag } {
 }
 
 /**
- * Точка для старої заявки: поштою — Нова Пошта; інакше за майстром,
- * який її брав (Богдан — Новий Розділ, Андріан — Львів). Ніхто не брав — невідомо.
+ * Точка для старої заявки — за майстром, який її брав (Богдан — Новий
+ * Розділ, Андріан — Львів). Нова Пошта — доставка, а не точка, тож на
+ * точку не впливає. Ніхто не брав — невідомо.
  */
 export function guessLocation(
-  lead: Pick<Lead, "source" | "deliveryRequested" | "assignee">,
+  lead: Pick<Lead, "assignee">,
   emails: { novyiRozdil?: string; lviv?: string },
 ): Location | null {
-  if (lead.source === "mail-in" || lead.deliveryRequested) return "nova-poshta";
   const who = lead.assignee?.trim().toLowerCase();
   if (!who) return null;
   if (who === emails.novyiRozdil?.trim().toLowerCase()) return "novyi-rozdil";

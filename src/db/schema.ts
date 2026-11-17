@@ -55,8 +55,12 @@ export const leadFlag = pgEnum("lead_flag", ["paused", "refused"]);
 /** own — наші клієнти; online — телефони від магазину-партнера «Онлайн» */
 export const leadChannel = pgEnum("lead_channel", ["own", "online"]);
 
-/** Де телефон: точка прийому або Нова Пошта */
-export const leadLocation = pgEnum("lead_location", ["lviv", "novyi-rozdil", "nova-poshta"]);
+/**
+ * Точка, де прийняли телефон. Магазин «Онлайн» — окрема точка, але її
+ * визначає channel = 'online', а не це поле. Нова Пошта — спосіб доставки
+ * (deliveryRequested), не точка. other — інше місто, назва в `city`.
+ */
+export const leadLocation = pgEnum("lead_location", ["lviv", "novyi-rozdil", "other"]);
 
 export const paymentMethod = pgEnum("payment_method", ["cash", "card", "transfer"]);
 

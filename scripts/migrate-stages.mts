@@ -35,10 +35,7 @@ const changes = rows
     const { stage, flag } = statusToStage(r.status);
     const location =
       r.location ??
-      guessLocation(
-        { source: r.source, deliveryRequested: r.delivery_requested, assignee: r.assignee },
-        emails,
-      );
+guessLocation({ assignee: r.assignee }, emails);
     const same = r.stage === stage && r.flag === flag && r.location === location;
     return same ? null : { id: r.id, no: r.order_no, status: r.status, stage, flag, location };
   })
