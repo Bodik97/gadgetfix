@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Адмінка GadgetFix — заявка №1092</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Unbounded:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#4D5C00}a:hover{color:#2F3900}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; display: flex; background: #F2F2EC; color: #111311; font-family: Manrope, system-ui, sans-serif; font-size: 15px; line-height: 1.5; overflow: hidden">
+
+<aside style="flex: none; width: 224px; display: flex; flex-direction: column; gap: 18px; padding: 18px 14px; background: #FFFFFF; border-right: 1px solid #E2E3DC; box-sizing: border-box; overflow-y: auto; font-size: 14px">
+<a href="Today.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 10px; border-radius: 10px; background: #111311; color: #FFFFFF; font-family: Unbounded, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ADC739" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M19 7a8 8 0 1 0 1 6h-7"></path></svg>Gadget<span style="color: #ADC739">Fix</span></a>
+<a href="Order.dc.html" style="display: flex; align-items: center; justify-content: center; height: 44px; border: 1px solid #8BA21C; border-radius: 14px; background: #ADC739; color: #111311; font-weight: 700; text-decoration: none">+ Нова заявка</a>
+<nav aria-label="Розділи" style="display: flex; flex-direction: column; gap: 2px">
+<p style="margin: 0 0 6px 12px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #5E615E">Розділи</p>
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="9">
+<a href="{{n.href}}" style="{{n.style}}"><span style="flex: 1">{{n.label}}</span><sc-if value="{{n.hasCount}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 700">{{n.count}}</span></sc-if></a>
+</sc-for>
+</nav>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 16px; background: #F7F7F2">
+<span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: #ADC739; display: inline-flex; align-items: center; justify-content: center; font-weight: 700">Б</span>
+<span style="flex: 1; font-weight: 700">Богдан</span>
+<button type="button" style="height: 36px; padding: 0 12px; border: 1px solid #CFD1C9; border-radius: 999px; background: #FFFFFF; font: inherit; font-weight: 600; color: #111311">Вийти</button>
+</div>
+</aside>
+
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px 24px; border-bottom: 1px solid #E2E3DC">
+<a href="Board.dc.html" style="display: inline-flex; align-items: center; height: 40px; padding: 0 14px; border: 1px solid #CFD1C9; border-radius: 999px; background: #FFFFFF; color: #111311; text-decoration: none; font-weight: 600">‹ Заявки</a>
+<span style="padding: 2px 12px; border: 1px solid rgba(159, 183, 31, 0.3); border-radius: 999px; background: rgba(159, 183, 31, 0.14); color: #4D5C00; font-family: Unbounded, sans-serif; font-size: 15px">№1092</span>
+<h1 style="margin: 0; font-family: Unbounded, sans-serif; font-size: 24px; font-weight: 600; letter-spacing: -0.8px; line-height: 1.2">iPhone 13 Pro</h1>
+<span style="color: #3A3D3A">роз'єм заряджання</span>
+<span style="{{statusStyle}}">{{statusText}}</span>
+<span style="margin-left: auto; color: #5E615E">Готово до <b style="color: #111311">18.11</b> · майстер <b style="color: #111311">Богдан</b></span>
+<a href="Search.dc.html" aria-label="Пошук, Ctrl K" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 40px; border: 1px solid #CFD1C9; border-radius: 999px; background: #FFFFFF; color: #3A3D3A">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg></a>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex">
+
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<ol aria-label="Етапи" style="flex: none; list-style: none; margin: 0; padding: 16px 24px 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{steps}}" as="it" hint-placeholder-count="5">
+<li><button type="button" onClick="{{it.go}}" style="{{it.style}}"><span style="{{it.dot}}">{{it.mark}}</span><span style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2"><span>{{it.name}}</span><span style="font-size: 12px; font-weight: 500; opacity: 0.75">{{it.time}}</span></span></button></li>
+</sc-for>
+</ol>
+
+<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 24px 20px">
+<sc-if value="{{paused}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 10px 16px; border: 1px solid rgba(214, 158, 28, 0.38); border-radius: 16px; background: rgba(214, 158, 28, 0.08); color: #6E4E00; font-weight: 600">
+<span style="flex: 1">На паузі · чекаємо деталь</span>
+<button type="button" onClick="{{togglePause}}" style="height: 40px; padding: 0 14px; border: 1px solid currentColor; border-radius: 12px; background: transparent; color: inherit; font: inherit; font-weight: 700">Продовжити</button>
+</div>
+</sc-if>
+<sc-if value="{{refused}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 10px 16px; border: 1px solid rgba(196, 50, 30, 0.38); border-radius: 16px; background: rgba(196, 50, 30, 0.07); color: #9A2A16; font-weight: 600">
+<span style="flex: 1">Клієнт відмовився · телефон повертаємо без ремонту</span>
+<button type="button" onClick="{{toggleRefuse}}" style="height: 40px; padding: 0 14px; border: 1px solid currentColor; border-radius: 12px; background: transparent; color: inherit; font: inherit; font-weight: 700">Повернути</button>
+</div>
+</sc-if>
+<sc-if value="{{issued}}" hint-placeholder-val="{{false}}">
+<div style="margin-bottom: 12px; padding: 12px 16px; border: 1px solid rgba(159, 183, 31, 0.45); border-radius: 16px; background: rgba(159, 183, 31, 0.12); color: #4D5C00; font-weight: 700">Видано клієнту · гарантія до 17.03.2027 · талон надіслано у Viber</div>
+</sc-if>
+
+<section style="padding: 24px 26px; background: #FFFFFF; border: 1px solid #E2E3DC; border-radius: 22px">
+<h2 style="margin: 0 0 18px; font-family: Unbounded, sans-serif; font-size: 20px; font-weight: 500; letter-spacing: -0.5px">{{title}}</h2>
+
+<sc-if value="{{s1}}" hint-placeholder-val="{{true}}">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px 28px">
+<div><p style="margin: 0 0 8px; font-weight: 700">Що сталося</p>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{problems}}" as="c" hint-placeholder-count="6"><button type="button" onClick="{{c.toggle}}" style="{{c.style}}">{{c.label}}</button></sc-for></div></div>
+<div><p style="margin: 0 0 8px; font-weight: 700">Стан і комплект</p>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{states}}" as="c" hint-placeholder-count="6"><button type="button" onClick="{{c.toggle}}" style="{{c.style}}">{{c.label}}</button></sc-for></div></div>
+<div><p style="margin: 0 0 8px; font-weight: 700">Фото до ремонту <span style="font-weight: 500; color: #5E615E">· обов'язково</span></p>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px"><sc-for list="{{photos}}" as="ph" hint-placeholder-count="3"><button type="button" onClick="{{ph.toggle}}" style="{{ph.style}}">{{ph.label}}</button></sc-for></div></div>
+<div><p style="margin: 0 0 8px; font-weight: 700">Підпис клієнта <span style="font-weight: 500; color: #5E615E">· обов'язково</span></p>
+<button type="button" onClick="{{signIn}}" style="{{sigIn}}">{{sigInText}}</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{s2}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px 28px">
+<div><label for="d1" style="display: block; margin: 0 0 8px; font-weight: 700">Що знайшли</label>
+<select id="d1" style="width: 100%; height: 48px; padding: 0 14px; border: 1px solid #CFD1C9; border-radius: 14px; background: #FFFFFF; font: inherit"><option>Зношений роз'єм заряджання</option><option>Окислення плати</option><option>Несправний контролер живлення</option></select>
+<label for="d3" style="display: block; margin: 16px 0 8px; font-weight: 700">Нотатка для своїх <span style="font-weight: 500; color: #5E615E">· клієнт не бачить</span></label>
+<input id="d3" type="text" value="Роз'єм окислений, рамка ціла" style="width: 100%; height: 48px; padding: 0 14px; box-sizing: border-box; border: 1px solid #CFD1C9; border-radius: 14px; background: #F7F7F2; font: inherit"></div>
+<div><p style="margin: 0 0 8px; font-weight: 700">Роботи і деталі</p>
+<div style="border: 1px solid #E2E3DC; border-radius: 16px; overflow: hidden">
+<div style="display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #E2E3DC"><span style="flex: 1">Заміна роз'єму заряджання</span><b>1 950 ₴</b></div>
+<div style="display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #E2E3DC; color: #3A3D3A"><span style="flex: 1">Роз'єм iPhone 13 Pro · є на складі</span><span>входить</span></div>
+<button type="button" style="width: 100%; height: 46px; border: 0; background: #F7F7F2; color: #4D5C00; font: inherit; font-weight: 700; text-align: left; padding: 0 14px">+ Додати з прайсу</button>
+</div>
+<p style="margin: 12px 0 0; display: flex; justify-content: space-between; font-weight: 700"><span>Разом для клієнта</span><span style="font-family: Unbounded, sans-serif; font-size: 20px">1 950 ₴</span></p></div>
+</div>
+</sc-if>
+
+<sc-if value="{{s3}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px 28px; align-items: start">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div style="padding: 14px 16px; border-radius: 16px; background: #F7F7F2"><p style="margin: 0; color: #5E615E; font-size: 13px">Ціна</p><p style="margin: 0; font-family: Unbounded, sans-serif; font-size: 22px">1 950 ₴</p></div>
+<div style="padding: 14px 16px; border-radius: 16px; background: #F7F7F2"><p style="margin: 0; color: #5E615E; font-size: 13px">Готово до</p><p style="margin: 0; font-family: Unbounded, sans-serif; font-size: 22px">18.11</p></div>
+<div style="padding: 14px 16px; border-radius: 16px; background: #F7F7F2"><p style="margin: 0; color: #5E615E; font-size: 13px">Гарантія</p><p style="margin: 0; font-family: Unbounded, sans-serif; font-size: 22px">4 міс.</p></div>
+</div>
+<div><p style="margin: 0 0 8px; font-weight: 700">Повідомлення у Viber</p>
+<div style="padding: 14px 16px; border-radius: 16px 16px 16px 4px; background: rgba(159, 183, 31, 0.12); color: #111311">Олено, ваш iPhone 13 Pro: заміна роз'єму — 1 950 ₴, буде готово 18.11. Підтвердіть, будь ласка, відповіддю «Так».</div>
+<p style="margin: 8px 0 0; display: flex; gap: 12px; flex-wrap: wrap; color: #5E615E; font-size: 13px"><span>Надіслано 15:10 · переглянуто 15:12</span><button type="button" style="border: 0; background: none; padding: 0; color: #4D5C00; font: inherit; font-weight: 700">Надіслати ще раз</button></p></div>
+</div>
+</sc-if>
+
+<sc-if value="{{s4}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px 28px; align-items: start">
+<div><p style="margin: 0 0 8px; font-weight: 700">Деталі</p>
+<div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 14px; border: 1px solid #E2E3DC; border-radius: 16px"><span>Роз'єм iPhone 13 Pro</span><span style="color: #4D5C00; font-weight: 700">списано зі складу</span></div>
+<p style="margin: 10px 0 0; color: #5E615E">Деталі немає? Натисніть «Пауза» — заявка позначиться на дошці.</p></div>
+<div><label for="r1" style="display: block; margin: 0 0 8px; font-weight: 700">Нотатка для своїх <span style="font-weight: 500; color: #5E615E">· клієнт не бачить</span></label>
+<input id="r1" type="text" value="Роз'єм замінено, проклейка нова" style="width: 100%; height: 48px; padding: 0 14px; box-sizing: border-box; border: 1px solid #CFD1C9; border-radius: 14px; background: #F7F7F2; font: inherit"></div>
+</div>
+</sc-if>
+
+<sc-if value="{{s5}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px 28px">
+<div><p style="margin: 0 0 8px; font-weight: 700">Перевірка перед видачею</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px"><sc-for list="{{checks}}" as="c" hint-placeholder-count="6"><button type="button" onClick="{{c.toggle}}" style="{{c.style}}">{{c.label}}</button></sc-for></div></div>
+<div><p style="margin: 0 0 8px; font-weight: 700">Оплата · <span style="font-family: Unbounded, sans-serif; font-weight: 500">1 950 ₴</span></p>
+<div style="display: flex; gap: 6px; margin-bottom: 16px"><sc-for list="{{pays}}" as="c" hint-placeholder-count="3"><button type="button" onClick="{{c.toggle}}" style="{{c.style}}">{{c.label}}</button></sc-for></div>
+<p style="margin: 0 0 8px; font-weight: 700">Підпис при видачі <span style="font-weight: 500; color: #5E615E">· обов'язково</span></p>
+<button type="button" onClick="{{signOut}}" style="{{sigOut}}">{{sigOutText}}</button></div>
+</div>
+</sc-if>
+</section>
+</div>
+
+<div style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 24px; background: #FFFFFF; border-top: 1px solid #E2E3DC">
+<sc-if value="{{notFirst}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{back}}" style="height: 48px; padding: 0 18px; border: 1px solid #CFD1C9; border-radius: 14px; background: #FFFFFF; color: #111311; font: inherit; font-weight: 600">‹ Назад</button>
+</sc-if>
+<button type="button" onClick="{{togglePause}}" style="height: 48px; padding: 0 14px; border: 0; border-radius: 14px; background: transparent; color: #5E615E; font: inherit; font-weight: 600">Пауза</button>
+<button type="button" onClick="{{toggleRefuse}}" style="height: 48px; padding: 0 14px; border: 0; border-radius: 14px; background: transparent; color: #5E615E; font: inherit; font-weight: 600">Відмова</button>
+<sc-if value="{{hasError}}" hint-placeholder-val="{{false}}"><span role="alert" style="margin-left: auto; color: #9A2A16; font-weight: 700">{{error}}</span></sc-if>
+<sc-if value="{{noError}}" hint-placeholder-val="{{true}}"><span style="margin-left: auto; font-size: 13px; color: #5E615E">{{notify}}</span></sc-if>
+<button type="button" onClick="{{next}}" style="height: 48px; padding: 0 22px; border: 1px solid #8BA21C; border-radius: 14px; background: #ADC739; color: #111311; font: inherit; font-weight: 700">{{nextLabel}} →</button>
+</div>
+</div>
+
+<aside aria-label="Картка заявки" style="flex: none; width: 340px; overflow-y: auto; background: #FFFFFF; border-left: 1px solid #E2E3DC; font-size: 14px">
+<div style="padding: 18px 20px; border-bottom: 1px solid #E2E3DC">
+<p style="margin: 0 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5E615E">Клієнт</p>
+<p style="margin: 0; font-weight: 700; font-size: 16px">Олена Коваль</p>
+<p style="margin: 0; color: #3A3D3A">+380 67 123 45 12 · Новий Розділ</p>
+<p style="margin: 2px 0 0; color: #5E615E">3-тя заявка · постійна клієнтка</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px">
+<button type="button" style="height: 44px; border: 1px solid #8BA21C; border-radius: 12px; background: rgba(159, 183, 31, 0.08); color: #4D5C00; font: inherit; font-weight: 700">Подзвонити</button>
+<button type="button" style="height: 44px; border: 1px solid #CFD1C9; border-radius: 12px; background: #FFFFFF; color: #111311; font: inherit; font-weight: 700">Viber</button>
+</div>
+</div>
+<div style="padding: 18px 20px; border-bottom: 1px solid #E2E3DC">
+<p style="margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5E615E">Пристрій</p>
+<dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px">
+<dt style="color: #5E615E">Модель</dt><dd style="margin: 0; font-weight: 600">iPhone 13 Pro · 256 ГБ</dd>
+<dt style="color: #5E615E">IMEI</dt><dd style="margin: 0; font-weight: 600">35 291611 482019 7</dd>
+<dt style="color: #5E615E">Стан</dt><dd style="margin: 0">подряпини на рамці</dd>
+<dt style="color: #5E615E">Комплект</dt><dd style="margin: 0">чохол</dd>
+</dl>
+</div>
+<div style="padding: 18px 20px; border-bottom: 1px solid #E2E3DC">
+<p style="margin: 0 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5E615E">Гроші</p>
+<div style="display: flex; justify-content: space-between"><span style="color: #3A3D3A">Робота і деталь</span><span>1 950 ₴</span></div>
+<div style="display: flex; justify-content: space-between"><span style="color: #3A3D3A">Передоплата</span><span>0 ₴</span></div>
+<div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #CFD1C9; font-weight: 700"><span>До сплати</span><span style="font-family: Unbounded, sans-serif">{{toPay}}</span></div>
+</div>
+<div style="padding: 18px 20px">
+<p style="margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #5E615E">Історія</p>
+<ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{history}}" as="h" hint-placeholder-count="3">
+<li style="display: flex; gap: 10px"><span style="flex: none; width: 44px; color: #5E615E">{{h.t}}</span><span>{{h.text}}</span></li>
+</sc-for>
+</ol>
+</div>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = {
+step: 2, paused: false, refused: false, issued: false, error: '',
+problems: ['Не заряджається'], states: ['Подряпини', 'Чохол'],
+photos: [true, true, false], signedIn: true, signedOut: false,
+checks: ['Зарядка', 'Екран', 'Face ID'], pay: 'Картка'
+};
+}
+renderVals() {
+const st = this.state;
+const step = st.step;
+const items = [['Огляд', 'Today.dc.html', ''], ['Заявки', 'Board.dc.html', '10'], ['Онлайн', 'Online.dc.html', '11'], ['Архів', '#', ''], ['Склад', '#', ''], ['Клієнти', '#', ''], ['Відгуки', '#', ''], ['Роботи', '#', ''], ['Каса', '#', ''], ['Статистика', '#', '']];
+const nav = items.map(([label, href, count], i) => ({
+label, href, count, hasCount: !!count,
+style: 'display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 13px; text-decoration: none; ' + (i === 1 ? 'background: rgba(159, 183, 31, 0.12); color: #4D5C00; font-weight: 600' : 'color: #3A3D3A')
+}));
+const names = ['Прийом', 'Діагностика', 'Погодження', 'У роботі', 'Видача'];
+const times = ['17.11 · 15:02', '17.11 · 15:08', 'чекаємо «Так»', 'до 18.11', ''];
+const titles = ['Прийом телефона', 'Діагностика', 'Погодження ціни', 'Ремонт', 'Перевірка і видача'];
+const nextLabels = ['Прийняти', 'Надіслати ціну', 'Клієнт погодив', 'Ремонт готовий', 'Видати клієнту'];
+const notifies = ['Клієнт отримає номер заявки у Viber', 'Клієнт отримає ціну у Viber', 'Відповідь клієнта прийде у Viber', 'Клієнт отримає «Готово» у Viber', 'Клієнт отримає гарантійний талон'];
+const steps = names.map((name, i) => {
+const done = i < step || (st.issued && i === 4);
+const cur = i === step && !done;
+return {
+name, time: done || cur ? times[i] : '',
+mark: done ? '✓' : String(i + 1),
+go: () => this.setState({ step: i, error: '' }),
+style: 'width: 100%; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 12px; border-radius: 16px; font: inherit; font-size: 14px; text-align: left; font-weight: ' + (cur ? '700' : '600') + '; cursor: pointer; ' + (cur ? 'border: 1px solid #8BA21C; background: #ADC739; color: #111311' : done ? 'border: 1px solid rgba(159, 183, 31, 0.38); background: rgba(159, 183, 31, 0.08); color: #4D5C00' : 'border: 1px solid #E2E3DC; background: #FFFFFF; color: #5E615E'),
+dot: 'width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none; ' + (cur ? 'background: #111311; color: #ADC739' : done ? 'background: #ADC739; color: #111311' : 'background: #F2F2EC; color: #3A3D3A')
+};
+});
+const on = 'border: 1px solid #8BA21C; background: rgba(159, 183, 31, 0.14); color: #4D5C00';
+const off = 'border: 1px solid #CFD1C9; background: #FFFFFF; color: #111311';
+const chipStyle = (sel) => 'height: 44px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; ' + (sel ? on : off);
+const boxStyle = (sel) => 'height: 44px; padding: 0 12px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; ' + (sel ? on : off);
+const multi = (key, labels, styler) => labels.map((label) => {
+const sel = st[key].includes(label);
+return { label: (sel && key === 'checks' ? '✓ ' : '') + label, style: styler(sel), toggle: () => this.setState({ [key]: sel ? st[key].filter((x) => x !== label) : st[key].concat(label), error: '' }) };
+});
+const problems = multi('problems', ['Не заряджається', 'Екран', 'Батарея', 'Кришка', 'Камера', 'Після води', 'Не вмикається', 'Інше'], chipStyle);
+const states = multi('states', ['Подряпини', 'Тріщина', 'Волога', 'Без пошкоджень', 'Чохол', 'Скло', 'SIM-карта'], chipStyle);
+const checkList = ['Зарядка', 'Екран', 'Face ID', 'Камери', 'Звук', 'Мережа'];
+const checks = multi('checks', checkList, boxStyle);
+const pays = ['Готівка', 'Картка', 'Переказ'].map((label) => ({ label, style: chipStyle(st.pay === label), toggle: () => this.setState({ pay: label }) }));
+const slot = (sel) => 'min-height: 96px; border-radius: 16px; font: inherit; font-weight: 600; cursor: pointer; ' + (sel ? on : 'border: 1px dashed #B9BCB2; background: #F7F7F2; color: #5E615E');
+const photoLabels = ['Спереду', 'Ззаду', 'Рамка'];
+const photos = st.photos.map((sel, i) => ({
+label: (sel ? '✓ ' : '+ ') + photoLabels[i], style: slot(sel),
+toggle: () => { const p = st.photos.slice(); p[i] = !p[i]; this.setState({ photos: p, error: '' }); }
+}));
+const sig = (sel) => 'width: 100%; ' + slot(sel);
+const next = () => {
+if (step === 0 && !st.photos.some(Boolean)) return this.setState({ error: 'Додайте хоча б одне фото' });
+if (step === 0 && !st.signedIn) return this.setState({ error: 'Потрібен підпис клієнта' });
+if (step === 4 && st.checks.length < checkList.length) return this.setState({ error: 'Перевірте все перед видачею' });
+if (step === 4 && !st.signedOut) return this.setState({ error: 'Потрібен підпис при видачі' });
+if (step === 4) return this.setState({ issued: true, error: '' });
+this.setState({ step: step + 1, error: '' });
+};
+const events = [['15:02', 'Прийняв Богдан · 2 фото, підпис'], ['15:08', 'Діагностика: роз\'єм'], ['15:10', 'Ціну 1 950 ₴ надіслано у Viber'], ['16:40', 'Клієнтка погодила'], ['18:05', 'Ремонт готовий · «Готово» у Viber']];
+const history = events.slice(0, Math.max(1, step + (st.issued ? 1 : 0))).concat(st.issued ? [['18:20', 'Видано · оплата: ' + st.pay.toLowerCase()]] : []).reverse().map(([t, text]) => ({ t, text }));
+const tag = (bg, fg) => 'padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: ' + bg + '; color: ' + fg;
+const status = st.refused ? ['Відмова', tag('rgba(196, 50, 30, 0.12)', '#9A2A16')] : st.paused ? ['Пауза', tag('rgba(214, 158, 28, 0.16)', '#6E4E00')] : st.issued ? ['Видано', tag('#ADC739', '#111311')] : [names[step], tag('rgba(214, 158, 28, 0.16)', '#6E4E00')];
+return {
+nav, steps, problems, states, checks, pays, photos, history,
+statusText: status[0], statusStyle: status[1],
+title: titles[step], nextLabel: nextLabels[step], notify: notifies[step],
+s1: step === 0, s2: step === 1, s3: step === 2, s4: step === 3, s5: step === 4,
+notFirst: step > 0,
+sigIn: sig(st.signedIn), sigInText: st.signedIn ? '✓ Підписано' : 'Торкніться для підпису',
+sigOut: sig(st.signedOut), sigOutText: st.signedOut ? '✓ Підписано' : 'Торкніться для підпису',
+signIn: () => this.setState({ signedIn: !st.signedIn, error: '' }),
+signOut: () => this.setState({ signedOut: !st.signedOut, error: '' }),
+paused: st.paused, refused: st.refused, issued: st.issued,
+toPay: st.issued ? '0 ₴' : '1 950 ₴',
+togglePause: () => this.setState({ paused: !st.paused, refused: false }),
+toggleRefuse: () => this.setState({ refused: !st.refused, paused: false }),
+hasError: !!st.error, noError: !st.error, error: st.error,
+back: () => this.setState({ step: Math.max(0, step - 1), error: '', issued: false }),
+next
+};
+}
+}
+</script>
+</body>
+</html>

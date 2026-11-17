@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Адмінка GadgetFix — заявки</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Unbounded:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#4D5C00}a:hover{color:#2F3900}
+</style>
+</helmet>
+<div style="height: 100vh; min-height: 720px; display: flex; background: #F2F2EC; color: #111311; font-family: Manrope, system-ui, sans-serif; font-size: 14px; line-height: 1.45; overflow: hidden">
+
+<aside style="flex: none; width: 224px; display: flex; flex-direction: column; gap: 18px; padding: 18px 14px; background: #FFFFFF; border-right: 1px solid #E2E3DC; box-sizing: border-box; overflow-y: auto">
+<a href="Today.dc.html" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 10px; border-radius: 10px; background: #111311; color: #FFFFFF; font-family: Unbounded, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ADC739" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M19 7a8 8 0 1 0 1 6h-7"></path></svg>Gadget<span style="color: #ADC739">Fix</span></a>
+<a href="Order.dc.html" style="display: flex; align-items: center; justify-content: center; height: 44px; border: 1px solid #8BA21C; border-radius: 14px; background: #ADC739; color: #111311; font-weight: 700; text-decoration: none">+ Нова заявка</a>
+<nav aria-label="Розділи" style="display: flex; flex-direction: column; gap: 2px">
+<p style="margin: 0 0 6px 12px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #5E615E">Розділи</p>
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="9">
+<a href="{{n.href}}" style="{{n.style}}"><span style="flex: 1">{{n.label}}</span><sc-if value="{{n.hasCount}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 700">{{n.count}}</span></sc-if></a>
+</sc-for>
+</nav>
+<div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 16px; background: #F7F7F2">
+<span style="width: 30px; height: 30px; flex: none; border-radius: 50%; background: #ADC739; display: inline-flex; align-items: center; justify-content: center; font-weight: 700">Б</span>
+<span style="flex: 1; font-weight: 700">Богдан</span>
+<button type="button" style="height: 36px; padding: 0 12px; border: 1px solid #CFD1C9; border-radius: 999px; background: #FFFFFF; font: inherit; font-weight: 600; color: #111311">Вийти</button>
+</div>
+</aside>
+
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<header style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px 24px 14px; border-bottom: 1px solid #E2E3DC">
+<h1 style="margin: 0; font-family: Unbounded, sans-serif; font-size: 28px; font-weight: 600; letter-spacing: -1px; line-height: 1.1">Заявки</h1>
+<span style="color: #3A3D3A">{{summary}}</span>
+<span style="margin-left: auto; display: inline-flex; padding: 3px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E2E3DC">
+<button type="button" onClick="{{toBoard}}" style="{{boardTab}}">Дошка</button>
+<button type="button" onClick="{{toList}}" style="{{listTab}}">Список</button>
+</span>
+<a href="Search.dc.html" style="display: flex; align-items: center; gap: 10px; width: 260px; height: 40px; padding: 0 14px; box-sizing: border-box; border: 1px solid #CFD1C9; border-radius: 999px; background: #FFFFFF; color: #5E615E; text-decoration: none">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+<span style="flex: 1">Пошук усюди</span><kbd style="font-family: inherit; font-size: 12px">Ctrl K</kbd></a>
+</header>
+
+<div style="flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 24px">
+<label for="flt" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Фільтр заявок</label>
+<input id="flt" type="text" placeholder="Фільтр: №, модель, клієнт" onInput="{{onQ}}" style="width: 260px; height: 44px; padding: 0 16px; box-sizing: border-box; border: 1px solid #CFD1C9; border-radius: 14px; background: #FFFFFF; font: inherit; color: #111311">
+<span style="display: inline-flex; padding: 3px; gap: 2px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E2E3DC">
+<sc-for list="{{locs}}" as="f" hint-placeholder-count="4">
+<button type="button" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</span>
+<button type="button" onClick="{{toggleMine}}" style="{{mineStyle}}">Мої</button>
+<button type="button" onClick="{{toggleLate}}" style="{{lateStyle}}">Прострочені · {{lateCount}}</button>
+</div>
+
+<sc-if value="{{isBoard}}" hint-placeholder-val="{{true}}">
+<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(5, minmax(200px, 1fr)); gap: 10px; padding: 0 24px 20px; overflow-x: auto">
+<sc-for list="{{cols}}" as="c" hint-placeholder-count="5">
+<section style="display: flex; flex-direction: column; min-height: 0; border-radius: 20px; background: rgba(17, 19, 17, 0.035)">
+<div style="flex: none; display: flex; align-items: baseline; gap: 8px; padding: 12px 14px 8px">
+<h2 style="margin: 0; font-family: Unbounded, sans-serif; font-size: 14px; font-weight: 500">{{c.title}}</h2>
+<span style="font-family: Unbounded, sans-serif; font-size: 13px; color: #5E615E">{{c.count}}</span>
+<span style="margin-left: auto; font-size: 12px; color: #5E615E">{{c.sum}}</span>
+</div>
+<div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 8px 10px">
+<sc-for list="{{c.cards}}" as="k" hint-placeholder-count="2">
+<article style="{{k.style}}">
+<a href="Order.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 14px 8px; color: #111311; text-decoration: none">
+<span style="display: flex; align-items: center; gap: 6px">
+<span style="padding: 1px 8px; border: 1px solid rgba(159, 183, 31, 0.3); border-radius: 999px; background: rgba(159, 183, 31, 0.14); color: #4D5C00; font-family: Unbounded, sans-serif; font-size: 12px">{{k.no}}</span>
+<span style="font-size: 12px; color: #5E615E">{{k.whereLabel}}</span>
+<span style="{{k.dueStyle}}">{{k.due}}</span></span>
+<span style="margin-top: 4px; font-weight: 700">{{k.device}}</span>
+<span style="color: #3A3D3A">{{k.problem}} · {{k.client}}</span>
+<sc-if value="{{k.paused}}" hint-placeholder-val="{{false}}"><span style="align-self: flex-start; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(214, 158, 28, 0.16); color: #6E4E00; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase">пауза · деталь</span></sc-if>
+</a>
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 8px 8px 14px">
+<span style="{{k.avatar}}">{{k.initial}}</span>
+<span style="flex: 1; font-weight: 700">{{k.priceText}}</span>
+<button type="button" onClick="{{k.advance}}" style="{{k.btn}}">{{k.action}}</button>
+</div>
+</article>
+</sc-for>
+<sc-if value="{{c.empty}}" hint-placeholder-val="{{false}}"><p style="margin: 8px 6px; color: #5E615E">Порожньо</p></sc-if>
+</div>
+</section>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isList}}" hint-placeholder-val="{{false}}">
+<div style="flex: 1; min-height: 0; overflow: auto; margin: 0 24px 20px; background: #FFFFFF; border: 1px solid #E2E3DC; border-radius: 20px">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px">
+<thead><tr style="text-align: left; color: #5E615E; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em">
+<th style="padding: 12px 16px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF">№</th>
+<th style="padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF">Пристрій</th>
+<th style="padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF">Клієнт</th>
+<th style="padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF">Точка</th>
+<th style="padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF">Майстер</th>
+<th style="padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF">Етап</th>
+<th style="padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF">Термін</th>
+<th style="padding: 12px 8px; font-weight: 600; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF; text-align: right">Сума</th>
+<th style="padding: 12px 16px; border-bottom: 1px solid #E2E3DC; position: sticky; top: 0; background: #FFFFFF"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Дія</span></th>
+</tr></thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+<tr style="{{r.rowStyle}}">
+<td style="padding: 8px 16px"><a href="Order.dc.html" style="padding: 1px 8px; border: 1px solid rgba(159, 183, 31, 0.3); border-radius: 999px; background: rgba(159, 183, 31, 0.14); color: #4D5C00; font-family: Unbounded, sans-serif; font-size: 12px; text-decoration: none">{{r.no}}</a></td>
+<td style="padding: 8px"><a href="Order.dc.html" style="color: #111311; text-decoration: none"><b>{{r.device}}</b> <span style="color: #3A3D3A">· {{r.problem}}</span></a></td>
+<td style="padding: 8px">{{r.client}}</td>
+<td style="padding: 8px; color: #3A3D3A">{{r.whereLabel}}</td>
+<td style="padding: 8px; color: #3A3D3A">{{r.whoText}}</td>
+<td style="padding: 8px"><span style="{{r.stageStyle}}">{{r.stageName}}</span></td>
+<td style="padding: 8px"><span style="{{r.dueStyle}}">{{r.due}}</span></td>
+<td style="padding: 8px; text-align: right; font-weight: 700">{{r.priceText}}</td>
+<td style="padding: 8px 16px; text-align: right"><button type="button" onClick="{{r.advance}}" style="{{r.btn}}">{{r.action}}</button></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+const O = (no, client, device, problem, price, due, late, where, who, stage, paused) => ({ no, client, device, problem, price, due, late, where, who, stage, paused: !!paused });
+this.state = {
+loc: 'all', mine: false, lateOnly: false, q: '', view: 'board',
+orders: [
+O('№1093', 'Олег В.', 'iPhone 15', 'не вмикається', 0, 'з сайту', false, 'lviv', '', 0),
+O('№1095', 'Віка Л.', 'iPhone 11', 'скло камери', 0, 'НП завтра', false, 'mail', '', 0),
+O('№1088', 'Ірина С.', 'Samsung A36', 'дисплей', 0, '−3 год', true, 'nr', 'Андріан', 1),
+O('№1092', 'Олена К.', 'iPhone 13 Pro', 'роз\'єм', 1950, 'до 18.11', false, 'nr', 'Богдан', 2),
+O('№1090', 'Наталя Р.', 'iPhone 12 mini', 'екран', 2900, 'до 19.11', false, 'mail', 'Андріан', 2),
+O('№1086', 'Андрій М.', 'iPhone 12', 'екран', 2100, '−1 день', true, 'lviv', 'Богдан', 3),
+O('№1089', 'Тарас Д.', 'iPhone 14 Pro', 'кришка', 2800, 'до 20.11', false, 'mail', 'Андріан', 3, true),
+O('№1084', 'Юлія Г.', 'iPhone 11', 'батарея', 1750, 'сьогодні', false, 'lviv', 'Богдан', 3),
+O('№1091', 'Максим Хомин', 'iPhone 7', 'батарея', 900, 'видати', false, 'lviv', 'Андріан', 4),
+O('№1087', 'Марта П.', 'Redmi 13C', 'АКБ', 900, 'видати', false, 'nr', 'Богдан', 4)
+]
+};
+}
+renderVals() {
+const st = this.state;
+const money = (n) => n ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₴' : '—';
+const active = st.orders.filter((o) => o.stage < 5);
+const items = [['Огляд', 'Today.dc.html', ''], ['Заявки', 'Board.dc.html', String(active.length)], ['Онлайн', 'Online.dc.html', '11'], ['Архів', '#', ''], ['Склад', '#', ''], ['Клієнти', '#', ''], ['Відгуки', '#', ''], ['Роботи', '#', ''], ['Каса', '#', ''], ['Статистика', '#', '']];
+const nav = items.map(([label, href, count], i) => ({
+label, href, count, hasCount: !!count,
+style: 'display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 13px; text-decoration: none; ' + (i === 1 ? 'background: rgba(159, 183, 31, 0.12); color: #4D5C00; font-weight: 600' : 'color: #3A3D3A')
+}));
+const stages = ['Нові', 'Діагностика', 'Погодження', 'У роботі', 'Готово'];
+const actions = ['Взяти собі', 'Ціну →', 'Погодив', 'Готово', 'Видано'];
+const whereLabels = { lviv: 'Львів', nr: 'Н. Розділ', mail: 'Нова Пошта' };
+const q = st.q.trim().toLowerCase();
+const shown = active.filter((o) =>
+(st.loc === 'all' || o.where === st.loc) &&
+(!st.mine || o.who === 'Богдан') &&
+(!st.lateOnly || o.late) &&
+(!q || (o.no + ' ' + o.client + ' ' + o.device + ' ' + o.problem).toLowerCase().includes(q)));
+const advance = (no) => () => this.setState({
+orders: st.orders.map((o) => o.no !== no ? o : { ...o, stage: o.stage + 1, who: o.who || 'Богдан', paused: false })
+});
+const tone = ['#CFD1C9', '#D69E1C', '#D69E1C', '#D69E1C', '#9FB71F'];
+const decorate = (o) => ({
+...o,
+whereLabel: whereLabels[o.where],
+priceText: money(o.price),
+whoText: o.who || 'не взято',
+initial: o.who ? o.who[0] : '?',
+stageName: stages[o.stage],
+action: actions[o.stage],
+advance: advance(o.no),
+avatar: 'width: 26px; height: 26px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; ' + (o.who === 'Богдан' ? 'background: #ADC739; color: #111311' : o.who ? 'background: #111311; color: #ADC739' : 'background: #F2F2EC; color: #5E615E; border: 1px dashed #B9BCB2; box-sizing: border-box'),
+btn: 'height: 40px; padding: 0 12px; border-radius: 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; ' + (o.stage === 4 ? 'border: 1px solid #8BA21C; background: #ADC739; color: #111311' : 'border: 1px solid #8BA21C; background: rgba(159, 183, 31, 0.08); color: #4D5C00'),
+dueStyle: 'margin-left: auto; font-size: 12px; font-weight: 700; color: ' + (o.late ? '#9A2A16' : '#5E615E'),
+style: 'display: flex; flex-direction: column; border-radius: 16px; background: ' + (o.late ? '#FFF7F5' : '#FFFFFF') + '; border: 1px solid ' + (o.late ? 'rgba(196, 50, 30, 0.45)' : '#E2E3DC') + '; border-left: 4px solid ' + (o.late ? '#C4321E' : tone[o.stage]),
+stageStyle: 'padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; ' + (o.stage === 4 ? 'background: #ADC739; color: #111311' : o.stage === 0 ? 'background: rgba(17, 19, 17, 0.06); color: #3A3D3A' : 'background: rgba(214, 158, 28, 0.16); color: #6E4E00'),
+rowStyle: 'border-bottom: 1px solid #E2E3DC; ' + (o.late ? 'background: #FFF7F5' : '')
+});
+const cols = stages.map((title, i) => {
+const cards = shown.filter((o) => o.stage === i).map(decorate);
+const sum = cards.reduce((s, o) => s + o.price, 0);
+return { title, count: cards.length, sum: sum ? money(sum) : '', cards, empty: cards.length === 0 };
+});
+const rows = shown.slice().sort((a, b) => (b.late - a.late) || (b.stage - a.stage)).map(decorate);
+const segOn = 'border: 0; background: rgba(159, 183, 31, 0.14); color: #4D5C00';
+const segOff = 'border: 0; background: transparent; color: #3A3D3A';
+const opts = [['all', 'Усі'], ['lviv', 'Львів'], ['nr', 'Новий Розділ'], ['mail', 'Нова Пошта']];
+const locs = opts.map(([id, label]) => ({
+label,
+pick: () => this.setState({ loc: id }),
+style: 'height: 36px; padding: 0 14px; border-radius: 11px; font: inherit; font-weight: 600; cursor: pointer; ' + (st.loc === id ? segOn : segOff)
+}));
+const chip = (on, red) => 'height: 44px; padding: 0 16px; border-radius: 14px; font: inherit; font-weight: 600; cursor: pointer; ' + (on ? (red ? 'border: 1px solid #C4321E; background: rgba(196, 50, 30, 0.08); color: #9A2A16' : 'border: 1px solid #8BA21C; background: rgba(159, 183, 31, 0.14); color: #4D5C00') : 'border: 1px solid #CFD1C9; background: #FFFFFF; color: #111311');
+const tab = (on) => 'height: 34px; padding: 0 16px; border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer; ' + (on ? segOn : segOff);
+const lateCount = active.filter((o) => o.late).length;
+return {
+nav, cols, rows, locs, lateCount,
+summary: active.length + ' активних · ' + active.filter((o) => o.stage === 4).length + ' готові до видачі',
+isBoard: st.view === 'board', isList: st.view === 'list',
+toBoard: () => this.setState({ view: 'board' }), toList: () => this.setState({ view: 'list' }),
+boardTab: tab(st.view === 'board'), listTab: tab(st.view === 'list'),
+onQ: (e) => this.setState({ q: e && e.target ? e.target.value : '' }),
+toggleMine: () => this.setState({ mine: !st.mine }), mineStyle: chip(st.mine),
+toggleLate: () => this.setState({ lateOnly: !st.lateOnly }), lateStyle: chip(st.lateOnly, true)
+};
+}
+}
+</script>
+</body>
+</html>
