@@ -2,7 +2,6 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { site } from "@/data/site";
-import { verifyTotp } from "./totp";
 
 const COOKIE = "gadgetfix_admin";
 const MAX_AGE = 60 * 60 * 12; // 12 годин
@@ -25,41 +24,28 @@ function sign(payload: string): string {
   return createHmac("sha256", requireEnv("ADMIN_SESSION_SECRET")).update(payload).digest("hex");
 }
 
-type Account = { email: string; password: string; name: string; totp: string | null };
+type Account = { email: string; name: string };
 
 /**
- * Доступ мають лише перелічені майстри. Кожен зі своєю парою:
- * ADMIN_EMAIL / ADMIN_PASSWORD — перший, ADMIN_EMAIL_2 / ADMIN_PASSWORD_2 — другий.
- * Другий необовʼязковий: якщо змінних немає, працює один акаунт.
+ * Доступ мають лише перелічені пошти: ADMIN_EMAIL — перший, ADMIN_EMAIL_2 — другий.
+ * Входять кодом, який Clerk надсилає на цю пошту (див. enterAdmin в actions.ts).
+ * Другий необовʼязковий: якщо змінної немає, працює один акаунт.
  *
  * ADMIN_NAME / ADMIN_NAME_2 — імена для адмінки. Перший акаунт — власник
  * (див. AdminRole), решта — майстри.
  */
 function accounts(): Account[] {
   const list = [
-    {
-      email: process.env.ADMIN_EMAIL,
-      password: process.env.ADMIN_PASSWORD,
-      name: process.env.ADMIN_NAME,
-      totp: process.env.ADMIN_TOTP_SECRET,
-    },
-    {
-      email: process.env.ADMIN_EMAIL_2,
-      password: process.env.ADMIN_PASSWORD_2,
-      name: process.env.ADMIN_NAME_2,
-      totp: process.env.ADMIN_TOTP_SECRET_2,
-    },
+    { email: process.env.ADMIN_EMAIL?.trim(), name: process.env.ADMIN_NAME },
+    { email: process.env.ADMIN_EMAIL_2?.trim(), name: process.env.ADMIN_NAME_2 },
   ];
 
   return list
-    .filter((a): a is typeof a & { email: string; password: string } => Boolean(a.email && a.password))
+    .filter((a): a is typeof a & { email: string } => Boolean(a.email))
     .map((a) => ({
-      email: a.email.trim().toLowerCase(),
-      password: a.password,
+      email: a.email.toLowerCase(),
       // Без ADMIN_NAME беремо частину пошти до «@» — краще за порожнє місце
       name: a.name?.trim() || a.email.split("@")[0],
-      // Секрет одноразових кодів (scripts/totp-setup.mts). Є — без коду не впустимо
-      totp: a.totp?.trim() || null,
     }));
 }
 
@@ -95,30 +81,28 @@ export async function currentTeam(): Promise<{
   };
 }
 
-/** Індекс майстра зі списку, якщо пара email+пароль зійшлася, інакше null */
-export function checkCredentials(email: string, password: string): number | null {
-  const list = accounts();
-  if (list.length === 0) throw new Error("ADMIN_EMAIL / ADMIN_PASSWORD не задано — адмінка вимкнена");
-
+/** Чи є така пошта серед майстрів — щоб завести її в Clerk перед першим входом */
+export function isAdminEmail(email: string): boolean {
   const given = email.trim().toLowerCase();
-
-  // Перебираємо всі акаунти до кінця — час відповіді не має видавати, який саме не зійшовся
-  let matched: number | null = null;
-  list.forEach((a, i) => {
-    const ok = safeEqual(given, a.email) && safeEqual(password, a.password);
-    if (ok) matched = i;
-  });
-
-  return matched;
+  return accounts().some((a) => a.email === given);
 }
 
 /**
- * Відбиток акаунта в сесії: пошта й пароль майстра під нашим підписом (сам пароль у
- * cookie не потрапляє). Змінили пароль чи прибрали акаунт — старі сесії одразу недійсні.
+ * Індекс майстра за підтвердженими поштами користувача Clerk, інакше null.
+ * Порядок accounts() важливий: перший — власник.
+ */
+export function adminIndexByEmails(emails: string[]): number | null {
+  const given = new Set(emails.map((e) => e.trim().toLowerCase()));
+  const i = accounts().findIndex((a) => given.has(a.email));
+  return i === -1 ? null : i;
+}
+
+/**
+ * Відбиток акаунта в сесії: пошта майстра під нашим підписом. Змінили пошту чи
+ * прибрали акаунт — старі сесії одразу недійсні.
  */
 function fingerprint(a: Account): string {
-  // Секрет кодів теж у відбитку: перевипустили його — старі сесії недійсні
-  return sign(`account:${a.email}:${a.password}:${a.totp ?? ""}`).slice(0, 24);
+  return sign(`account:${a.email}`).slice(0, 24);
 }
 
 export async function createSession(index: number): Promise<void> {
@@ -153,7 +137,7 @@ async function session(): Promise<number | null> {
 
   try {
     if (!safeEqual(signature, sign(`${expires}.${index}.${print}`))) return null;
-    // Акаунт досі є й пароль той самий, з яким входили
+    // Акаунт досі є й пошта та сама, з якою входили
     const account = accounts()[Number(index)];
     if (!account || !safeEqual(print, fingerprint(account))) return null;
   } catch {
@@ -187,67 +171,4 @@ export async function currentAdmin(): Promise<{ name: string; email: string; rol
 /** true лише для власника — для видалення та грошових звітів */
 export async function isOwner(): Promise<boolean> {
   return (await session()) === 0;
-}
-
-// ── Другий крок входу: одноразовий код ─────────────────────────────
-
-const PENDING = "gadgetfix_admin_2fa";
-/** Пароль правильний — на код дається 5 хвилин */
-const PENDING_AGE = 5 * 60;
-
-/** Чи треба цьому акаунту одноразовий код (задано ADMIN_TOTP_SECRET / _2) */
-export function needsCode(index: number): boolean {
-  return Boolean(accounts()[index]?.totp);
-}
-
-/**
- * Пароль зійшовся, чекаємо код. Окрема коротка cookie з тим самим підписом:
- * без неї сторінка коду нічого не дає, а сама по собі вона в адмінку не пускає.
- */
-export async function createPending(index: number): Promise<void> {
-  const account = accounts()[index];
-  if (!account) throw new Error("Немає такого акаунта майстра");
-  const expires = Date.now() + PENDING_AGE * 1000;
-  const payload = `2fa.${expires}.${index}.${fingerprint(account)}`;
-  (await cookies()).set(PENDING, `${payload}.${sign(payload)}`, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/admin",
-    maxAge: PENDING_AGE,
-  });
-}
-
-/** Індекс майстра, який уже ввів правильний пароль і чекає на код; інакше null */
-export async function pendingIndex(): Promise<number | null> {
-  const raw = (await cookies()).get(PENDING)?.value;
-  if (!raw) return null;
-  const parts = raw.split(".");
-  if (parts.length !== 5 || parts[0] !== "2fa") return null;
-  const [, expires, index, print, signature] = parts;
-  if (Number(expires) < Date.now()) return null;
-  try {
-    if (!safeEqual(signature, sign(`2fa.${expires}.${index}.${print}`))) return null;
-    const account = accounts()[Number(index)];
-    if (!account || !safeEqual(print, fingerprint(account))) return null;
-  } catch {
-    return null;
-  }
-  return Number(index);
-}
-
-export async function clearPending(): Promise<void> {
-  (await cookies()).delete({ name: PENDING, path: "/admin" });
-}
-
-/** Номер 30-секундного проміжку, якщо код правильний, інакше null */
-export function checkCode(index: number, code: string): number | null {
-  const secret = accounts()[index]?.totp;
-  if (!secret) return null;
-  try {
-    return verifyTotp(secret, code);
-  } catch {
-    // Секрет у змінній зіпсований — краще не впустити, ніж упустити перевірку
-    return null;
-  }
 }

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { lowContrastTexts } from "./helpers/contrast";
-import { OWNER, signInAdmin } from "./helpers/adminLogin";
+import { canSignIn, OWNER, signInAdmin } from "./helpers/adminLogin";
 
 /**
  * Світла й темна тема: перемикач працює й запамʼятовує вибір, тема стоїть
@@ -62,7 +62,7 @@ for (const theme of ["dark", "light"] as const) {
 }
 
 test("контраст у світлій темі — адмінка", async ({ page }) => {
-  test.skip(!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD, "немає облікових даних майстра");
+  test.skip(!canSignIn(OWNER), "немає тестової пошти майстра (+clerk_test)");
   test.setTimeout(120_000);
   await page.addInitScript(() => localStorage.setItem("gf-theme", "light"));
   await signInAdmin(page, OWNER);

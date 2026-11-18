@@ -13,13 +13,12 @@ const m = vi.hoisted(() => ({
   admin: true,
   owner: true,
   limits: {} as Record<string, { ok: true } | { ok: false; retryAfter: number }>,
-  released: [] as string[],
-  credentials: null as number | null | "throw",
   sessions: [] as number[],
-  needsCode: false,
-  pending: null as number | null,
-  code: null as number | null,
-  pendings: [] as number[],
+  sessionFails: false,
+  adminEmails: [] as string[],
+  clerkUser: null as null | { emailAddresses: { emailAddress: string; verification: { status: string } | null }[] },
+  clerkExisting: [] as string[],
+  clerkCreated: [] as string[],
   uploaded: [] as string[],
   deleted: [] as string[],
   delFails: false,
@@ -73,30 +72,36 @@ vi.mock("@vercel/blob", () => ({
 
 vi.mock("@/lib/rateLimit", () => ({
   rateLimit: async (subject: string) => m.limits[subject] ?? { ok: true },
-  release: async (subject: string) => {
-    m.released.push(subject);
-  },
 }));
 
 vi.mock("@/lib/admin", () => ({
   isAdmin: async () => m.admin,
   isOwner: async () => m.admin && m.owner,
   currentAdmin: async () => (m.admin ? { name: "Богдан", email: "b@gadgetfix.ua" } : null),
-  checkCredentials: () => {
-    if (m.credentials === "throw") throw new Error("no env");
-    return m.credentials;
+  isAdminEmail: (e: string) => m.adminEmails.includes(e),
+  adminIndexByEmails: (emails: string[]) => {
+    const i = m.adminEmails.findIndex((a) => emails.includes(a));
+    return i === -1 ? null : i;
   },
   createSession: async (i: number) => {
+    if (m.sessionFails) throw new Error("no secret");
     m.sessions.push(i);
   },
   destroySession: async () => {},
-  needsCode: () => m.needsCode,
-  createPending: async (i: number) => {
-    m.pendings.push(i);
-  },
-  pendingIndex: async () => m.pending,
-  clearPending: async () => {},
-  checkCode: () => m.code,
+}));
+
+vi.mock("@clerk/nextjs/server", () => ({
+  currentUser: async () => m.clerkUser,
+  clerkClient: async () => ({
+    users: {
+      getUserList: async ({ emailAddress }: { emailAddress: string[] }) => ({
+        totalCount: m.clerkExisting.filter((e) => emailAddress.includes(e)).length,
+      }),
+      createUser: async ({ emailAddress }: { emailAddress: string[] }) => {
+        m.clerkCreated.push(...emailAddress);
+      },
+    },
+  }),
 }));
 
 import * as actions from "@/app/admin/actions";
@@ -133,13 +138,12 @@ beforeEach(() => {
   m.admin = true;
   m.owner = true;
   m.limits = {};
-  m.released = [];
-  m.credentials = null;
   m.sessions = [];
-  m.needsCode = false;
-  m.pending = null;
-  m.code = null;
-  m.pendings = [];
+  m.sessionFails = false;
+  m.adminEmails = ["b@gadgetfix.ua", "a@gadgetfix.ua"];
+  m.clerkUser = null;
+  m.clerkExisting = [];
+  m.clerkCreated = [];
   m.uploaded = [];
   m.deleted = [];
   m.delFails = false;
@@ -151,8 +155,8 @@ beforeEach(() => {
 });
 
 describe("без входу майстра жодна дія не змінює базу", () => {
-  // signIn і verifyCode — це сам вхід, вони за визначенням для тих, хто ще не увійшов
-  const guarded = Object.entries(actions).filter(([name]) => !["signIn", "signOut", "verifyCode"].includes(name));
+  // prepareAdminSignIn і enterAdmin — це сам вхід, вони за визначенням для тих, хто ще не увійшов
+  const guarded = Object.entries(actions).filter(([name]) => !["prepareAdminSignIn", "signOut", "enterAdmin"].includes(name));
 
   it("перевірені всі дії адмінки", () => {
     // Нова дія без перевірки має потрапити сюди, а не прослизнути повз
@@ -179,58 +183,67 @@ describe("без входу майстра жодна дія не змінює �
   }
 });
 
-describe("signIn", () => {
-  const signIn = (email: string, password: string) =>
-    actions.signIn(null, form({ email, password }));
-
-  it("ліміт на пошту перевіряється до пароля", async () => {
-    m.limits["login:email:a@b.cc:9.9.9.9"] = { ok: false, retryAfter: 600 };
-    m.credentials = 0;
-    expect(await signIn(" A@B.cc ", "x")).toBe("Забагато спроб входу. Спробуйте за 10 хв.");
-    expect(m.sessions).toEqual([]);
+describe("prepareAdminSignIn", () => {
+  it("ліміт на пошту з цієї адреси — до будь-яких звернень до Clerk", async () => {
+    m.limits["login:email:b@gadgetfix.ua:9.9.9.9"] = { ok: false, retryAfter: 600 };
+    expect(await actions.prepareAdminSignIn(" B@gadgetfix.ua ")).toBe("Забагато спроб входу. Спробуйте за 10 хв.");
+    expect(m.clerkCreated).toEqual([]);
   });
 
   it("ліміт рахується за першою адресою з x-forwarded-for", async () => {
     m.limits["login:ip:9.9.9.9"] = { ok: false, retryAfter: 30 };
-    expect(await signIn("a@b.cc", "x")).toBe("Забагато спроб входу. Спробуйте за хвилину.");
+    expect(await actions.prepareAdminSignIn("b@gadgetfix.ua")).toBe("Забагато спроб входу. Спробуйте за хвилину.");
   });
 
-  it("неправильний пароль — повідомлення, без сесії й без зняття лічильника", async () => {
-    vi.useFakeTimers();
-    const pending = signIn("a@b.cc", "bad");
-    await vi.advanceTimersByTimeAsync(700);
-    expect(await pending).toBe("Пошта або пароль не підходять.");
-    vi.useRealTimers();
+  it("майстра ще немає в Clerk — заводимо", async () => {
+    expect(await actions.prepareAdminSignIn("A@gadgetfix.ua")).toBeNull();
+    expect(m.clerkCreated).toEqual(["a@gadgetfix.ua"]);
+  });
+
+  it("майстер уже є в Clerk — вдруге не заводимо", async () => {
+    m.clerkExisting = ["a@gadgetfix.ua"];
+    expect(await actions.prepareAdminSignIn("a@gadgetfix.ua")).toBeNull();
+    expect(m.clerkCreated).toEqual([]);
+  });
+
+  it("чужа пошта — не заводимо й відповідаємо так само, як майстру", async () => {
+    expect(await actions.prepareAdminSignIn("chuzhyj@example.com")).toBeNull();
+    expect(m.clerkCreated).toEqual([]);
+  });
+});
+
+describe("enterAdmin", () => {
+  const user = (email: string, status = "verified") => ({
+    emailAddresses: [{ emailAddress: email, verification: { status } }],
+  });
+
+  it("без сесії Clerk — не пускає", async () => {
+    expect(await actions.enterAdmin()).toMatch(/не підтвердився/);
     expect(m.sessions).toEqual([]);
-    expect(m.released).toEqual([]);
   });
 
-  it("правильний — сесія саме цього майстра, лічильник знято, переходимо в адмінку", async () => {
-    m.credentials = 1;
-    await expect(signIn("a@b.cc", "ok")).rejects.toThrow("REDIRECT:/admin");
+  it("підтверджена пошта майстра — сесія саме цього майстра", async () => {
+    m.clerkUser = user("a@gadgetfix.ua");
+    expect(await actions.enterAdmin()).toBeNull();
     expect(m.sessions).toEqual([1]);
-    expect(m.released).toEqual(["login:email:a@b.cc:9.9.9.9"]);
   });
 
-  it("чужі спроби на пошту майстра з іншої адреси не зачиняють його самого", async () => {
-    // Хтось, знаючи пошту, вичерпав спроби зі свого компʼютера
-    m.limits["login:email:a@b.cc:6.6.6.6"] = { ok: false, retryAfter: 600 };
-    m.credentials = 0;
-    await expect(signIn("a@b.cc", "ok")).rejects.toThrow("REDIRECT:/admin");
-    expect(m.sessions).toEqual([0]);
+  it("пошта клієнта — не пускає", async () => {
+    m.clerkUser = user("klient@example.com");
+    expect(await actions.enterAdmin()).toBe("Ця пошта не має доступу до адмінки.");
+    expect(m.sessions).toEqual([]);
   });
 
-  it("перебір пароля з багатьох адрес упирається в загальну межу на пошту", async () => {
-    // Розподілений перебір: кожна адреса окремо в межах, але на пошту сумарно — забагато
-    m.limits["login:email:a@b.cc"] = { ok: false, retryAfter: 600 };
-    m.credentials = 0;
-    expect(await signIn("a@b.cc", "ok")).toBe("Забагато спроб входу. Спробуйте за 10 хв.");
+  it("пошта майстра, але не підтверджена — не пускає", async () => {
+    m.clerkUser = user("b@gadgetfix.ua", "unverified");
+    expect(await actions.enterAdmin()).toBe("Ця пошта не має доступу до адмінки.");
     expect(m.sessions).toEqual([]);
   });
 
   it("адмінка не налаштована — зрозуміле повідомлення, а не падіння", async () => {
-    m.credentials = "throw";
-    expect(await signIn("a@b.cc", "x")).toMatch(/Адмінка не налаштована/);
+    m.clerkUser = user("b@gadgetfix.ua");
+    m.sessionFails = true;
+    expect(await actions.enterAdmin()).toMatch(/Адмінка не налаштована/);
   });
 });
 
@@ -860,50 +873,3 @@ describe("deleteLead", () => {
   });
 });
 
-describe("вхід з одноразовим кодом", () => {
-  it("пароль правильний, але потрібен код — сесії ще немає, переходимо на крок коду", async () => {
-    m.credentials = 0;
-    m.needsCode = true;
-    await expect(actions.signIn(null, form({ email: "b@gadgetfix.ua", password: "x" }))).rejects.toThrow(
-      "REDIRECT:/admin/vhid?krok=kod",
-    );
-    expect(m.sessions).toEqual([]);
-    expect(m.pendings).toEqual([0]);
-  });
-
-  it("код без пройденого пароля — не пускає", async () => {
-    m.pending = null;
-    expect(await actions.verifyCode(null, form({ code: "123456" }))).toMatch(/увійдіть ще раз/);
-    expect(m.sessions).toEqual([]);
-  });
-
-  it("неправильний код — без сесії", async () => {
-    m.pending = 1;
-    m.code = null;
-    expect(await actions.verifyCode(null, form({ code: "000000" }))).toMatch(/не підходить/);
-    expect(m.sessions).toEqual([]);
-  });
-
-  it("правильний код — сесія саме цього майстра", async () => {
-    m.pending = 1;
-    m.code = 56_666_666;
-    await expect(actions.verifyCode(null, form({ code: "123456" }))).rejects.toThrow("REDIRECT:/admin");
-    expect(m.sessions).toEqual([1]);
-  });
-
-  it("той самий код удруге — ні (його могли підгледіти)", async () => {
-    m.pending = 1;
-    m.code = 56_666_666;
-    m.limits["login:code-used:1:56666666"] = { ok: false, retryAfter: 100 };
-    expect(await actions.verifyCode(null, form({ code: "123456" }))).toMatch(/уже використано/);
-    expect(m.sessions).toEqual([]);
-  });
-
-  it("забагато спроб коду — блок до перевірки", async () => {
-    m.pending = 1;
-    m.code = 56_666_666;
-    m.limits["login:code:1"] = { ok: false, retryAfter: 600 };
-    expect(await actions.verifyCode(null, form({ code: "123456" }))).toMatch(/Забагато/);
-    expect(m.sessions).toEqual([]);
-  });
-});

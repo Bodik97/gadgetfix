@@ -13,7 +13,7 @@ import { addEvent, getHandoverDate, getLeadById, registerDevice } from "@/db/eve
 import { releaseDiscount } from "@/db/discounts";
 import { addExpense, EXPENSE_CATEGORIES, removeExpense } from "@/db/expenses";
 import { addPart, removePart, shiftPartQty } from "@/db/parts";
-import { rateLimit, release } from "@/lib/rateLimit";
+import { rateLimit } from "@/lib/rateLimit";
 import { sendPush } from "@/lib/push";
 import { notifyClientStatus, offerPrice } from "@/lib/clientBot";
 import { closeOrder } from "@/lib/handover";
@@ -24,7 +24,8 @@ import { dropPhotos, readPair, savePhoto } from "@/lib/photoPair";
 import { LIMITS, plainText, validName } from "@/lib/validate";
 import { start } from "workflow/api";
 import { watchParcel } from "@/workflows/watch-parcel";
-import { checkCode, checkCredentials, clearPending, createPending, createSession, currentAdmin, destroySession, isAdmin, isOwner, needsCode, pendingIndex } from "@/lib/admin";
+import { clerkClient, currentUser } from "@clerk/nextjs/server";
+import { adminIndexByEmails, createSession, currentAdmin, destroySession, isAdmin, isAdminEmail, isOwner } from "@/lib/admin";
 
 /** Адреса, з якої прийшов запит — за нею теж рахуємо спроби входу */
 async function clientAddress(): Promise<string> {
@@ -36,21 +37,13 @@ async function clientAddress(): Promise<string> {
 
 /**
  * Межі входу. Спроби на пошту рахуємо окремо для кожної адреси: якби лічильник
- * був один на пошту, будь-хто, знаючи її, пʼятьма хибними паролями зачиняв би
- * майстра з його власного телефона. Загальна межа на адресу лишається —
- * вона може бути спільна у двох майстрів, тому вища.
+ * був один на пошту, будь-хто, знаючи її, зачиняв би майстра з його власного
+ * телефона. Загальна межа на адресу вища — вона може бути спільна у двох майстрів.
+ * Сам код перевіряє Clerk зі своїми межами; тут — лише надсилання листів.
  */
 const LOGIN_WINDOW = 15 * 60_000;
 const BY_EMAIL = 5;
 const BY_IP = 15;
-
-/**
- * Стеля на пошту з усіх адрес разом: без неї перебір з багатьох IP не мав межі.
- * Висока й на годину — щоб чужий не зачинив майстра кількома хибними паролями,
- * а розподілений перебір упирався в 60 спроб на годину.
- */
-const EMAIL_WINDOW = 60 * 60_000;
-const BY_EMAIL_TOTAL = 60;
 
 /** 900 → «15 хв», 90 → «2 хв»: точні секунди тут нікому не потрібні */
 function waitLabel(sec: number): string {
@@ -58,81 +51,51 @@ function waitLabel(sec: number): string {
   return min <= 1 ? "хвилину" : `${min} хв`;
 }
 
-export async function signIn(_prev: string | null, formData: FormData): Promise<string | null> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
+/**
+ * Перший крок входу, перед тим як Clerk надішле код. Майстра, якого ще немає
+ * в Clerk, заводимо тут — інакше Clerk відповів би «такої пошти немає».
+ * Чужу пошту не заводимо й не кажемо, чи вона наша: відповідь та сама.
+ */
+export async function prepareAdminSignIn(email: string): Promise<string | null> {
+  const mail = email.trim().toLowerCase();
   const ip = await clientAddress();
 
-  // Межу перевіряємо ДО пароля: інакше сама перевірка стає тим, що перебирають
-  const emailKey = `login:email:${email}:${ip}`;
-  const byEmail = await rateLimit(emailKey, BY_EMAIL, LOGIN_WINDOW);
+  const byEmail = await rateLimit(`login:email:${mail}:${ip}`, BY_EMAIL, LOGIN_WINDOW);
   if (!byEmail.ok) return `Забагато спроб входу. Спробуйте за ${waitLabel(byEmail.retryAfter)}.`;
-
   const byIp = await rateLimit(`login:ip:${ip}`, BY_IP, LOGIN_WINDOW);
   if (!byIp.ok) return `Забагато спроб входу. Спробуйте за ${waitLabel(byIp.retryAfter)}.`;
 
-  const byEmailTotal = await rateLimit(`login:email:${email}`, BY_EMAIL_TOTAL, EMAIL_WINDOW);
-  if (!byEmailTotal.ok) return `Забагато спроб входу. Спробуйте за ${waitLabel(byEmailTotal.retryAfter)}.`;
+  if (!isAdminEmail(mail)) return null;
 
-  let master: number | null = null;
-  try {
-    master = checkCredentials(email, password);
-  } catch {
-    return "Адмінка не налаштована: немає ADMIN_EMAIL, ADMIN_PASSWORD або ADMIN_SESSION_SECRET.";
+  const clerk = await clerkClient();
+  const { totalCount } = await clerk.users.getUserList({ emailAddress: [mail], limit: 1 });
+  if (totalCount === 0) {
+    await clerk.users.createUser({ emailAddress: [mail], skipPasswordRequirement: true });
   }
-
-  if (master === null) {
-    // Спробу вже списано в rateLimit — окремо записувати нічого.
-    // Затримка лишається: вона нічого не варта проти паралельних спроб,
-    // але робить послідовний перебір ще повільнішим
-    await new Promise((r) => setTimeout(r, 700));
-    return "Пошта або пароль не підходять.";
-  }
-
-  // Успіх знімає лічильник, щоб майстер не лишався заблокованим
-  // через власні помилки перед вдалим входом
-  await release(emailKey);
-
-  // Є одноразові коди — пароль лише перший крок
-  if (needsCode(master)) {
-    await createPending(master);
-    redirect("/admin/vhid?krok=kod");
-  }
-
-  await createSession(master);
-  redirect("/admin");
+  return null;
 }
 
 /**
- * Другий крок входу: 6 цифр із додатка. Спроб — 5 за 15 хвилин на акаунт;
- * той самий код вдруге не приймаємо (його могли підгледіти).
+ * Другий крок: Clerk уже перевірив код із листа й відкрив свою сесію. Беремо
+ * з неї підтверджені пошти й пускаємо, лише якщо одна з них — пошта майстра.
+ * Сесію Clerk після цього закриває браузер: в адмінці живе наша cookie.
  */
-export async function verifyCode(_prev: string | null, formData: FormData): Promise<string | null> {
-  const index = await pendingIndex();
-  if (index === null) return "Час на код минув — увійдіть ще раз з паролем.";
+export async function enterAdmin(): Promise<string | null> {
+  const user = await currentUser();
+  if (!user) return "Код не підтвердився. Спробуйте ще раз.";
 
-  const code = String(formData.get("code") ?? "").replace(/\s/g, "");
-  const ip = await clientAddress();
+  const verified = user.emailAddresses
+    .filter((e) => e.verification?.status === "verified")
+    .map((e) => e.emailAddress);
+  const index = adminIndexByEmails(verified);
+  if (index === null) return "Ця пошта не має доступу до адмінки.";
 
-  const tries = await rateLimit(`login:code:${index}`, 5, LOGIN_WINDOW);
-  if (!tries.ok) return `Забагато спроб. Спробуйте за ${waitLabel(tries.retryAfter)}.`;
-  const byIp = await rateLimit(`login:code-ip:${ip}`, BY_IP, LOGIN_WINDOW);
-  if (!byIp.ok) return `Забагато спроб. Спробуйте за ${waitLabel(byIp.retryAfter)}.`;
-
-  const counter = checkCode(index, code);
-  if (counter === null) {
-    await new Promise((r) => setTimeout(r, 500));
-    return "Код не підходить. Перевірте, що час на телефоні правильний.";
+  try {
+    await createSession(index);
+  } catch {
+    return "Адмінка не налаштована: немає ADMIN_SESSION_SECRET.";
   }
-
-  // Один код — один вхід: позначка живе дві хвилини, довше за будь-який дійсний код
-  const fresh = await rateLimit(`login:code-used:${index}:${counter}`, 1, 2 * 60_000);
-  if (!fresh.ok) return "Цей код уже використано — дочекайтесь наступного.";
-
-  await release(`login:code:${index}`);
-  await clearPending();
-  await createSession(index);
-  redirect("/admin");
+  return null;
 }
 
 export async function signOut(): Promise<void> {

@@ -143,7 +143,7 @@ Clerk (`@clerk/nextjs` v7), вхід **за кодом на пошту** — б�
 - `NEXT_PUBLIC_SITE_URL` — продакшн-домен. Впливає на `canonical`, `sitemap.xml`, `robots.txt`.
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` — необов'язкові. Без них заявка все одно приймається.
 - `DATABASE_URL` — Neon, провізовано через Marketplace.
-- `ADMIN_EMAIL`, `ADMIN_PASSWORD` — вхід у `/admin`. Порожні = адмінка закрита для всіх.
+- `ADMIN_EMAIL`, `ADMIN_EMAIL_2` — хто може увійти в `/admin` (кодом на цю пошту через Clerk). Порожні = адмінка закрита для всіх.
 - `ADMIN_SESSION_SECRET` — підпис сесійної cookie, уже згенерований і заданий у Vercel.
 
 **Увага:** `vercel env pull` перезаписує `.env.local` і виставляє порожні значення як `ADMIN_EMAIL=""`.

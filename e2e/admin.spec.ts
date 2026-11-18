@@ -1,5 +1,5 @@
 import { expect as baseExpect, test, type Page } from "@playwright/test";
-import { MASTER, OWNER, signInAdmin as signIn } from "./helpers/adminLogin";
+import { canSignIn, MASTER, OWNER, signInAdmin as signIn } from "./helpers/adminLogin";
 
 /**
  * Нова адмінка від входу до видачі — справжній браузер, справжня збірка.
@@ -22,6 +22,7 @@ const CAN_UPLOAD = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 test.describe.configure({ mode: "serial" });
 test.skip(!enabled, "Адмінку перевіряємо лише з E2E_ADMIN=1 на тестовій базі");
+test.skip(enabled && !canSignIn(OWNER), "ADMIN_EMAIL має бути тестовою поштою Clerk (+clerk_test)");
 // Сценарії довгі й пишуть у базу — один раз, на компʼютерному екрані
 test.beforeEach(({}, info) => {
   test.skip(info.project.name !== "desktop", "Лише на компʼютерному проєкті");
@@ -30,7 +31,7 @@ test.beforeEach(({}, info) => {
 
 /**
  * Одна сесія власника на весь сценарій: вхід — лише раз. Інакше кілька
- * запусків поспіль упираються в захист від підбору пароля (15 входів з IP за 15 хв).
+ * запусків поспіль упираються в межу листів з кодом (15 з IP за 15 хв).
  */
 let page: Page;
 test.beforeAll(async ({ browser }, info) => {
@@ -54,14 +55,18 @@ test("без входу адмінка не відкривається", async (
   expect(photo.status()).toBe(403);
 });
 
-test("неправильний пароль — не пускає", async ({ page }) => {
-  await page.goto("/admin/vhid");
-  await page.fill("#a-email", OWNER.email);
-  await page.fill("#a-password", "точно-не-той-пароль");
-  await page.click('button[type="submit"]');
-  // Після кількох запусків поспіль може спрацювати захист від підбору — теж «не пускає»
-  await expect(page.getByText(/Пошта або пароль не підходять|Забагато спроб/)).toBeVisible();
+test("неправильний код — не пускає", async ({ page }) => {
+  await signIn(page, OWNER, "000000");
+  await expect(page.getByText(/Код не підійшов|Не вдалося увійти|Забагато спроб/)).toBeVisible();
   await expect(page).toHaveURL(/\/admin\/vhid/);
+});
+
+test("пошта не майстра — коду не надсилаємо", async ({ page }) => {
+  await page.goto("/admin/vhid");
+  await page.fill("#a-email", "chuzhyj+clerk_test@example.com");
+  await page.click('button[type="submit"]');
+  await expect(page.getByText(/Не вдалося надіслати код|Забагато спроб/)).toBeVisible();
+  await expect(page.locator("#a-code")).toHaveCount(0);
 });
 
 test("магазин «Онлайн»: прайс → швидкий прийом → Взяти → Готово → Віддати → розрахунок", async () => {
@@ -183,7 +188,7 @@ test("свій клієнт: прийом без фото не проходит�
 });
 
 test("майстер (не власник): Каси й Статистики немає, видалити не може", async ({ page }) => {
-  test.skip(!MASTER.email, "Другого акаунта в цьому середовищі немає");
+  test.skip(!canSignIn(MASTER), "Другого тестового акаунта в цьому середовищі немає");
   await signIn(page, MASTER);
   await expect(page.getByRole("link", { name: "Каса" })).toHaveCount(0);
   await page.goto("/admin/groshi");

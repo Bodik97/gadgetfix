@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Перевірка пари пошта+пароль — те, за чим лежать телефони всіх клієнтів,
- * листування й гроші. Тут не має бути ні поблажок до регістру пошти, ні
- * проходу з порожнім паролем, ні плутанини, хто саме зайшов.
+ * Хто з підтверджених пошт — майстер: за цим лежать телефони всіх клієнтів,
+ * листування й гроші. Тут не має бути ні чужих пошт, ні порожніх, ні
+ * плутанини, хто саме зайшов.
  */
 
 // Модуль читає cookies при завантаженні — у тестах вони не потрібні
@@ -11,10 +11,8 @@ vi.mock("next/headers", () => ({ cookies: () => ({ get: () => undefined, set: ()
 
 const ENV = {
   ADMIN_EMAIL: "perayj@example.com",
-  ADMIN_PASSWORD: "parol-pershoho",
   ADMIN_NAME: "Перший",
   ADMIN_EMAIL_2: "druhyj@example.com",
-  ADMIN_PASSWORD_2: "parol-druhoho",
   ADMIN_NAME_2: "Другий",
   ADMIN_SESSION_SECRET: "sekret-dlia-testu",
 };
@@ -29,57 +27,48 @@ async function admin() {
 }
 
 describe("вхід майстра", () => {
-  it("пускає першого й другого, і розрізняє їх", async () => {
-    const { checkCredentials } = await admin();
-    expect(checkCredentials(ENV.ADMIN_EMAIL, ENV.ADMIN_PASSWORD)).toBe(0);
-    expect(checkCredentials(ENV.ADMIN_EMAIL_2, ENV.ADMIN_PASSWORD_2)).toBe(1);
+  it("кожна пошта — свій майстер, перший — власник", async () => {
+    const { adminIndexByEmails } = await admin();
+    expect(adminIndexByEmails([ENV.ADMIN_EMAIL])).toBe(0);
+    expect(adminIndexByEmails([ENV.ADMIN_EMAIL_2])).toBe(1);
   });
 
-  it("не пускає з чужим паролем", async () => {
-    const { checkCredentials } = await admin();
-    expect(checkCredentials(ENV.ADMIN_EMAIL, ENV.ADMIN_PASSWORD_2)).toBeNull();
-    expect(checkCredentials(ENV.ADMIN_EMAIL_2, ENV.ADMIN_PASSWORD)).toBeNull();
+  it("чужа чи порожня пошта — не пускає", async () => {
+    const { adminIndexByEmails, isAdminEmail } = await admin();
+    expect(adminIndexByEmails(["chuzhyj@example.com"])).toBeNull();
+    expect(adminIndexByEmails([""])).toBeNull();
+    expect(adminIndexByEmails([])).toBeNull();
+    expect(isAdminEmail("chuzhyj@example.com")).toBe(false);
+    expect(isAdminEmail("")).toBe(false);
   });
 
-  it("не пускає з порожнім паролем або невідомою поштою", async () => {
-    const { checkCredentials } = await admin();
-    expect(checkCredentials(ENV.ADMIN_EMAIL, "")).toBeNull();
-    expect(checkCredentials("", "")).toBeNull();
-    expect(checkCredentials("chuzhyj@example.com", ENV.ADMIN_PASSWORD)).toBeNull();
+  it("регістр і пробіли в пошті не заважають", async () => {
+    const { adminIndexByEmails, isAdminEmail } = await admin();
+    expect(adminIndexByEmails(["  PeRaYj@Example.COM  "])).toBe(0);
+    expect(isAdminEmail(" DRUHYJ@example.com")).toBe(true);
   });
 
-  it("пошта нечутлива до регістру й пробілів, пароль — чутливий", async () => {
-    const { checkCredentials } = await admin();
-    expect(checkCredentials("  PeRaYj@Example.COM  ", ENV.ADMIN_PASSWORD)).toBe(0);
-    expect(checkCredentials(ENV.ADMIN_EMAIL, "PAROL-PERSHOHO")).toBeNull();
-    expect(checkCredentials(ENV.ADMIN_EMAIL, " parol-pershoho ")).toBeNull();
+  it("серед кількох пошт користувача знаходить майстрову", async () => {
+    const { adminIndexByEmails } = await admin();
+    expect(adminIndexByEmails(["inshyj@example.com", ENV.ADMIN_EMAIL_2])).toBe(1);
   });
 
-  it("без другої пари працює лише один акаунт", async () => {
+  it("без другої пошти працює лише один акаунт", async () => {
     vi.stubEnv("ADMIN_EMAIL_2", "");
-    vi.stubEnv("ADMIN_PASSWORD_2", "");
     vi.resetModules();
 
-    const { checkCredentials } = await admin();
-    expect(checkCredentials(ENV.ADMIN_EMAIL, ENV.ADMIN_PASSWORD)).toBe(0);
-    expect(checkCredentials(ENV.ADMIN_EMAIL_2, ENV.ADMIN_PASSWORD_2)).toBeNull();
+    const { adminIndexByEmails } = await admin();
+    expect(adminIndexByEmails([ENV.ADMIN_EMAIL])).toBe(0);
+    expect(adminIndexByEmails([ENV.ADMIN_EMAIL_2])).toBeNull();
   });
 
   it("без налаштувань адмінка не пускає нікого", async () => {
     for (const k of Object.keys(ENV)) vi.stubEnv(k, "");
     vi.resetModules();
 
-    const { checkCredentials } = await admin();
-    expect(() => checkCredentials("будь-хто@example.com", "будь-що")).toThrow();
-  });
-
-  it("неповна пара ігнорується: сама пошта без пароля не дає доступу", async () => {
-    vi.stubEnv("ADMIN_PASSWORD_2", "");
-    vi.resetModules();
-
-    const { checkCredentials } = await admin();
-    expect(checkCredentials(ENV.ADMIN_EMAIL_2, "")).toBeNull();
-    expect(checkCredentials(ENV.ADMIN_EMAIL_2, ENV.ADMIN_PASSWORD_2)).toBeNull();
+    const { adminIndexByEmails, isAdminEmail } = await admin();
+    expect(adminIndexByEmails(["будь-хто@example.com", ""])).toBeNull();
+    expect(isAdminEmail("")).toBe(false);
   });
 });
 

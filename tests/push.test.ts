@@ -64,9 +64,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "pub");
   vi.stubEnv("VAPID_PRIVATE_KEY", "priv");
   vi.stubEnv("ADMIN_EMAIL", "b@gadgetfix.ua");
-  vi.stubEnv("ADMIN_PASSWORD", "parol-pershoho");
   vi.stubEnv("ADMIN_EMAIL_2", "");
-  vi.stubEnv("ADMIN_PASSWORD_2", "");
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -119,7 +117,6 @@ describe("alertMasters", () => {
 
     beforeEach(() => {
       vi.stubEnv("ADMIN_EMAIL_2", SECOND);
-      vi.stubEnv("ADMIN_PASSWORD_2", "parol-druhoho");
     });
 
     it("push є лише в одного — другий не лишається без сповіщення: Telegram теж іде", async () => {

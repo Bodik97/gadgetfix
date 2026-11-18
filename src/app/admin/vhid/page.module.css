@@ -60,4 +60,9 @@
   justify-self: center;
   font-size: 14px;
   color: var(--text-2);
+  background: none;
+  border: 0;
+  padding: 4px;
+  cursor: pointer;
+  text-decoration: underline;
 }
